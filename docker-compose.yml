@@ -1,0 +1,41 @@
+name: terrapulse
+
+services:
+  postgis:
+    image: postgis/postgis:16-3.4
+    container_name: terrapulse-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: terrapulse
+      POSTGRES_PASSWORD: terrapulse
+      POSTGRES_DB: terrapulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U terrapulse -d terrapulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: terrapulse-pgadmin
+    profiles: ["tools"]
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@terrapulse.local
+      PGADMIN_DEFAULT_PASSWORD: terrapulse
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - ./infra/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgis:
+        condition: service_healthy
+
+volumes:
+  postgis-data:
