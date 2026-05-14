@@ -3,8 +3,7 @@ import {
   Calendar,
   dateFnsLocalizer,
   Event as RBCEvent,
-  SlotInfo,
-  View
+  SlotInfo
 } from "react-big-calendar";
 import {
   format,
@@ -22,7 +21,6 @@ import {
   MechanicAbsence,
   UUID
 } from "../types";
-import { fmtDateTime } from "../i18n/format";
 
 const locales = { "en-US": undefined };
 const localizer = dateFnsLocalizer({
@@ -78,7 +76,7 @@ export function AbsenceCalendarPicker({
   onCancel
 }: Props) {
   const { t } = useTranslation();
-  const [view, setView] = useState<View>("month");
+  const [showCalendar, setShowCalendar] = useState(false);
   const [start, setStart] = useState<string>(instantToIsoLocal(initialDraft?.startAt ?? ""));
   const [end, setEnd] = useState<string>(instantToIsoLocal(initialDraft?.endAt ?? ""));
   const [type, setType] = useState<AbsenceType>(initialDraft?.type ?? "VACATION");
@@ -132,11 +130,8 @@ export function AbsenceCalendarPicker({
   function softWarn(d: Date) {
     const now = new Date();
     const daysAgo = differenceInCalendarDays(now, d);
-    if (daysAgo > 30) {
-      setWarn(t("absences.softWarnPast"));
-    } else {
-      setWarn(null);
-    }
+    if (daysAgo > 30) setWarn(t("absences.softWarnPast"));
+    else              setWarn(null);
   }
 
   function submit(e: FormEvent) {
@@ -164,110 +159,133 @@ export function AbsenceCalendarPicker({
     start && end && new Date(isoLocalToInstant(end)) <= new Date(isoLocalToInstant(start))
   );
 
-  return (
-    <div className="absence-picker">
-      <h3 className="picker-heading">{editingId ? t("absences.edit") : t("absences.add")}</h3>
-      <p className="muted">{t("absences.calendarHint")}</p>
+  const days =
+    start && end && !invalidRange
+      ? Math.max(
+          1,
+          differenceInCalendarDays(
+            new Date(isoLocalToInstant(end)),
+            new Date(isoLocalToInstant(start))
+          ) + 1
+        )
+      : null;
 
-      <div className="ds-cal-toolbar">
-        <button
-          type="button"
-          className={view === "month" ? "" : "ghost"}
-          onClick={() => setView("month")}
-        >
-          {t("absences.viewMonth", { defaultValue: "Mese" })}
-        </button>
-        <button
-          type="button"
-          className={view === "week" ? "" : "ghost"}
-          onClick={() => setView("week")}
-        >
-          {t("absences.viewWeek", { defaultValue: "Settimana" })}
-        </button>
-        <span className="spacer" />
-        {start && end && !invalidRange && (
-          <span className="muted">
-            {fmtDateTime(isoLocalToInstant(start))} → {fmtDateTime(isoLocalToInstant(end))}
+  return (
+    <form className="absence-picker" onSubmit={submit}>
+      <header className="absence-picker-head">
+        <h3 className="picker-heading">
+          {editingId ? t("absences.edit") : t("absences.add")}
+        </h3>
+        {days != null && (
+          <span className="absence-picker-summary muted">
+            {t("absences.daysSummary", {
+              count: days,
+              defaultValue: "{{count}} day(s)"
+            })}
           </span>
         )}
+      </header>
+
+      <div className="absence-picker-grid">
+        <label>
+          {t("absences.fieldStart")} *
+          <input
+            required
+            type="datetime-local"
+            value={start}
+            onChange={(e) => {
+              setStart(e.target.value);
+              if (e.target.value) softWarn(new Date(isoLocalToInstant(e.target.value)));
+            }}
+          />
+        </label>
+        <label>
+          {t("absences.fieldEnd")} *
+          <input
+            required
+            type="datetime-local"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          />
+        </label>
+        <label>
+          {t("absences.fieldType")}
+          <select value={type} onChange={(e) => setType(e.target.value as AbsenceType)}>
+            {ABSENCE_TYPES.map((tt) => (
+              <option key={tt} value={tt}>{t(`absenceType.${tt}`)}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("absences.fieldReason")}
+          <input
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            maxLength={255}
+          />
+        </label>
       </div>
 
-      <div className="ds-cal-wrap">
-        <Calendar
-          localizer={localizer}
-          events={events}
-          view={view}
-          onView={(v) => setView(v)}
-          views={["month", "week"]}
-          defaultDate={new Date()}
-          selectable
-          onSelectSlot={handleSelectSlot}
-          longPressThreshold={50}
-          style={{ height: "100%" }}
-          eventPropGetter={(ev: any) => {
-            const e = ev as CalEvent;
-            const cls = [
-              "rbc-event",
-              e.absenceType ? `absence-${e.absenceType}` : "",
-              e.editing ? "ds-cal-event-editing" : ""
-            ]
-              .filter(Boolean)
-              .join(" ");
-            return { className: cls };
-          }}
-        />
-      </div>
+      <button
+        type="button"
+        className="ghost absence-picker-toggle"
+        aria-expanded={showCalendar}
+        onClick={() => setShowCalendar((v) => !v)}
+      >
+        {showCalendar
+          ? t("absences.hideCalendar", { defaultValue: "Hide calendar" })
+          : t("absences.pickVisually", { defaultValue: "Pick on calendar" })}
+      </button>
 
-      <form className="absence-form" onSubmit={submit}>
-        <div className="form-row">
-          <label>{t("absences.fieldType")}
-            <select value={type} onChange={(e) => setType(e.target.value as AbsenceType)}>
-              {ABSENCE_TYPES.map((tt) => <option key={tt} value={tt}>{t(`absenceType.${tt}`)}</option>)}
-            </select>
-          </label>
-          <label>{t("absences.fieldReason")}
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              maxLength={255}
-            />
-          </label>
+      {showCalendar && (
+        <div className="absence-picker-cal">
+          <p className="muted" style={{ margin: "0 0 6px" }}>
+            {t("absences.calendarHint")}
+          </p>
+          <Calendar
+            localizer={localizer}
+            events={events}
+            view="week"
+            views={["week"]}
+            onView={() => { /* locked to week */ }}
+            defaultDate={new Date()}
+            selectable
+            onSelectSlot={handleSelectSlot}
+            longPressThreshold={50}
+            step={60}
+            timeslots={1}
+            min={new Date(new Date().setHours(6, 0, 0, 0))}
+            max={new Date(new Date().setHours(20, 0, 0, 0))}
+            style={{ height: "100%" }}
+            eventPropGetter={(ev: any) => {
+              const e = ev as CalEvent;
+              const cls = [
+                "rbc-event",
+                e.absenceType ? `absence-${e.absenceType}` : "",
+                e.editing ? "ds-cal-event-editing" : ""
+              ]
+                .filter(Boolean)
+                .join(" ");
+              return { className: cls };
+            }}
+          />
         </div>
-        <div className="form-row">
-          <label>{t("absences.fieldStart")} *
-            <input
-              required
-              type="datetime-local"
-              value={start}
-              onChange={(e) => {
-                setStart(e.target.value);
-                if (e.target.value) softWarn(new Date(isoLocalToInstant(e.target.value)));
-              }}
-            />
-          </label>
-          <label>{t("absences.fieldEnd")} *
-            <input
-              required
-              type="datetime-local"
-              value={end}
-              onChange={(e) => setEnd(e.target.value)}
-            />
-          </label>
-        </div>
-        {err && <p className="error">{err}</p>}
-        {!err && warn && <p className="muted">{warn}</p>}
-        <div className="form-actions">
-          <button
-            type="submit"
-            disabled={Boolean(submitting) || invalidRange || !start || !end}
-          >
-            {t("common.save")}
-          </button>
-          <button type="button" className="ghost" onClick={onCancel}>
-            {t("common.cancel")}
-          </button>
-        </div>
-      </form>
-    </div>
+      )}
+
+      {err && <p className="error">{err}</p>}
+      {!err && warn && <p className="muted">{warn}</p>}
+
+      <div className="form-actions">
+        <button
+          type="submit"
+          disabled={Boolean(submitting) || invalidRange || !start || !end}
+        >
+          {t("common.save")}
+        </button>
+        <button type="button" className="ghost" onClick={onCancel}>
+          {t("common.cancel")}
+        </button>
+      </div>
+    </form>
   );
 }

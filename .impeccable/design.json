@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-14T21:55:52Z",
+  "title": "Design System: TerraPulse",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Clay Accent",
+        "canonical": "oklch(0.58 0.16 38)",
+        "tonalRamp": [
+          "oklch(0.18 0.06 38)",
+          "oklch(0.28 0.10 38)",
+          "oklch(0.38 0.13 38)",
+          "oklch(0.50 0.17 38)",
+          "oklch(0.58 0.16 38)",
+          "oklch(0.70 0.13 38)",
+          "oklch(0.84 0.08 40)",
+          "oklch(0.94 0.05 50)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Console Ink",
+        "canonical": "oklch(0.22 0.018 60)",
+        "tonalRamp": [
+          "oklch(0.14 0.014 60)",
+          "oklch(0.22 0.018 60)",
+          "oklch(0.30 0.020 60)",
+          "oklch(0.44 0.014 65)",
+          "oklch(0.54 0.014 65)",
+          "oklch(0.72 0.014 70)",
+          "oklch(0.86 0.014 70)",
+          "oklch(0.94 0.012 75)"
+        ]
+      },
+      "surface-app": {
+        "role": "neutral",
+        "displayName": "Parchment App",
+        "canonical": "oklch(0.970 0.008 78)",
+        "tonalRamp": [
+          "oklch(0.30 0.020 60)",
+          "oklch(0.44 0.014 65)",
+          "oklch(0.62 0.04 60)",
+          "oklch(0.78 0.018 72)",
+          "oklch(0.885 0.012 72)",
+          "oklch(0.955 0.010 75)",
+          "oklch(0.970 0.008 78)",
+          "oklch(0.992 0.005 80)"
+        ]
+      },
+      "warn-fg": {
+        "role": "secondary",
+        "displayName": "State Amber",
+        "canonical": "oklch(0.50 0.13 82)",
+        "tonalRamp": [
+          "oklch(0.20 0.08 82)",
+          "oklch(0.30 0.10 82)",
+          "oklch(0.40 0.12 82)",
+          "oklch(0.50 0.13 82)",
+          "oklch(0.62 0.13 82)",
+          "oklch(0.76 0.10 85)",
+          "oklch(0.88 0.07 85)",
+          "oklch(0.95 0.06 85)"
+        ]
+      },
+      "danger-fg": {
+        "role": "secondary",
+        "displayName": "Brick Danger",
+        "canonical": "oklch(0.50 0.18 25)",
+        "tonalRamp": [
+          "oklch(0.20 0.10 25)",
+          "oklch(0.30 0.13 25)",
+          "oklch(0.40 0.16 25)",
+          "oklch(0.50 0.18 25)",
+          "oklch(0.62 0.16 25)",
+          "oklch(0.76 0.12 25)",
+          "oklch(0.86 0.08 25)",
+          "oklch(0.94 0.05 25)"
+        ]
+      },
+      "success-fg": {
+        "role": "tertiary",
+        "displayName": "Moss",
+        "canonical": "oklch(0.45 0.13 150)",
+        "tonalRamp": [
+          "oklch(0.18 0.06 150)",
+          "oklch(0.28 0.09 150)",
+          "oklch(0.36 0.11 150)",
+          "oklch(0.45 0.13 150)",
+          "oklch(0.58 0.12 150)",
+          "oklch(0.74 0.09 150)",
+          "oklch(0.86 0.07 150)",
+          "oklch(0.93 0.06 150)"
+        ]
+      },
+      "info-fg": {
+        "role": "tertiary",
+        "displayName": "Sky",
+        "canonical": "oklch(0.46 0.12 230)",
+        "tonalRamp": [
+          "oklch(0.18 0.06 230)",
+          "oklch(0.28 0.09 230)",
+          "oklch(0.36 0.11 230)",
+          "oklch(0.46 0.12 230)",
+          "oklch(0.58 0.10 228)",
+          "oklch(0.74 0.07 228)",
+          "oklch(0.86 0.05 225)",
+          "oklch(0.94 0.035 225)"
+        ]
+      },
+      "quoted-fg": {
+        "role": "tertiary",
+        "displayName": "Quoted Violet",
+        "canonical": "oklch(0.44 0.15 295)",
+        "tonalRamp": [
+          "oklch(0.18 0.08 295)",
+          "oklch(0.28 0.11 295)",
+          "oklch(0.36 0.13 295)",
+          "oklch(0.44 0.15 295)",
+          "oklch(0.58 0.13 295)",
+          "oklch(0.74 0.10 295)",
+          "oklch(0.86 0.07 295)",
+          "oklch(0.93 0.05 295)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "page-heading": { "displayName": "Page heading", "purpose": "Page-level titles. Smaller than typical so the dispatch board owns attention." },
+      "panel-heading": { "displayName": "Panel heading", "purpose": "Section labels inside a page (.panel h2). Same size as page heading by design." },
+      "sub-heading": { "displayName": "Sub-heading", "purpose": "Drawer headers, picker headings, group labels." },
+      "body": { "displayName": "Body", "purpose": "Default text. Prose caps at 65-75ch." },
+      "meta": { "displayName": "Meta / muted", "purpose": "Timestamps, helper text, the .muted role." },
+      "label": { "displayName": "Label", "purpose": "Uppercase 0.04em-tracked table column headers. Uppercase nowhere else." },
+      "mono": { "displayName": "Mono data", "purpose": "VMRS codes, serial numbers, IDs, durations, phone, coordinates." }
+    },
+    "shadows": [
+      { "name": "modal-lift", "value": "0 8px 24px oklch(0.22 0.018 60 / 0.18)", "purpose": "Modal sheet only. The single allowed shadow." }
+    ],
+    "motion": [
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Default easing for state transitions." },
+      { "name": "duration-default", "value": "160ms", "purpose": "Default transition length: background, border, color, outline-color." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Clay-on-parchment action button used inside the nearest-mechanic modal and other 'do it now' actions.",
+      "html": "<button class=\"ds-btn-primary\">Dispatch</button>",
+      "css": ".ds-btn-primary { background: oklch(0.58 0.16 38); color: oklch(0.992 0.005 80); border: 1px solid oklch(0.58 0.16 38); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; cursor: pointer; transition: background-color 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-primary:hover:not(:disabled) { background: oklch(0.50 0.17 38); border-color: oklch(0.50 0.17 38); } .ds-btn-primary:focus-visible { outline: 2px solid oklch(0.58 0.16 38); outline-offset: 2px; }"
+    },
+    {
+      "name": "Default Button",
+      "kind": "button",
+      "refersTo": "button-default",
+      "description": "The most common button on the system. Parchment-on-parchment with a hairline border.",
+      "html": "<button class=\"ds-btn-default\">Edit</button>",
+      "css": ".ds-btn-default { background: oklch(0.992 0.005 80); color: oklch(0.26 0.016 60); border: 1px solid oklch(0.885 0.012 72); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; cursor: pointer; transition: background-color 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-default:hover:not(:disabled) { background: oklch(0.955 0.010 75); border-color: oklch(0.62 0.04 60); } .ds-btn-default:focus-visible { outline: 2px solid oklch(0.58 0.16 38); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Transparent dismiss button used for dialog close (×) and toolbar dismissals.",
+      "html": "<button class=\"ds-btn-ghost\" aria-label=\"Close\">×</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: oklch(0.54 0.014 65); border: 1px solid transparent; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; cursor: pointer; transition: background-color 160ms cubic-bezier(0.22,1,0.36,1), color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-ghost:hover:not(:disabled) { background: oklch(0.955 0.010 75); color: oklch(0.26 0.016 60); } .ds-btn-ghost:focus-visible { outline: 2px solid oklch(0.58 0.16 38); outline-offset: 2px; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Row-level destructive action. Brick text on parchment until hover, then a brick-tinted background.",
+      "html": "<button class=\"ds-btn-danger\">Delete</button>",
+      "css": ".ds-btn-danger { background: oklch(0.992 0.005 80); color: oklch(0.50 0.18 25); border: 1px solid oklch(0.84 0.07 25); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; cursor: pointer; transition: background-color 160ms cubic-bezier(0.22,1,0.36,1), border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-btn-danger:hover:not(:disabled) { background: oklch(0.94 0.05 25); border-color: oklch(0.50 0.18 25); } .ds-btn-danger:focus-visible { outline: 2px solid oklch(0.58 0.16 38); outline-offset: 2px; }"
+    },
+    {
+      "name": "State Badge (IN_PROGRESS)",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "State badge with a leading 6px dot. The dot inherits the foreground color via currentColor, so one rule covers every state variant.",
+      "html": "<span class=\"ds-badge ds-state-in-progress\">In progress</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; line-height: 1.4; background: oklch(0.92 0.012 70); color: oklch(0.42 0.014 65); } .ds-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 6px; display: inline-block; } .ds-state-in-progress { background: oklch(0.93 0.06 150); color: oklch(0.45 0.13 150); }"
+    },
+    {
+      "name": "Skill Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Neutral pill used for mechanic skills inside a table row. Sits inside .ds-cell-chips on one line and scrolls horizontally if it overflows.",
+      "html": "<span class=\"ds-chip\">HYDRAULICS</span>",
+      "css": ".ds-chip { display: inline-block; font-size: 0.72rem; background: oklch(0.92 0.012 70); color: oklch(0.42 0.014 65); padding: 2px 6px; border-radius: 999px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Default form field. Hairline border, clay-outline focus, no glow, no animation on layout.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search address\" />",
+      "css": ".ds-input { padding: 7px 9px; border: 1px solid oklch(0.885 0.012 72); border-radius: 6px; font-size: 0.875rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; color: oklch(0.26 0.016 60); background: oklch(0.992 0.005 80); transition: border-color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-input:hover { border-color: oklch(0.62 0.04 60); } .ds-input:focus-visible { outline: 2px solid oklch(0.58 0.16 38); outline-offset: 2px; border-color: oklch(0.62 0.04 60); }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Default container: parchment surface, hairline border, 8px radius, 14px padding. No shadow.",
+      "html": "<section class=\"ds-panel\"><h2 class=\"ds-panel-heading\">Mechanics (3)</h2><p>Section content lives here.</p></section>",
+      "css": ".ds-panel { background: oklch(0.992 0.005 80); border: 1px solid oklch(0.885 0.012 72); border-radius: 8px; padding: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; font-size: 0.875rem; color: oklch(0.26 0.016 60); } .ds-panel-heading { margin: 0 0 10px; font-size: 1.05rem; font-weight: 600; line-height: 1.3; }"
+    },
+    {
+      "name": "Nav Link (active)",
+      "kind": "nav",
+      "refersTo": "nav-link-active",
+      "description": "Active link inside the dark app header. Clay fill marks the current route; non-active links are ink-soft on ink with an ink-elevated hover.",
+      "html": "<header class=\"ds-nav\"><a class=\"ds-nav-link\" href=\"#\">Dispatch</a><a class=\"ds-nav-link ds-nav-link-active\" href=\"#\">Orders</a><a class=\"ds-nav-link\" href=\"#\">Mechanics</a></header>",
+      "css": ".ds-nav { display: flex; gap: 4px; padding: 10px 20px; background: oklch(0.22 0.018 60); } .ds-nav-link { color: oklch(0.86 0.014 70); text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.875rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; transition: background-color 160ms cubic-bezier(0.22,1,0.36,1), color 160ms cubic-bezier(0.22,1,0.36,1); } .ds-nav-link:hover { background: oklch(0.30 0.020 60); color: oklch(0.992 0.005 80); } .ds-nav-link-active { background: oklch(0.58 0.16 38); color: oklch(0.992 0.005 80); }"
+    },
+    {
+      "name": "Data Table Row",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Canonical multi-column row with inline primary+meta and single-line chip cell. Baselines align across columns because no cell pushes the row taller.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>Name</th><th>Status</th><th>Skills</th><th>Location</th><th></th></tr></thead><tbody><tr><td><span class=\"ds-cell-primary\">Mara Costa <span class=\"ds-meta ds-mono\">+39 333 222 1111</span></span></td><td><span class=\"ds-badge ds-state-in-progress\">In progress</span></td><td><span class=\"ds-cell-chips\"><span class=\"ds-chip\">HYDRAULICS</span><span class=\"ds-chip\">DIESEL</span></span></td><td class=\"ds-mono\">45.4642, 9.1900</td><td class=\"ds-row-actions\"><button class=\"ds-btn-default\">Edit</button><button class=\"ds-btn-danger\">Delete</button></td></tr></tbody></table>",
+      "css": ".ds-table { width: 100%; border-collapse: collapse; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif; font-size: 0.875rem; color: oklch(0.26 0.016 60); } .ds-table th, .ds-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid oklch(0.885 0.012 72); vertical-align: middle; line-height: 1.4; } .ds-table th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: oklch(0.44 0.014 65); font-weight: 600; padding: 6px 8px; } .ds-cell-primary { display: inline-flex; align-items: baseline; gap: 8px; min-width: 0; } .ds-cell-primary > .ds-meta { color: oklch(0.54 0.014 65); font-size: 0.85rem; white-space: nowrap; } .ds-cell-chips { display: inline-flex; flex-wrap: nowrap; gap: 4px; max-width: 100%; overflow-x: auto; } .ds-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; } .ds-row-actions { display: flex; gap: 4px; justify-content: flex-end; white-space: nowrap; } .ds-row-actions button { padding: 4px 8px; font-size: 0.72rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Dispatcher's Console",
+    "overview": "TerraPulse is the surface a dispatcher leaves open all day, on a 24-inch monitor at the front desk, with the phone in the other hand. The console reads like a tool that respects the user's time. Confident warm-tinted neutrals carry roughly 90% of every screen. A single clay accent at hue 38 marks the live thing: current selection, primary action, focused input, active nav link. Color is otherwise reserved for state: the same enum draws the same swatch in every view, so a dispatcher learns the palette once and reads the board for the rest of the year.\n\nThe palette shifted away from cobalt-on-slate because that family was reading either generic-SaaS or generic-SRE depending on the angle. Warm tinted neutrals with a clay accent borrows from industrial signage and printed work-order pads without falling into hard-hat kitsch. Closer in spirit to Linear's restraint, Samsara Fleet's information density, and the orange-bound notebooks on a service-desk shelf than to consumer SaaS. State-warn amber stays at hue 82 and state-danger shifts to brick at hue 25 specifically so neither fights the clay accent for attention.\n\nThis system rejects the consumer-SaaS family wholesale: no cream-and-pastel marketing palette, no gradient hero metrics, no map-first dashboards, no hard-hat icons. Cards are not the answer. Density is, with rhythm: spacing varies deliberately so the eye finds scan-stops without being given an infographic.",
+    "keyCharacteristics": [
+      "Restrained warm-neutral palette (hues 60-80) plus a single clay accent at hue 38, used on no more than 10% of any screen.",
+      "Semantic state colors carry the load: same enum, same swatch, every screen.",
+      "System sans only. No display font, no script, no all-caps eyebrow labels for flavor.",
+      "Flat by default. Single 1px hairline borders convey structure; shadows are state-driven, not decorative.",
+      "Motion is feedback, not choreography. 160ms ease-out-quart, fade not slide for WS updates.",
+      "WCAG 2.2 AA contrast; state never communicated by color alone.",
+      "Tables are baseline-aligned and single-line per row by default; multi-line data uses inline trailing meta, not subline divs."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "The clay accent appears on no more than 10% of any screen. Its rarity is what makes 'this row is selected' or 'this is the primary action' legible at a glance. Decorative clay is forbidden.", "section": "colors" },
+      { "name": "The State-Is-Sacred Rule", "body": "A given enum value (e.g. IN_PROGRESS) has exactly one swatch pair across every surface where it appears. New screens import the pair; they do not pick a new one. If a state needs a new home, edit styles.css; never inline a different swatch in a component.", "section": "colors" },
+      { "name": "The Accent-vs-Amber Rule", "body": "Clay (hue 38) and warn-amber (hue 82) sit forty-four hue degrees apart on purpose: amber state is dense in pending-heavy views, clay is rare. Hue separation is the load-bearing wall. Do not pull either color toward the other. Brick danger (hue 25) is also kept away from clay's hue specifically so destructive intent never reads as primary action.", "section": "colors" },
+      { "name": "The No-Pure-Black, No-Pure-White Rule", "body": "All neutrals carry chroma 0.005-0.018 toward warm hues 60-80. #000 and #fff are banned.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "No display face, no script, no second body sans. Hierarchy is built from scale and weight on one stack. Mono is a vocabulary signal, not a decorative choice.", "section": "typography" },
+      { "name": "The No-All-Caps-Eyebrow Rule", "body": "Uppercase is reserved for table column labels. Never used on buttons, never on section headings, never on nav links, never on badges.", "section": "typography" },
+      { "name": "The Inline-Meta Rule", "body": "When a table cell pairs a primary value (mechanic name) with a secondary value (phone), they sit inline with the secondary value dimmed and sized down to meta (text-muted, 0.85rem). Two-line sublines underneath a name are prohibited because they break cross-column baseline alignment.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces rest at level 0. Shadows appear only on overlay surfaces (currently only the modal sheet). Decorative drop-shadows on cards, panels, or buttons are prohibited. Hover state is communicated by background tint, not by elevation.", "section": "elevation" },
+      { "name": "The Hairline Rule", "body": "Structural separation uses a single 1px border in the Hairline neutral. Side-stripe accent borders (border-left: 4px solid …) are forbidden: full borders, background tints, or leading state badges instead.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do reserve the clay accent (oklch(0.58 0.16 38)) for primary action, current selection, active nav link, and focused input outline. No more than 10% of any screen.",
+      "Do use the same swatch pair for the same enum value across every screen the enum appears on. Open styles.css and reuse; never invent a one-off.",
+      "Do tint every neutral toward warm hues 60-80 (chroma 0.005-0.018). Parchment, not paper.",
+      "Do pair every state color with a text label and, where space allows, a leading dot. State never relies on color alone.",
+      "Do vary spacing for rhythm: dense data tables run tight (10px 8px cells), decision surfaces (drawer actions, override controls) get breathing room.",
+      "Do prefer inline disclosure (the absence picker pattern, the override form pattern) and side drawers (the service-order drawer) over modals. Modals only for genuinely blocking confirmations (the nearest-mechanic dispatch step).",
+      "Do respect prefers-reduced-motion. WS-driven updates fade rather than slide.",
+      "Do use the mono stack for serial numbers, VMRS codes, IDs, phone numbers, and numeric coordinate pairs.",
+      "Do keep table rows single-line where possible; pair primary + secondary values inline with .cell-primary so all cells in a row share a baseline."
+    ],
+    "donts": [
+      "Don't use consumer-SaaS cream + pastel gradients. No Mailchimp, no Notion-marketing, no 'fintech but friendly.'",
+      "Don't build the hero-metric template: big number, tiny label, supporting stat grid, gradient accent. Prohibited.",
+      "Don't repeat identical icon + heading + paragraph card grids. The dispatch board is the product; cards are not.",
+      "Don't drop construction-industry kitsch into the UI: no hard-hat icons, no yellow-and-black hazard stripes, no orange-cone metaphors. Clay is a tinted neutral mate, not a safety vest.",
+      "Don't make a map the primary surface. Mechanic location is a column; the timeline is the product.",
+      "Don't use glassmorphism, frosted blurs, or stacked drop-shadows. Surfaces are flat; the modal sheet is the only place a box-shadow is allowed.",
+      "Don't use border-left or border-right greater than 1px as a colored accent on cards, list items, or callouts. Full borders, background tints, leading badges instead.",
+      "Don't use background-clip: text gradients on any heading. A single solid color, emphasis via weight.",
+      "Don't use #000 or #fff anywhere. Tint toward the warm hue family.",
+      "Don't use em dashes in copy. Commas, colons, semicolons, periods, or parentheses.",
+      "Don't invent a new color for a state that already has one. Open styles.css, reuse the pair.",
+      "Don't put a phone, address, or any secondary value on a second line under a primary value in a table cell. Inline meta with .cell-primary and dim the secondary; two-line cells break baselines across columns.",
+      "Don't expose a month-view calendar in the dispatch timeline or the absence picker. The dispatch timeline is day/week only; the absence picker is week only inside the optional inset. Month view dwarfs the page and erodes the list-first pattern."
+    ]
+  }
+}

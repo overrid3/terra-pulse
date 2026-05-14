@@ -1,11 +1,16 @@
 /* ============================================================
    TerraPulse design tokens (DESIGN.md doctrine)
 
-   Color philosophy: restrained palette, tinted slate neutrals
-   (chroma 0.005 to 0.01 tilted toward the cobalt hue 264) plus a
-   single cobalt accent. Semantic state palette pairs (bg + fg) keep
+   Color philosophy: restrained palette, tinted warm neutrals
+   (chroma 0.005 to 0.014 tilted toward hue 70 ochre) plus a single
+   clay accent at hue 38. Semantic state palette pairs (bg + fg) keep
    "same enum = same swatch everywhere". OKLCH throughout. No raw
    hex, no #000, no #fff.
+
+   Accent is clay (hue 38), deliberately separated from state-warn
+   amber (hue 82) so the One Voice Rule survives in pending-heavy
+   views. State-danger shifts toward brick (hue 25) for the same
+   reason: accent rarity vs. danger density never fight.
 
    Token roles:
      --color-accent           cobalt, primary action, selection, focus ring
@@ -45,49 +50,49 @@
    ============================================================ */
 
 :root {
-  /* Cobalt accent (hue 264) */
-  --color-accent:          oklch(0.55 0.20 264);
-  --color-accent-strong:   oklch(0.48 0.21 264);
-  --color-accent-soft:     oklch(0.94 0.04 264);
+  /* Clay accent (hue 38) */
+  --color-accent:          oklch(0.58 0.16 38);
+  --color-accent-strong:   oklch(0.50 0.17 38);
+  --color-accent-soft:     oklch(0.94 0.05 50);
 
-  /* Tinted slate ink + text (chroma 0.01 toward 264) */
-  --color-ink:             oklch(0.21 0.03 264);
-  --color-ink-elevated:    oklch(0.30 0.04 264);   /* nav hover on dark surface */
-  --color-ink-soft:        oklch(0.85 0.02 264);
-  --color-ink-muted:       oklch(0.70 0.02 264);   /* muted text on dark surface */
-  --color-text:            oklch(0.25 0.025 264);
-  --color-text-muted:      oklch(0.55 0.02 264);
-  --color-text-subtle:     oklch(0.45 0.02 264);
+  /* Tinted warm ink + text (chroma 0.012-0.022 toward hue 60) */
+  --color-ink:             oklch(0.22 0.018 60);
+  --color-ink-elevated:    oklch(0.30 0.020 60);   /* nav hover on dark surface */
+  --color-ink-soft:        oklch(0.86 0.014 70);
+  --color-ink-muted:       oklch(0.72 0.014 70);   /* muted text on dark surface */
+  --color-text:            oklch(0.26 0.016 60);
+  --color-text-muted:      oklch(0.54 0.014 65);
+  --color-text-subtle:     oklch(0.44 0.014 65);
 
-  /* Surfaces (chroma 0.005 to 0.008 toward 264) */
-  --color-surface-app:     oklch(0.965 0.008 264);
-  --color-surface-panel:   oklch(0.995 0.005 264);
-  --color-surface-elev:    oklch(0.995 0.005 264);
-  --color-surface-sunken:  oklch(0.975 0.008 264);
+  /* Surfaces (chroma 0.005 to 0.010 toward hue 75 warm cream) */
+  --color-surface-app:     oklch(0.970 0.008 78);
+  --color-surface-panel:   oklch(0.992 0.005 80);
+  --color-surface-elev:    oklch(0.992 0.005 80);
+  --color-surface-sunken:  oklch(0.955 0.010 75);
 
   /* Hairlines */
-  --color-hairline:        oklch(0.90 0.012 264);
-  --color-hairline-strong: oklch(0.65 0.05 264);
+  --color-hairline:        oklch(0.885 0.012 72);
+  --color-hairline-strong: oklch(0.62 0.04 60);
 
   /* Semantic foreground/background pairs */
-  --color-danger-fg:       oklch(0.45 0.17 25);
-  --color-danger-bg:       oklch(0.94 0.04 25);
-  --color-danger-hairline: oklch(0.85 0.06 25);
+  --color-danger-fg:       oklch(0.50 0.18 25);
+  --color-danger-bg:       oklch(0.94 0.05 25);
+  --color-danger-hairline: oklch(0.84 0.07 25);
 
-  --color-warn-fg:         oklch(0.45 0.13 70);
-  --color-warn-bg:         oklch(0.95 0.05 80);
+  --color-warn-fg:         oklch(0.50 0.13 82);
+  --color-warn-bg:         oklch(0.95 0.06 85);
 
   --color-success-fg:      oklch(0.45 0.13 150);
   --color-success-bg:      oklch(0.93 0.06 150);
 
-  --color-info-fg:         oklch(0.42 0.15 255);
-  --color-info-bg:         oklch(0.93 0.04 255);
+  --color-info-fg:         oklch(0.46 0.12 230);
+  --color-info-bg:         oklch(0.94 0.035 225);
 
-  --color-neutral-fg:      oklch(0.40 0.02 264);
-  --color-neutral-bg:      oklch(0.92 0.01 264);
+  --color-neutral-fg:      oklch(0.42 0.014 65);
+  --color-neutral-bg:      oklch(0.92 0.012 70);
 
   /* Purple slot for QUOTED (single deviation outside the four semantics) */
-  --color-quoted-fg:       oklch(0.42 0.16 295);
+  --color-quoted-fg:       oklch(0.44 0.15 295);
   --color-quoted-bg:       oklch(0.93 0.05 295);
 
   /* Type scale (~1.2x ratio, body 0.875rem) */
@@ -102,8 +107,8 @@
   --radius-pill: 999px;
 
   /* Overlay scrim + modal shadow (single elevation step) */
-  --color-overlay-scrim:   oklch(0.21 0.03 264 / 0.5);
-  --shadow-modal:          0 8px 24px oklch(0.21 0.03 264 / 0.18);
+  --color-overlay-scrim:   oklch(0.22 0.018 60 / 0.5);
+  --shadow-modal:          0 8px 24px oklch(0.22 0.018 60 / 0.18);
 
   /* Motion (ease-out-quart, 160ms) */
   --motion-duration: 160ms;
@@ -176,9 +181,10 @@ body {
 
 .dispatch {
   display: grid;
-  grid-template-columns: 280px 1fr auto;
+  grid-template-columns: 280px minmax(0, 1fr) auto;
   gap: 12px; padding: 12px;
   flex: 1; min-height: 0;
+  min-width: 0;
 }
 .page-grid {
   flex: 1; min-height: 0; padding: 12px; display: grid; gap: 12px;
@@ -247,13 +253,21 @@ body {
    Center column + timeline + pending
    ============================================================ */
 
-.center { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.center { display: flex; flex-direction: column; gap: 12px; min-height: 0; min-width: 0; }
 .timeline {
   flex: 1; min-height: 400px; padding: 4px;
   background: var(--color-surface-panel);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-md);
+  min-width: 0;
+  overflow: hidden;
 }
+.timeline > .rbc-calendar { min-width: 0; width: 100%; }
+.timeline .rbc-time-view,
+.timeline .rbc-month-view { min-width: 0; }
+.timeline .rbc-time-header,
+.timeline .rbc-time-content { min-width: 0; }
+.timeline .rbc-time-content { overflow-x: auto; }
 
 .pending {
   background: var(--color-surface-panel);
@@ -466,9 +480,10 @@ button.ghost:hover:not(:disabled) {
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th, .data-table td {
   text-align: left;
-  padding: 8px 6px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--color-hairline);
-  vertical-align: top;
+  vertical-align: middle;
+  line-height: 1.4;
 }
 .data-table th {
   font-size: var(--text-xs);
@@ -476,12 +491,53 @@ button.ghost:hover:not(:disabled) {
   letter-spacing: 0.04em;
   color: var(--color-text-subtle);
   font-weight: 600;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 .data-table tbody tr { cursor: pointer; }
 .data-table tr.selected { background: var(--color-accent-soft); }
 .data-table tr:hover:not(.selected) { background: var(--color-surface-sunken); }
-.row-actions { display: flex; gap: 4px; white-space: nowrap; }
+
+/* Multi-line cell support: name primary, dim meta trailing on same line.
+   Keeps the row to a single text line so cells align across columns. */
+.cell-primary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.cell-primary > .meta {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Chips inside a row stay on one line and scroll if they overflow. */
+.cell-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.cell-chips::-webkit-scrollbar { height: 4px; }
+.cell-chips::-webkit-scrollbar-thumb {
+  background: var(--color-hairline-strong);
+  border-radius: var(--radius-pill);
+}
+.cell-chips .chip { margin-right: 0; flex: 0 0 auto; }
+
+.row-actions {
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+  justify-content: flex-end;
+}
 .row-actions button { padding: 4px 8px; font-size: var(--text-xs); }
+.data-table td.row-actions,
+.data-table td:last-child { text-align: right; }
 
 /* ============================================================
    Forms
@@ -710,7 +766,7 @@ button.ghost:hover:not(:disabled) {
   background-image: repeating-linear-gradient(
     135deg,
     transparent 0 4px,
-    oklch(0.995 0.005 264 / 0.20) 4px 5px
+    oklch(0.992 0.005 80 / 0.20) 4px 5px
   );
 }
 
@@ -775,22 +831,79 @@ button.ghost:hover:not(:disabled) {
    Absence calendar picker, language switcher, title editor
    ============================================================ */
 
+/* ============================================================
+   Absence picker (list-first; calendar collapsed by default)
+
+   Layout doctrine: the absence table is the primary surface. The
+   picker is a compact form, not a workspace. Visual calendar lives
+   behind a toggle and is height-capped so it never dwarfs the list.
+   ============================================================ */
 .absence-picker {
   margin-top: 16px;
   border-top: 1px solid var(--color-hairline);
   padding-top: 16px;
-}
-.ds-cal-toolbar {
   display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 8px;
+  flex-direction: column;
+  gap: 10px;
 }
-.ds-cal-toolbar .spacer { flex: 1; }
-.ds-cal-wrap {
-  height: 420px;
-  margin-bottom: 14px;
+.absence-picker-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
+.absence-picker-head .picker-heading { margin: 0; }
+.absence-picker-summary { font-size: var(--text-sm); }
+
+.absence-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+.absence-picker-grid label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.absence-picker-grid input,
+.absence-picker-grid select {
+  padding: 7px 9px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface-panel);
+  transition: var(--transition-default);
+}
+.absence-picker-grid input:hover,
+.absence-picker-grid select:hover {
+  border-color: var(--color-hairline-strong);
+}
+.absence-picker-grid input:focus-visible,
+.absence-picker-grid select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-color: var(--color-hairline-strong);
+}
+
+.absence-picker-toggle {
+  align-self: flex-start;
+  padding: 4px 8px;
+  font-size: var(--text-xs);
+}
+
+.absence-picker-cal {
+  height: 320px;
+  padding: 8px;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+}
+.absence-picker-cal > .rbc-calendar { flex: 1; min-height: 0; }
+
 .ds-cal-event-editing {
   outline: 1.5px solid var(--color-accent);
   outline-offset: -1px;

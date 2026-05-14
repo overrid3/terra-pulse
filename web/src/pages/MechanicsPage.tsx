@@ -110,9 +110,20 @@ export function MechanicsPage() {
           <tbody>
             {qc.data?.map((m) => (
               <tr key={m.id} className={editing?.id === m.id ? "selected" : ""}>
-                <td>{m.fullName}<div className="muted">{m.phone ?? ""}</div></td>
+                <td>
+                  <span className="cell-primary">
+                    <span>{m.fullName}</span>
+                    {m.phone && <span className="meta mono">{m.phone}</span>}
+                  </span>
+                </td>
                 <td><span className={`badge status-${m.status}`}>{t(`mechanicStatus.${m.status}`)}</span></td>
-                <td>{m.skills.map((s) => <span key={s} className="chip">{s}</span>)}</td>
+                <td>
+                  {m.skills.length > 0 ? (
+                    <span className="cell-chips">
+                      {m.skills.map((s) => <span key={s} className="chip">{s}</span>)}
+                    </span>
+                  ) : <span className="muted">{t("common.dash")}</span>}
+                </td>
                 <td className="mono">{m.location ? `${m.location.lat.toFixed(4)}, ${m.location.lng.toFixed(4)}` : t("common.dash")}</td>
                 <td className="row-actions">
                   <button onClick={() => loadForEdit(m)}>{t("common.edit")}</button>

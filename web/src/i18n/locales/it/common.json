@@ -197,10 +197,14 @@
     "fieldReason": "Motivo",
     "fieldStart": "Inizio",
     "fieldEnd": "Fine",
-    "calendarHint": "Seleziona l'intervallo trascinando sul calendario. Affina sotto se necessario.",
+    "calendarHint": "Seleziona l'intervallo trascinando sul calendario. Affina sopra se necessario.",
     "softWarnPast": "Inizio molto nel passato. Verifica.",
     "viewMonth": "Mese",
-    "viewWeek": "Settimana"
+    "viewWeek": "Settimana",
+    "pickVisually": "Scegli sul calendario",
+    "hideCalendar": "Nascondi calendario",
+    "daysSummary_one": "{{count}} giorno",
+    "daysSummary_other": "{{count}} giorni"
   },
   "address": {
     "placeholderFallback": "Cerca un indirizzo (es. Piazza Duomo Milano)",
