@@ -185,13 +185,13 @@ function VehicleHistory({ vehicle, onClose }: { vehicle: Vehicle; onClose: () =>
 
       {open.length > 0 && (
         <>
-          <h3 style={{ marginTop: 14 }}>{t("vehicles.openSection", { count: open.length })}</h3>
+          <h3 className="section-heading">{t("vehicles.openSection", { count: open.length })}</h3>
           <HistoryList orders={open} />
         </>
       )}
       {closed.length > 0 && (
         <>
-          <h3 style={{ marginTop: 14 }}>{t("vehicles.closedSection", { count: closed.length })}</h3>
+          <h3 className="section-heading">{t("vehicles.closedSection", { count: closed.length })}</h3>
           <HistoryList orders={closed} />
         </>
       )}

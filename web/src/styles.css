@@ -52,7 +52,9 @@
 
   /* Tinted slate ink + text (chroma 0.01 toward 264) */
   --color-ink:             oklch(0.21 0.03 264);
+  --color-ink-elevated:    oklch(0.30 0.04 264);   /* nav hover on dark surface */
   --color-ink-soft:        oklch(0.85 0.02 264);
+  --color-ink-muted:       oklch(0.70 0.02 264);   /* muted text on dark surface */
   --color-text:            oklch(0.25 0.025 264);
   --color-text-muted:      oklch(0.55 0.02 264);
   --color-text-subtle:     oklch(0.45 0.02 264);
@@ -98,6 +100,10 @@
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-pill: 999px;
+
+  /* Overlay scrim + modal shadow (single elevation step) */
+  --color-overlay-scrim:   oklch(0.21 0.03 264 / 0.5);
+  --shadow-modal:          0 8px 24px oklch(0.21 0.03 264 / 0.18);
 
   /* Motion (ease-out-quart, 160ms) */
   --motion-duration: 160ms;
@@ -160,9 +166,9 @@ body {
   border-radius: var(--radius-sm);
   transition: var(--transition-default);
 }
-.app-header nav a:hover  { background: oklch(0.30 0.04 264); color: var(--color-surface-panel); }
+.app-header nav a:hover  { background: var(--color-ink-elevated); color: var(--color-surface-panel); }
 .app-header nav a.active { background: var(--color-accent); color: var(--color-surface-panel); }
-.app-header .muted { color: oklch(0.70 0.02 264); margin-left: auto; }
+.app-header .muted { color: var(--color-ink-muted); margin-left: auto; }
 
 /* ============================================================
    Page grids + panels
@@ -218,7 +224,12 @@ body {
 .mechanic-list .dot {
   width: 12px; height: 12px; border-radius: 50%;
   margin-top: 4px; flex: 0 0 12px;
+  background: var(--color-neutral-fg);
 }
+.mechanic-list .dot.status-IDLE        { background: var(--color-info-fg); }
+.mechanic-list .dot.status-EN_ROUTE    { background: var(--color-warn-fg); }
+.mechanic-list .dot.status-IN_PROGRESS { background: var(--color-success-fg); }
+.mechanic-list .dot.status-OFF_DUTY    { background: var(--color-neutral-fg); }
 .m-name { font-weight: 500; }
 .m-meta { display: flex; gap: 8px; font-size: var(--text-xs); color: var(--color-text-muted); }
 .m-skills { margin-top: 4px; display: flex; gap: 4px; flex-wrap: wrap; }
@@ -328,6 +339,23 @@ button.ghost:hover:not(:disabled) {
   padding: 6px;
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-sm);
+  width: 80px;
+}
+
+/* Section heading inside a panel — rhythm marker, not a new region */
+.section-heading {
+  margin: 14px 0 6px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.section-heading.override-heading { margin-top: 18px; }
+
+/* Picker heading sits flush with its panel separator */
+.picker-heading {
+  margin: 0 0 6px;
+  font-size: var(--text-base);
+  font-weight: 600;
 }
 
 /* ============================================================
@@ -392,7 +420,7 @@ button.ghost:hover:not(:disabled) {
 
 .modal-backdrop {
   position: fixed; inset: 0;
-  background: oklch(0.21 0.03 264 / 0.5);
+  background: var(--color-overlay-scrim);
   display: flex; align-items: center; justify-content: center;
   z-index: 50;
 }
@@ -403,7 +431,7 @@ button.ghost:hover:not(:disabled) {
   padding: 20px;
   max-width: 480px;
   width: 90%;
-  box-shadow: 0 8px 24px oklch(0.21 0.03 264 / 0.18);
+  box-shadow: var(--shadow-modal);
 }
 .modal h3 { margin-top: 0; }
 
@@ -449,11 +477,9 @@ button.ghost:hover:not(:disabled) {
   color: var(--color-text-subtle);
   font-weight: 600;
 }
+.data-table tbody tr { cursor: pointer; }
 .data-table tr.selected { background: var(--color-accent-soft); }
-.data-table tr:hover:not(.selected) {
-  background: var(--color-surface-sunken);
-  cursor: pointer;
-}
+.data-table tr:hover:not(.selected) { background: var(--color-surface-sunken); }
 .row-actions { display: flex; gap: 4px; white-space: nowrap; }
 .row-actions button { padding: 4px 8px; font-size: var(--text-xs); }
 
@@ -676,6 +702,17 @@ button.ghost:hover:not(:disabled) {
   font-size: var(--text-xs);
 }
 .rbc-event.rbc-selected { background: var(--color-accent-strong); }
+
+/* Absence events: distinct from work blocks via diagonal hatch + dim
+   No italics, no color shift. The state palette still drives the hue. */
+.rbc-event.is-absence {
+  opacity: 0.78;
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 4px,
+    oklch(0.995 0.005 264 / 0.20) 4px 5px
+  );
+}
 
 /* State-colored events (consumers add the class via eventPropGetter
    if/when wired up; pairs match the badge palette). */

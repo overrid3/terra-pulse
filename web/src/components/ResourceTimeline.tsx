@@ -99,13 +99,11 @@ export function ResourceTimeline({
           const e = ev as CalEvent;
           if (e.kind === "absence") {
             return {
-              className: `rbc-event absence-${e.absenceType ?? "OTHER"}`,
-              style: { opacity: 0.75, border: "none", fontStyle: "italic" }
+              className: `rbc-event is-absence absence-${e.absenceType ?? "OTHER"}`
             };
           }
           return {
-            className: `rbc-event state-${e.orderState ?? "DISPATCHED"}`,
-            style: { border: "none" }
+            className: `rbc-event state-${e.orderState ?? "DISPATCHED"}`
           };
         }}
       />

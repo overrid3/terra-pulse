@@ -198,7 +198,7 @@ function OrderDetail({
         {order.notes && <><dt>{t("orders.fieldNotesHistory")}</dt><dd><pre className="notes">{order.notes}</pre></dd></>}
       </dl>
 
-      <h3 style={{ marginTop: 18 }}>{t("orders.overrideHeading")}</h3>
+      <h3 className="section-heading override-heading">{t("orders.overrideHeading")}</h3>
       <p className="muted">{t("orders.overrideHelp")}</p>
       <div className="form-row">
         <label>{t("orders.overrideTarget")}

@@ -166,7 +166,7 @@ export function AbsenceCalendarPicker({
 
   return (
     <div className="absence-picker">
-      <h3 style={{ marginTop: 0 }}>{editingId ? t("absences.edit") : t("absences.add")}</h3>
+      <h3 className="picker-heading">{editingId ? t("absences.edit") : t("absences.add")}</h3>
       <p className="muted">{t("absences.calendarHint")}</p>
 
       <div className="ds-cal-toolbar">

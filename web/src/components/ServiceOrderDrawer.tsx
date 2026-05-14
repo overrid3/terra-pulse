@@ -66,7 +66,6 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
             <input
               type="number" min={1} value={actualMin}
               onChange={(e) => setActualMin(Number(e.target.value))}
-              style={{ width: 80 }}
               aria-label={t("orders.fieldActual")}
             />
             <button onClick={() => complete.mutate(actualMin)} disabled={complete.isPending}>{t("dispatch.actionComplete")}</button>
