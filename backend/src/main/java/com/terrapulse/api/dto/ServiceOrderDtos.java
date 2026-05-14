@@ -12,6 +12,7 @@ public final class ServiceOrderDtos {
 
     public record ServiceOrderDto(
             UUID id,
+            String title,
             UUID vehicleId,
             UUID mechanicId,
             UUID clientId,
@@ -33,6 +34,7 @@ public final class ServiceOrderDtos {
         public static ServiceOrderDto of(ServiceOrder so) {
             return new ServiceOrderDto(
                     so.id,
+                    so.title,
                     so.vehicle.id,
                     so.mechanic != null ? so.mechanic.id : null,
                     so.client != null ? so.client.id : null,
@@ -59,8 +61,11 @@ public final class ServiceOrderDtos {
             UUID clientId,
             String vmrsCode,
             LatLng siteLocation,
-            String notes
+            String notes,
+            String title
     ) {}
+
+    public record TitleUpdateDto(String title) {}
 
     public record DispatchRequest(UUID mechanicId) {}
 

@@ -5,6 +5,7 @@ import com.terrapulse.api.dto.ServiceOrderDtos.DispatchRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.OverrideStateRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderCreateDto;
 import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderDto;
+import com.terrapulse.api.dto.ServiceOrderDtos.TitleUpdateDto;
 import com.terrapulse.domain.client.Client;
 import com.terrapulse.domain.mechanic.Mechanic;
 import com.terrapulse.domain.service.ServiceOrder;
@@ -19,12 +20,14 @@ import com.terrapulse.repository.VehicleRepository;
 import com.terrapulse.repository.VmrsCodeRepository;
 import com.terrapulse.service.EstimationService;
 import com.terrapulse.service.GeometrySupport;
+import com.terrapulse.service.TitleGenerator;
 import com.terrapulse.ws.DispatchEvent;
 import com.terrapulse.ws.DispatchEventBus;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -49,6 +52,7 @@ public class ServiceOrderResource {
     @Inject VmrsCodeRepository vmrsRepo;
     @Inject EstimationService estimation;
     @Inject GeometrySupport geo;
+    @Inject TitleGenerator titleGenerator;
     @Inject DispatchEventBus bus;
 
     @GET
@@ -83,6 +87,16 @@ public class ServiceOrderResource {
         }
         so.siteLocation = geo.point(in.siteLocation().lng(), in.siteLocation().lat());
         so.notes = in.notes();
+        // Title: caller-supplied wins; blank/missing -> auto-generated mnemonic.
+        if (in.title() == null || in.title().isBlank()) {
+            so.title = titleGenerator.generate(v, c);
+        } else {
+            String t = in.title().trim();
+            if (t.length() > 120) {
+                throw new IllegalArgumentException("title must be <= 120 chars");
+            }
+            so.title = t;
+        }
         // Estimation runs at creation so a default is available before QUOTED transition.
         so.estimatedMinutes = estimation.estimateMinutes(c);
         so.state = ServiceOrderState.REQUESTED;
@@ -204,6 +218,33 @@ public class ServiceOrderResource {
         bus.publish(com.terrapulse.ws.DispatchEvent.of(
                 com.terrapulse.ws.DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
         return ServiceOrderDto.of(so);
+    }
+
+    @PATCH
+    @Path("/{id}/title")
+    @Transactional
+    public ServiceOrderDto renameTitle(@PathParam("id") UUID id, TitleUpdateDto in) {
+        if (in == null || in.title() == null || in.title().isBlank()) {
+            throw new IllegalArgumentException("title required");
+        }
+        String t = in.title().trim();
+        if (t.length() > 120) {
+            throw new IllegalArgumentException("title must be <= 120 chars");
+        }
+        ServiceOrder so = load(id);
+        so.title = t;
+        ServiceOrderDto dto = ServiceOrderDto.of(so);
+        // No dedicated SERVICE_ORDER_UPDATED constant exists yet; reuse
+        // SERVICE_ORDER_STATE_CHANGED with titleChanged=true so subscribers can
+        // disambiguate. Payload shape stays additive.
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", so.id);
+        payload.put("fromState", so.state);
+        payload.put("toState", so.state);
+        payload.put("title", so.title);
+        payload.put("titleChanged", true);
+        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
+        return dto;
     }
 
     private ServiceOrder load(UUID id) {

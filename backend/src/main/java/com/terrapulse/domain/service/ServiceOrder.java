@@ -46,6 +46,9 @@ public class ServiceOrder {
     @JoinColumn(name = "vmrs_code", nullable = false)
     public VmrsCode vmrsCode;
 
+    @Column(name = "title", nullable = false, length = 120)
+    public String title;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "state", nullable = false, length = 16)
     public ServiceOrderState state = ServiceOrderState.REQUESTED;
