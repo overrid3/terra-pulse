@@ -26,6 +26,7 @@ export const SERVICE_ORDER_STATES: ServiceOrderState[] = [
 
 export type ServiceOrder = {
   id: UUID;
+  title?: string;
   vehicleId: UUID;
   mechanicId: UUID | null;
   clientId: UUID | null;

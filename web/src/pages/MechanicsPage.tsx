@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { mechanicsApi, MechanicUpsert } from "../api/mechanics";
 import { skillsApi } from "../api/skills";
 import { queryKeys } from "../api/client";
@@ -21,6 +22,7 @@ type Draft = {
 const EMPTY: Draft = { fullName: "", phone: "", skills: [], status: "IDLE", lat: "", lng: "" };
 
 export function MechanicsPage() {
+  const { t } = useTranslation();
   const qc = useQuery({ queryKey: queryKeys.mechanics, queryFn: mechanicsApi.list });
   const skillsQ = useQuery({ queryKey: queryKeys.skills, queryFn: skillsApi.list });
   const catalog = (skillsQ.data ?? []).map((s) => s.name);
@@ -94,43 +96,55 @@ export function MechanicsPage() {
   return (
     <main className={`page-grid ${editing ? "three-row" : "two-col"}`}>
       <section className="panel">
-        <h2>Mechanics ({qc.data?.length ?? 0})</h2>
+        <h2>{t("mechanics.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
         <table className="data-table">
           <thead>
-            <tr><th>Name</th><th>Status</th><th>Skills</th><th>Location</th><th></th></tr>
+            <tr>
+              <th>{t("mechanics.columnName")}</th>
+              <th>{t("mechanics.columnStatus")}</th>
+              <th>{t("mechanics.columnSkills")}</th>
+              <th>{t("mechanics.columnLocation")}</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             {qc.data?.map((m) => (
               <tr key={m.id} className={editing?.id === m.id ? "selected" : ""}>
                 <td>{m.fullName}<div className="muted">{m.phone ?? ""}</div></td>
-                <td><span className={`badge status-${m.status}`}>{m.status}</span></td>
+                <td><span className={`badge status-${m.status}`}>{t(`mechanicStatus.${m.status}`)}</span></td>
                 <td>{m.skills.map((s) => <span key={s} className="chip">{s}</span>)}</td>
-                <td className="mono">{m.location ? `${m.location.lat.toFixed(4)}, ${m.location.lng.toFixed(4)}` : "—"}</td>
+                <td className="mono">{m.location ? `${m.location.lat.toFixed(4)}, ${m.location.lng.toFixed(4)}` : t("common.dash")}</td>
                 <td className="row-actions">
-                  <button onClick={() => loadForEdit(m)}>Edit</button>
-                  <button className="danger" onClick={() => confirm(`Delete ${m.fullName}?`) && deleteMut.mutate(m.id)}>Delete</button>
+                  <button onClick={() => loadForEdit(m)}>{t("common.edit")}</button>
+                  <button className="danger" onClick={() => confirm(t("common.deleteConfirm", { label: m.fullName })) && deleteMut.mutate(m.id)}>{t("common.delete")}</button>
                 </td>
               </tr>
             ))}
-            {qc.data?.length === 0 && <tr><td colSpan={5} className="muted">no mechanics yet</td></tr>}
+            {qc.data?.length === 0 && <tr><td colSpan={5} className="muted">{t("mechanics.noMechanics")}</td></tr>}
           </tbody>
         </table>
       </section>
 
       <section className="panel form-panel">
-        <h2>{editing ? `Edit ${editing.fullName}` : "New mechanic"}</h2>
+        <h2>{editing ? t("mechanics.editMechanic", { name: editing.fullName }) : t("mechanics.newMechanic")}</h2>
         <form onSubmit={submit}>
-          <label>Full name *<input required value={draft.fullName} onChange={(e) => set("fullName", e.target.value)} /></label>
-          <label>Phone<input value={draft.phone} onChange={(e) => set("phone", e.target.value)} /></label>
-          <label>Status
+          <label>{t("mechanics.fieldFullName")} *<input required value={draft.fullName} onChange={(e) => set("fullName", e.target.value)} /></label>
+          <label>{t("mechanics.fieldPhone")}<input value={draft.phone} onChange={(e) => set("phone", e.target.value)} /></label>
+          <label>{t("mechanics.fieldStatus")}
             <select value={draft.status} onChange={(e) => set("status", e.target.value as MechanicStatus)}>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {STATUSES.map((s) => <option key={s} value={s}>{t(`mechanicStatus.${s}`)}</option>)}
             </select>
           </label>
           <div>
-            <label>Skills <span className="muted">(managed under <a href="/skills">/skills</a>)</span></label>
+            <label>
+              {t("mechanics.fieldSkills")}{" "}
+              <span className="muted">
+                {t("mechanics.skillsManagedAt", { link: "" })}
+                <a href="/skills">/skills</a>
+              </span>
+            </label>
             {catalog.length === 0 ? (
-              <p className="muted">no skills in catalog — add some on the Skills page first</p>
+              <p className="muted">{t("mechanics.skillsCatalogEmpty")}</p>
             ) : (
               <div className="checkbox-row">
                 {catalog.map((s) => (
@@ -141,22 +155,22 @@ export function MechanicsPage() {
               </div>
             )}
           </div>
-          <label>Address lookup
+          <label>{t("mechanics.fieldAddressLookup")}
             <AddressLookup
               onPick={(h) => setDraft((d) => ({ ...d, lat: String(h.lat), lng: String(h.lng) }))}
-              placeholder="Search to auto-fill lat/lng"
+              placeholder={t("mechanics.addressPlaceholder")}
             />
           </label>
           <div className="form-row">
-            <label>Latitude<input type="number" step="any" value={draft.lat} onChange={(e) => set("lat", e.target.value)} /></label>
-            <label>Longitude<input type="number" step="any" value={draft.lng} onChange={(e) => set("lng", e.target.value)} /></label>
+            <label>{t("mechanics.fieldLat")}<input type="number" step="any" value={draft.lat} onChange={(e) => set("lat", e.target.value)} /></label>
+            <label>{t("mechanics.fieldLng")}<input type="number" step="any" value={draft.lng} onChange={(e) => set("lng", e.target.value)} /></label>
           </div>
           {error && <p className="error">{error}</p>}
           <div className="form-actions">
             <button type="submit" disabled={createMut.isPending || patchMut.isPending}>
-              {editing ? "Save" : "Create"}
+              {editing ? t("common.save") : t("common.create")}
             </button>
-            {editing && <button type="button" className="ghost" onClick={reset}>Cancel</button>}
+            {editing && <button type="button" className="ghost" onClick={reset}>{t("common.cancel")}</button>}
           </div>
         </form>
       </section>

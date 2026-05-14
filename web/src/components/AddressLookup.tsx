@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { geoApi, GeocodeResult } from "../api/geo";
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
 };
 
 export function AddressLookup({ onPick, placeholder }: Props) {
+  const { t } = useTranslation();
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<GeocodeResult[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,15 +39,15 @@ export function AddressLookup({ onPick, placeholder }: Props) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); search(); } }}
-          placeholder={placeholder ?? "Search address (e.g. Piazza Duomo Milano)"}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(); } }}
+          placeholder={placeholder ?? t("address.placeholderFallback")}
         />
-        <button type="button" onClick={search} disabled={busy || !q.trim()}>
-          {busy ? "…" : "Find"}
+        <button type="button" onClick={() => void search()} disabled={busy || !q.trim()}>
+          {busy ? "…" : t("common.find")}
         </button>
       </div>
       {err && <p className="error">{err}</p>}
-      {hits && hits.length === 0 && <p className="muted">no matches</p>}
+      {hits && hits.length === 0 && <p className="muted">{t("address.noMatches")}</p>}
       {hits && hits.length > 0 && (
         <ul className="address-hits">
           {hits.map((h, i) => (

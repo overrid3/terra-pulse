@@ -1,5 +1,6 @@
 import { Calendar, dateFnsLocalizer, Event as RBCEvent } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay, addMinutes, startOfDay } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { Mechanic, MechanicAbsence, ServiceOrder } from "../types";
 
 const locales = { "en-US": undefined };
@@ -33,6 +34,7 @@ type CalEvent = RBCEvent & {
 export function ResourceTimeline({
   mechanics, orders, absences, selectedMechanicId, onSelectOrder
 }: Props) {
+  const { t } = useTranslation();
   const visible = selectedMechanicId
     ? mechanics.filter((m) => m.id === selectedMechanicId)
     : mechanics;
@@ -53,7 +55,7 @@ export function ResourceTimeline({
       const minutes = o.actualMinutes ?? o.estimatedMinutes;
       const end = addMinutes(start, minutes);
       return {
-        title: `${o.vmrsCode} · ${minutes}m`,
+        title: `${o.title ?? o.vmrsCode} · ${minutes}m`,
         start,
         end,
         resourceId: o.mechanicId!,
@@ -64,7 +66,7 @@ export function ResourceTimeline({
     });
 
   const absenceEvents: CalEvent[] = absences.map((a) => ({
-    title: `${a.type}${a.reason ? ` · ${a.reason}` : ""}`,
+    title: `${t(`absenceType.${a.type}`)}${a.reason ? ` · ${a.reason}` : ""}`,
     start: new Date(a.startAt),
     end: new Date(a.endAt),
     resourceId: a.mechanicId,
@@ -96,32 +98,14 @@ export function ResourceTimeline({
         eventPropGetter={(ev: any) => {
           const e = ev as CalEvent;
           if (e.kind === "absence") {
-            const absenceColors: Record<string, string> = {
-              VACATION: "#94a3b8",
-              SICK: "#fca5a5",
-              TRAINING: "#fcd34d",
-              OTHER: "#cbd5e1"
-            };
             return {
-              style: {
-                backgroundColor: absenceColors[e.absenceType ?? "OTHER"],
-                opacity: 0.55,
-                border: "none",
-                color: "#1e293b",
-                fontStyle: "italic"
-              }
+              className: `rbc-event absence-${e.absenceType ?? "OTHER"}`,
+              style: { opacity: 0.75, border: "none", fontStyle: "italic" }
             };
           }
-          const stateColors: Record<string, string> = {
-            DISPATCHED: "#2563eb",
-            IN_PROGRESS: "#10b981",
-            COMPLETED: "#6b7280"
-          };
           return {
-            style: {
-              backgroundColor: stateColors[e.orderState ?? ""] ?? "#475569",
-              border: "none"
-            }
+            className: `rbc-event state-${e.orderState ?? "DISPATCHED"}`,
+            style: { border: "none" }
           };
         }}
       />

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { ServiceOrder } from "../types";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
 import { DispatchModal } from "./DispatchModal";
+import { fmtTime } from "../i18n/format";
 
 type Props = {
   order: ServiceOrder;
@@ -11,6 +13,7 @@ type Props = {
 };
 
 export function ServiceOrderDrawer({ order, onClose }: Props) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [showDispatch, setShowDispatch] = useState(false);
 
@@ -40,35 +43,36 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
   return (
     <aside className="panel drawer">
       <div className="drawer-header">
-        <h2>Order</h2>
-        <button className="ghost" onClick={onClose}>×</button>
+        <h2>{order.title ?? t("dispatch.orderHeading")}</h2>
+        <button className="ghost" onClick={onClose} aria-label={t("common.close")}>×</button>
       </div>
       <dl>
-        <dt>State</dt><dd><span className={`badge state-${order.state}`}>{order.state}</span></dd>
-        <dt>VMRS</dt><dd>{order.vmrsCode}</dd>
-        <dt>Estimated</dt><dd>{order.estimatedMinutes} min</dd>
-        {order.actualMinutes != null && (<><dt>Actual</dt><dd>{order.actualMinutes} min</dd></>)}
-        <dt>Site</dt><dd>{order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}</dd>
-        {order.mechanicId && (<><dt>Mechanic</dt><dd className="muted">{order.mechanicId.slice(0, 8)}…</dd></>)}
-        {order.dispatchedAt && (<><dt>Dispatched</dt><dd className="muted">{new Date(order.dispatchedAt).toLocaleTimeString()}</dd></>)}
-        {order.startedAt && (<><dt>Started</dt><dd className="muted">{new Date(order.startedAt).toLocaleTimeString()}</dd></>)}
+        <dt>{t("orders.columnState")}</dt><dd><span className={`badge state-${order.state}`}>{t(`state.${order.state}`)}</span></dd>
+        <dt>{t("orders.columnVmrs")}</dt><dd className="mono">{order.vmrsCode}</dd>
+        <dt>{t("orders.fieldEstimated")}</dt><dd>{t("common.minutes", { count: order.estimatedMinutes })}</dd>
+        {order.actualMinutes != null && (<><dt>{t("orders.fieldActual")}</dt><dd>{t("common.minutes", { count: order.actualMinutes })}</dd></>)}
+        <dt>{t("orders.fieldSite")}</dt><dd className="mono">{order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}</dd>
+        {order.mechanicId && (<><dt>{t("orders.fieldMechanic")}</dt><dd className="muted mono">{order.mechanicId.slice(0, 8)}…</dd></>)}
+        {order.dispatchedAt && (<><dt>{t("orders.fieldDispatched")}</dt><dd className="muted">{fmtTime(order.dispatchedAt)}</dd></>)}
+        {order.startedAt && (<><dt>{t("orders.fieldStarted")}</dt><dd className="muted">{fmtTime(order.startedAt)}</dd></>)}
       </dl>
       <div className="actions">
-        {canQuote &&    <button onClick={() => quote.mutate()}    disabled={quote.isPending}>Quote</button>}
-        {canApprove &&  <button onClick={() => approve.mutate()}  disabled={approve.isPending}>Approve</button>}
-        {canDispatch && <button onClick={() => setShowDispatch(true)}>Dispatch…</button>}
-        {canStart &&    <button onClick={() => start.mutate()}    disabled={start.isPending}>Start</button>}
+        {canQuote &&    <button onClick={() => quote.mutate()}    disabled={quote.isPending}>{t("dispatch.actionQuote")}</button>}
+        {canApprove &&  <button onClick={() => approve.mutate()}  disabled={approve.isPending}>{t("dispatch.actionApprove")}</button>}
+        {canDispatch && <button onClick={() => setShowDispatch(true)}>{t("dispatch.actionDispatchEllipsis")}</button>}
+        {canStart &&    <button onClick={() => start.mutate()}    disabled={start.isPending}>{t("dispatch.actionStart")}</button>}
         {canComplete && (
           <span className="complete-row">
             <input
               type="number" min={1} value={actualMin}
               onChange={(e) => setActualMin(Number(e.target.value))}
               style={{ width: 80 }}
+              aria-label={t("orders.fieldActual")}
             />
-            <button onClick={() => complete.mutate(actualMin)} disabled={complete.isPending}>Complete</button>
+            <button onClick={() => complete.mutate(actualMin)} disabled={complete.isPending}>{t("dispatch.actionComplete")}</button>
           </span>
         )}
-        {canCancel && <button className="danger" onClick={() => cancel.mutate()} disabled={cancel.isPending}>Cancel</button>}
+        {canCancel && <button className="danger" onClick={() => cancel.mutate()} disabled={cancel.isPending}>{t("common.cancel")}</button>}
       </div>
       {showDispatch && (
         <DispatchModal order={order} onClose={() => setShowDispatch(false)} />

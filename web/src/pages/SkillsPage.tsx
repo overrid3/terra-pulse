@@ -1,10 +1,13 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { skillsApi } from "../api/skills";
 import { queryKeys } from "../api/client";
 import { Skill } from "../types";
+import { fmtDateTime } from "../i18n/format";
 
 export function SkillsPage() {
+  const { t } = useTranslation();
   const qc = useQuery({ queryKey: queryKeys.skills, queryFn: skillsApi.list });
   const [editing, setEditing] = useState<Skill | null>(null);
   const [name, setName] = useState("");
@@ -48,40 +51,38 @@ export function SkillsPage() {
   return (
     <main className="page-grid two-col">
       <section className="panel">
-        <h2>Skills ({qc.data?.length ?? 0})</h2>
-        <p className="muted">
-          Skills are referenced by mechanics. Deleting a skill removes it from every mechanic that has it.
-        </p>
+        <h2>{t("skills.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
+        <p className="muted">{t("skills.help")}</p>
         <table className="data-table">
-          <thead><tr><th>Name</th><th>Created</th><th></th></tr></thead>
+          <thead><tr><th>{t("skills.columnName")}</th><th>{t("skills.columnCreated")}</th><th></th></tr></thead>
           <tbody>
             {qc.data?.map((s) => (
               <tr key={s.id} className={editing?.id === s.id ? "selected" : ""}>
                 <td>{s.name}</td>
-                <td className="muted">{s.createdAt ? new Date(s.createdAt).toLocaleString() : "—"}</td>
+                <td className="muted">{s.createdAt ? fmtDateTime(s.createdAt) : t("common.dash")}</td>
                 <td className="row-actions">
-                  <button onClick={() => loadForEdit(s)}>Rename</button>
-                  <button className="danger" onClick={() => confirm(`Delete skill "${s.name}"?`) && deleteMut.mutate(s.id)}>Delete</button>
+                  <button onClick={() => loadForEdit(s)}>{t("common.rename")}</button>
+                  <button className="danger" onClick={() => confirm(t("common.deleteConfirm", { label: s.name })) && deleteMut.mutate(s.id)}>{t("common.delete")}</button>
                 </td>
               </tr>
             ))}
-            {qc.data?.length === 0 && <tr><td colSpan={3} className="muted">no skills yet</td></tr>}
+            {qc.data?.length === 0 && <tr><td colSpan={3} className="muted">{t("skills.noSkills")}</td></tr>}
           </tbody>
         </table>
       </section>
 
       <section className="panel form-panel">
-        <h2>{editing ? `Rename ${editing.name}` : "New skill"}</h2>
+        <h2>{editing ? t("skills.renameSkill", { name: editing.name }) : t("skills.newSkill")}</h2>
         <form onSubmit={submit}>
-          <label>Name *
-            <input required maxLength={64} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. HYDRAULICS" />
+          <label>{t("skills.fieldName")} *
+            <input required maxLength={64} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("skills.namePlaceholder")} />
           </label>
           {error && <p className="error">{error}</p>}
           <div className="form-actions">
             <button type="submit" disabled={createMut.isPending || renameMut.isPending}>
-              {editing ? "Save" : "Create"}
+              {editing ? t("common.save") : t("common.create")}
             </button>
-            {editing && <button type="button" className="ghost" onClick={reset}>Cancel</button>}
+            {editing && <button type="button" className="ghost" onClick={reset}>{t("common.cancel")}</button>}
           </div>
         </form>
       </section>

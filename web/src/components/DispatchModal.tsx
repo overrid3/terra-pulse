@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { mechanicsApi } from "../api/mechanics";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function DispatchModal({ order, onClose }: Props) {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const { data: nearest, isLoading } = useQuery({
     queryKey: ["nearest", order.id],
@@ -29,28 +31,28 @@ export function DispatchModal({ order, onClose }: Props) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Dispatch order {order.vmrsCode}</h3>
+        <h3>{t("dispatch.dispatchHeading", { title: order.title ?? order.vmrsCode })}</h3>
         <p className="muted">
-          Site: {order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}
+          {t("dispatch.siteLabel")}: {order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}
         </p>
-        {isLoading && <p>Loading nearest mechanics…</p>}
+        {isLoading && <p>{t("dispatch.loadingNearest")}</p>}
         <ul className="nearest-list">
           {nearest?.map((m, idx) => (
             <li key={m.id}>
               <div>
                 <strong>{idx + 1}. {m.fullName}</strong>
-                <div className="muted">{m.status} · {m.skills.join(", ")}</div>
+                <div className="muted">{t(`mechanicStatus.${m.status}`)} · {m.skills.join(", ")}</div>
               </div>
               <button
                 disabled={dispatchMut.isPending || m.status === "OFF_DUTY"}
                 onClick={() => dispatchMut.mutate(m.id)}
               >
-                Dispatch
+                {t("dispatch.actionDispatch")}
               </button>
             </li>
           ))}
         </ul>
-        <button className="ghost" onClick={onClose}>Cancel</button>
+        <button className="ghost" onClick={onClose}>{t("common.cancel")}</button>
       </div>
     </div>
   );

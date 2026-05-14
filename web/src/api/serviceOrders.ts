@@ -13,6 +13,8 @@ export const serviceOrdersApi = {
   cancel:   (id: UUID)                               => api.post<ServiceOrder>(`/service-orders/${id}/cancel`),
   override: (id: UUID, state: "CANCELLED" | "REQUESTED", reason: string) =>
     api.post<ServiceOrder>(`/service-orders/${id}/override-state`, { state, reason }),
-  create:   (body: { vehicleId: UUID; clientId: UUID; vmrsCode: string; siteLocation: { lat: number; lng: number }; notes?: string }) =>
+  renameTitle: (id: UUID, title: string) =>
+    api.patch<ServiceOrder>(`/service-orders/${id}/title`, { title }),
+  create:   (body: { vehicleId: UUID; clientId: UUID; vmrsCode: string; title?: string; siteLocation: { lat: number; lng: number }; notes?: string }) =>
     api.post<ServiceOrder>("/service-orders", body)
 };

@@ -1,11 +1,13 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { vehiclesApi } from "../api/vehicles";
 import { clientsApi } from "../api/clients";
 import { queryKeys } from "../api/client";
 import { ServiceOrder, ServiceOrderState, SERVICE_ORDER_STATES } from "../types";
 import { AddressLookup } from "../components/AddressLookup";
+import { fmtDateTime } from "../i18n/format";
 
 const VMRS_OPTIONS = [
   { code: "013001001", label: "Engine oil + filter (60m)" },
@@ -21,6 +23,7 @@ const VMRS_OPTIONS = [
 const CLOSED = new Set<ServiceOrderState>(["COMPLETED", "CANCELLED"]);
 
 export function OrdersPage() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const ordersQ   = useQuery({ queryKey: queryKeys.serviceOrders, queryFn: serviceOrdersApi.list });
   const vehiclesQ = useQuery({ queryKey: queryKeys.vehicles,      queryFn: vehiclesApi.list });
@@ -49,40 +52,57 @@ export function OrdersPage() {
       serviceOrdersApi.override(args.id, args.state, args.reason),
     onSuccess: invalidate
   });
+  const renameMut = useMutation({
+    mutationFn: (args: { id: string; title: string }) => serviceOrdersApi.renameTitle(args.id, args.title),
+    onSuccess: (updated) => {
+      invalidate();
+      setSelected(updated);
+    }
+  });
 
   return (
     <main className="page-grid two-col">
       <section className="panel">
         <div className="filters">
-          <h2>Service orders</h2>
-          <label><input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} /> show closed</label>
-          <label>State
+          <h2>{t("orders.pageTitle")}</h2>
+          <label><input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} /> {t("orders.showClosed")}</label>
+          <label>{t("orders.filterState")}
             <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value as any)}>
-              <option value="ALL">all</option>
-              {SERVICE_ORDER_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+              <option value="ALL">{t("common.all")}</option>
+              {SERVICE_ORDER_STATES.map((s) => <option key={s} value={s}>{t(`state.${s}`)}</option>)}
             </select>
           </label>
-          <span className="muted">{orders.length} rows</span>
+          <span className="muted">{t("common.rows", { count: orders.length })}</span>
         </div>
         <table className="data-table">
           <thead>
-            <tr><th>State</th><th>VMRS</th><th>Client</th><th>Est.</th><th>Actual</th><th>Requested</th><th></th></tr>
+            <tr>
+              <th>{t("orders.columnState")}</th>
+              <th>{t("orders.columnTitle")}</th>
+              <th>{t("orders.columnVmrs")}</th>
+              <th>{t("orders.columnClient")}</th>
+              <th>{t("orders.columnEstimated")}</th>
+              <th>{t("orders.columnActual")}</th>
+              <th>{t("orders.columnRequested")}</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             {orders.map((o) => (
               <tr key={o.id} className={selected?.id === o.id ? "selected" : ""} onClick={() => setSelected(o)}>
-                <td><span className={`badge state-${o.state}`}>{o.state}</span></td>
+                <td><span className={`badge state-${o.state}`}>{t(`state.${o.state}`)}</span></td>
+                <td>{o.title ?? <span className="muted">{t("common.dash")}</span>}</td>
                 <td className="mono">{o.vmrsCode}</td>
-                <td>{o.clientName ?? <span className="muted">—</span>}</td>
-                <td>{o.estimatedMinutes}m</td>
-                <td>{o.actualMinutes ?? "—"}</td>
-                <td className="muted">{new Date(o.requestedAt).toLocaleString()}</td>
+                <td>{o.clientName ?? <span className="muted">{t("common.dash")}</span>}</td>
+                <td>{t("common.minutesShort", { count: o.estimatedMinutes })}</td>
+                <td>{o.actualMinutes ?? t("common.dash")}</td>
+                <td className="muted">{fmtDateTime(o.requestedAt)}</td>
                 <td className="row-actions">
-                  <button onClick={(e) => { e.stopPropagation(); setSelected(o); }}>Inspect</button>
+                  <button onClick={(e) => { e.stopPropagation(); setSelected(o); }}>{t("common.inspect")}</button>
                 </td>
               </tr>
             ))}
-            {orders.length === 0 && <tr><td colSpan={7} className="muted">no orders match</td></tr>}
+            {orders.length === 0 && <tr><td colSpan={8} className="muted">{t("orders.noOrders")}</td></tr>}
           </tbody>
         </table>
       </section>
@@ -94,6 +114,8 @@ export function OrdersPage() {
             onClose={() => setSelected(null)}
             onOverride={(state, reason) => overrideMut.mutate({ id: selected.id, state, reason })}
             overriding={overrideMut.isPending}
+            onRename={(title) => renameMut.mutate({ id: selected.id, title })}
+            renaming={renameMut.isPending}
           />
         ) : (
           <NewOrderForm
@@ -109,52 +131,88 @@ export function OrdersPage() {
 }
 
 function OrderDetail({
-  order, onClose, onOverride, overriding
+  order, onClose, onOverride, overriding, onRename, renaming
 }: {
   order: ServiceOrder;
   onClose: () => void;
   onOverride: (state: "CANCELLED" | "REQUESTED", reason: string) => void;
   overriding: boolean;
+  onRename: (title: string) => void;
+  renaming: boolean;
 }) {
+  const { t } = useTranslation();
   const [overrideState, setOverrideState] = useState<"CANCELLED" | "REQUESTED">("CANCELLED");
   const [reason, setReason] = useState("");
+  const [titleDraft, setTitleDraft] = useState<string | null>(null);
+  const [titleErr, setTitleErr] = useState<string | null>(null);
+
+  const editingTitle = titleDraft !== null;
+
+  function commitTitle() {
+    if (titleDraft === null) return;
+    const trimmed = titleDraft.trim();
+    if (!trimmed) { setTitleErr(t("errors.titleRequired")); return; }
+    if (trimmed.length > 120) { setTitleErr(t("errors.titleTooLong")); return; }
+    setTitleErr(null);
+    onRename(trimmed);
+    setTitleDraft(null);
+  }
+
   return (
     <div>
       <div className="drawer-header">
-        <h2>Order detail</h2>
-        <button className="ghost" onClick={onClose}>×</button>
+        <h2>{t("orders.orderDetail")}</h2>
+        <button className="ghost" onClick={onClose} aria-label={t("common.close")}>×</button>
       </div>
       <dl>
-        <dt>State</dt><dd><span className={`badge state-${order.state}`}>{order.state}</span></dd>
-        <dt>VMRS</dt><dd className="mono">{order.vmrsCode}</dd>
-        <dt>Client</dt><dd>{order.clientName ?? "—"}</dd>
-        <dt>Estimated</dt><dd>{order.estimatedMinutes} min</dd>
-        {order.actualMinutes != null && (<><dt>Actual</dt><dd>{order.actualMinutes} min</dd></>)}
-        <dt>Site</dt><dd className="mono">{order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}</dd>
-        <dt>Mechanic</dt><dd className="muted">{order.mechanicId ? order.mechanicId.slice(0, 8) + "…" : "—"}</dd>
-        <dt>Requested</dt><dd className="muted">{new Date(order.requestedAt).toLocaleString()}</dd>
-        {order.completedAt && <><dt>Completed</dt><dd className="muted">{new Date(order.completedAt).toLocaleString()}</dd></>}
-        {order.notes && <><dt>Notes</dt><dd><pre className="notes">{order.notes}</pre></dd></>}
+        <dt>{t("orders.columnTitle")}</dt>
+        <dd>
+          {editingTitle ? (
+            <span className="complete-row">
+              <input
+                value={titleDraft ?? ""}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                maxLength={120}
+                autoFocus
+              />
+              <button onClick={commitTitle} disabled={renaming}>{t("orders.actionTitleSave")}</button>
+              <button className="ghost" onClick={() => { setTitleDraft(null); setTitleErr(null); }}>{t("common.cancel")}</button>
+            </span>
+          ) : (
+            <span className="title-row">
+              <span>{order.title ?? t("common.dash")}</span>
+              <button className="ghost" onClick={() => setTitleDraft(order.title ?? "")} aria-label={t("orders.actionTitleEdit")}>✎</button>
+            </span>
+          )}
+          {titleErr && <p className="error">{titleErr}</p>}
+        </dd>
+        <dt>{t("orders.columnState")}</dt><dd><span className={`badge state-${order.state}`}>{t(`state.${order.state}`)}</span></dd>
+        <dt>{t("orders.columnVmrs")}</dt><dd className="mono">{order.vmrsCode}</dd>
+        <dt>{t("orders.fieldClient")}</dt><dd>{order.clientName ?? t("common.dash")}</dd>
+        <dt>{t("orders.fieldEstimated")}</dt><dd>{t("common.minutes", { count: order.estimatedMinutes })}</dd>
+        {order.actualMinutes != null && (<><dt>{t("orders.fieldActual")}</dt><dd>{t("common.minutes", { count: order.actualMinutes })}</dd></>)}
+        <dt>{t("orders.fieldSite")}</dt><dd className="mono">{order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}</dd>
+        <dt>{t("orders.fieldMechanic")}</dt><dd className="muted mono">{order.mechanicId ? order.mechanicId.slice(0, 8) + "…" : t("common.dash")}</dd>
+        <dt>{t("orders.fieldRequested")}</dt><dd className="muted">{fmtDateTime(order.requestedAt)}</dd>
+        {order.completedAt && <><dt>{t("orders.fieldCompleted")}</dt><dd className="muted">{fmtDateTime(order.completedAt)}</dd></>}
+        {order.notes && <><dt>{t("orders.fieldNotesHistory")}</dt><dd><pre className="notes">{order.notes}</pre></dd></>}
       </dl>
 
-      <h3 style={{ marginTop: 18 }}>Override state</h3>
-      <p className="muted">
-        Admin override bypasses the normal workflow. Only <code>CANCELLED</code> and <code>REQUESTED</code> are allowed.
-        Reopening to <code>REQUESTED</code> clears the assigned mechanic and lifecycle timestamps.
-      </p>
+      <h3 style={{ marginTop: 18 }}>{t("orders.overrideHeading")}</h3>
+      <p className="muted">{t("orders.overrideHelp")}</p>
       <div className="form-row">
-        <label>Target
+        <label>{t("orders.overrideTarget")}
           <select value={overrideState} onChange={(e) => setOverrideState(e.target.value as any)}>
-            <option value="CANCELLED">CANCELLED</option>
-            <option value="REQUESTED">REQUESTED (reopen)</option>
+            <option value="CANCELLED">{t("orders.overrideCancelled")}</option>
+            <option value="REQUESTED">{t("orders.overrideReopen")}</option>
           </select>
         </label>
-        <label>Reason
-          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why?" />
+        <label>{t("orders.overrideReason")}
+          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("orders.overrideReasonPlaceholder")} />
         </label>
       </div>
       <button className="danger" disabled={overriding} onClick={() => onOverride(overrideState, reason)}>
-        Apply override
+        {t("orders.overrideApply")}
       </button>
     </div>
   );
@@ -165,12 +223,14 @@ function NewOrderForm({
 }: {
   vehicles: { id: string; make: string; model: string; serialNumber: string }[];
   clients: { id: string; name: string }[];
-  onSubmit: (body: { vehicleId: string; clientId: string; vmrsCode: string; siteLocation: { lat: number; lng: number }; notes?: string }) => void;
+  onSubmit: (body: { vehicleId: string; clientId: string; vmrsCode: string; title?: string; siteLocation: { lat: number; lng: number }; notes?: string }) => void;
   submitting: boolean;
 }) {
+  const { t } = useTranslation();
   const [vehicleId, setVehicleId] = useState("");
   const [clientId,  setClientId]  = useState("");
   const [vmrsCode,  setVmrsCode]  = useState(VMRS_OPTIONS[0].code);
+  const [title,     setTitle]     = useState("");
   const [lat, setLat] = useState("45.46");
   const [lng, setLng] = useState("9.19");
   const [notes, setNotes] = useState("");
@@ -179,6 +239,7 @@ function NewOrderForm({
     e.preventDefault();
     onSubmit({
       vehicleId, clientId, vmrsCode,
+      title: title.trim() || undefined,
       siteLocation: { lat: Number(lat), lng: Number(lng) },
       notes: notes || undefined
     });
@@ -186,38 +247,45 @@ function NewOrderForm({
 
   return (
     <>
-      <h2>New order</h2>
+      <h2>{t("orders.newOrder")}</h2>
       <form onSubmit={submit}>
-        <label>Vehicle *
+        <label>{t("orders.fieldVehicle")} *
           <select required value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
-            <option value="">— pick —</option>
-            {vehicles.map((v) => <option key={v.id} value={v.id}>{v.make} {v.model} · {v.serialNumber}</option>)}
+            <option value="">{t("orders.selectPlaceholder")}</option>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {t("orders.vehicleOption", { make: v.make, model: v.model, serial: v.serialNumber })}
+              </option>
+            ))}
           </select>
         </label>
-        <label>Client *
+        <label>{t("orders.fieldClient")} *
           <select required value={clientId} onChange={(e) => setClientId(e.target.value)}>
-            <option value="">— pick —</option>
+            <option value="">{t("orders.selectPlaceholder")}</option>
             {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
-        <label>VMRS task
+        <label>{t("orders.fieldVmrs")}
           <select value={vmrsCode} onChange={(e) => setVmrsCode(e.target.value)}>
             {VMRS_OPTIONS.map((v) => <option key={v.code} value={v.code}>{v.label}</option>)}
           </select>
         </label>
-        <label>Site address lookup
+        <label>{t("orders.fieldTitle")}
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
+        </label>
+        <label>{t("orders.fieldAddressLookup")}
           <AddressLookup
             onPick={(h) => { setLat(String(h.lat)); setLng(String(h.lng)); }}
-            placeholder="Search site address to auto-fill lat/lng"
+            placeholder={t("orders.addressPlaceholder")}
           />
         </label>
         <div className="form-row">
-          <label>Site lat *<input required type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} /></label>
-          <label>Site lng *<input required type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} /></label>
+          <label>{t("orders.fieldLat")} *<input required type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} /></label>
+          <label>{t("orders.fieldLng")} *<input required type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} /></label>
         </div>
-        <label>Notes<textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
+        <label>{t("orders.fieldNotes")}<textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
         <div className="form-actions">
-          <button type="submit" disabled={submitting || !vehicleId || !clientId}>Create order</button>
+          <button type="submit" disabled={submitting || !vehicleId || !clientId}>{t("orders.newOrder")}</button>
         </div>
       </form>
     </>

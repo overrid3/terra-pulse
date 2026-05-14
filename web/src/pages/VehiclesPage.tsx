@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { vehiclesApi } from "../api/vehicles";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
@@ -8,6 +9,7 @@ import {
   VEHICLE_CLASSES, VEHICLE_STATUSES,
   ServiceOrder, UUID
 } from "../types";
+import { fmtDateTime } from "../i18n/format";
 
 const EMPTY: VehicleUpsert = {
   make: "", model: "", serialNumber: "",
@@ -20,6 +22,7 @@ type PanelMode =
   | { kind: "history"; vehicle: Vehicle };
 
 export function VehiclesPage() {
+  const { t } = useTranslation();
   const qc = useQuery({ queryKey: queryKeys.vehicles, queryFn: vehiclesApi.list });
   const [mode, setMode] = useState<PanelMode>({ kind: "create" });
   const [draft, setDraft] = useState<VehicleUpsert>(EMPTY);
@@ -79,12 +82,16 @@ export function VehiclesPage() {
   return (
     <main className="page-grid two-col">
       <section className="panel">
-        <h2>Vehicles ({qc.data?.length ?? 0})</h2>
+        <h2>{t("vehicles.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
         <table className="data-table">
           <thead>
             <tr>
-              <th>Make / Model</th><th>Serial</th><th>Class</th>
-              <th>Hours</th><th>Status</th><th></th>
+              <th>{t("vehicles.columnMakeModel")}</th>
+              <th>{t("vehicles.columnSerial")}</th>
+              <th>{t("vehicles.columnClass")}</th>
+              <th>{t("vehicles.columnHours")}</th>
+              <th>{t("vehicles.columnStatus")}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -92,17 +99,17 @@ export function VehiclesPage() {
               <tr key={v.id} className={selectedId === v.id ? "selected" : ""}>
                 <td>{v.make} {v.model}</td>
                 <td className="mono">{v.serialNumber}</td>
-                <td>{v.vehicleClass}</td>
+                <td>{t(`vehicleClass.${v.vehicleClass}`)}</td>
                 <td className="mono">{Number(v.engineHours).toFixed(1)}</td>
-                <td><span className={`badge status-${v.status}`}>{v.status}</span></td>
+                <td><span className={`badge status-${v.status}`}>{t(`vehicleStatus.${v.status}`)}</span></td>
                 <td className="row-actions">
-                  <button onClick={() => loadForEdit(v)}>Edit</button>
-                  <button onClick={() => loadHistory(v)}>History</button>
-                  <button className="danger" onClick={() => confirm(`Delete ${v.make} ${v.model}?`) && deleteMut.mutate(v.id)}>Delete</button>
+                  <button onClick={() => loadForEdit(v)}>{t("common.edit")}</button>
+                  <button onClick={() => loadHistory(v)}>{t("common.history")}</button>
+                  <button className="danger" onClick={() => confirm(t("common.deleteConfirm", { label: `${v.make} ${v.model}` })) && deleteMut.mutate(v.id)}>{t("common.delete")}</button>
                 </td>
               </tr>
             ))}
-            {qc.data?.length === 0 && <tr><td colSpan={6} className="muted">no vehicles yet</td></tr>}
+            {qc.data?.length === 0 && <tr><td colSpan={6} className="muted">{t("vehicles.noVehicles")}</td></tr>}
           </tbody>
         </table>
       </section>
@@ -112,35 +119,35 @@ export function VehiclesPage() {
           <VehicleHistory vehicle={mode.vehicle} onClose={reset} />
         ) : (
           <>
-            <h2>{mode.kind === "edit" ? `Edit ${mode.vehicle.make} ${mode.vehicle.model}` : "New vehicle"}</h2>
+            <h2>{mode.kind === "edit" ? t("vehicles.editVehicle", { make: mode.vehicle.make, model: mode.vehicle.model }) : t("vehicles.newVehicle")}</h2>
             <form onSubmit={submit}>
               <div className="form-row">
-                <label>Make *<input required value={draft.make} onChange={(e) => set("make", e.target.value)} /></label>
-                <label>Model *<input required value={draft.model} onChange={(e) => set("model", e.target.value)} /></label>
+                <label>{t("vehicles.fieldMake")} *<input required value={draft.make} onChange={(e) => set("make", e.target.value)} /></label>
+                <label>{t("vehicles.fieldModel")} *<input required value={draft.model} onChange={(e) => set("model", e.target.value)} /></label>
               </div>
-              <label>Serial number *<input required value={draft.serialNumber} onChange={(e) => set("serialNumber", e.target.value)} /></label>
+              <label>{t("vehicles.fieldSerial")} *<input required value={draft.serialNumber} onChange={(e) => set("serialNumber", e.target.value)} /></label>
               <div className="form-row">
-                <label>Class
+                <label>{t("vehicles.fieldClass")}
                   <select value={draft.vehicleClass} onChange={(e) => set("vehicleClass", e.target.value as VehicleUpsert["vehicleClass"])}>
-                    {VEHICLE_CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {VEHICLE_CLASSES.map((c) => <option key={c} value={c}>{t(`vehicleClass.${c}`)}</option>)}
                   </select>
                 </label>
-                <label>Engine hours
+                <label>{t("vehicles.fieldHours")}
                   <input type="number" step="0.1" min="0" value={draft.engineHours}
                          onChange={(e) => set("engineHours", Number(e.target.value))} />
                 </label>
               </div>
-              <label>Status
+              <label>{t("vehicles.fieldStatus")}
                 <select value={draft.status} onChange={(e) => set("status", e.target.value as VehicleUpsert["status"])}>
-                  {VEHICLE_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {VEHICLE_STATUSES.map((s) => <option key={s} value={s}>{t(`vehicleStatus.${s}`)}</option>)}
                 </select>
               </label>
               {error && <p className="error">{error}</p>}
               <div className="form-actions">
                 <button type="submit" disabled={createMut.isPending || updateMut.isPending}>
-                  {mode.kind === "edit" ? "Save" : "Create"}
+                  {mode.kind === "edit" ? t("common.save") : t("common.create")}
                 </button>
-                {mode.kind === "edit" && <button type="button" className="ghost" onClick={reset}>Cancel</button>}
+                {mode.kind === "edit" && <button type="button" className="ghost" onClick={reset}>{t("common.cancel")}</button>}
               </div>
             </form>
           </>
@@ -151,6 +158,7 @@ export function VehiclesPage() {
 }
 
 function VehicleHistory({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => void }) {
+  const { t } = useTranslation();
   const q = useQuery({
     queryKey: ["serviceOrders", "byVehicle", vehicle.id] as const,
     queryFn: () => serviceOrdersApi.listByVehicle(vehicle.id as UUID)
@@ -166,27 +174,24 @@ function VehicleHistory({ vehicle, onClose }: { vehicle: Vehicle; onClose: () =>
   return (
     <div>
       <div className="drawer-header">
-        <h2>History · {vehicle.make} {vehicle.model}</h2>
-        <button className="ghost" onClick={onClose}>×</button>
+        <h2>{t("vehicles.historyTitle", { make: vehicle.make, model: vehicle.model })}</h2>
+        <button className="ghost" onClick={onClose} aria-label={t("common.close")}>×</button>
       </div>
-      <p className="muted">
-        Issues for this vehicle. Each row is a service order tied to a VMRS code.
-        Open = workflow in progress. Closed = COMPLETED or CANCELLED.
-      </p>
+      <p className="muted">{t("vehicles.historyHelp")}</p>
 
-      {q.isLoading && <p className="muted">loading…</p>}
+      {q.isLoading && <p className="muted">{t("common.loading")}</p>}
       {q.error && <p className="error">{(q.error as Error).message}</p>}
-      {!q.isLoading && orders.length === 0 && <p className="muted">no issues recorded</p>}
+      {!q.isLoading && orders.length === 0 && <p className="muted">{t("vehicles.noIssues")}</p>}
 
       {open.length > 0 && (
         <>
-          <h3 style={{ marginTop: 14 }}>Open ({open.length})</h3>
+          <h3 style={{ marginTop: 14 }}>{t("vehicles.openSection", { count: open.length })}</h3>
           <HistoryList orders={open} />
         </>
       )}
       {closed.length > 0 && (
         <>
-          <h3 style={{ marginTop: 14 }}>Closed ({closed.length})</h3>
+          <h3 style={{ marginTop: 14 }}>{t("vehicles.closedSection", { count: closed.length })}</h3>
           <HistoryList orders={closed} />
         </>
       )}
@@ -195,19 +200,23 @@ function VehicleHistory({ vehicle, onClose }: { vehicle: Vehicle; onClose: () =>
 }
 
 function HistoryList({ orders }: { orders: ServiceOrder[] }) {
+  const { t } = useTranslation();
   return (
     <ul className="history-list">
       {orders.map((o) => (
         <li key={o.id}>
           <div className="history-row">
-            <span className={`badge state-${o.state}`}>{o.state}</span>
+            <span className={`badge state-${o.state}`}>{t(`state.${o.state}`)}</span>
             <span className="mono">{o.vmrsCode}</span>
-            <span className="history-desc">{o.vmrsDescription ?? ""}</span>
+            <span className="history-desc">{o.title ?? o.vmrsDescription ?? ""}</span>
           </div>
           <div className="history-meta muted">
-            requested {new Date(o.requestedAt).toLocaleString()} ·
-            est {o.estimatedMinutes}m{o.actualMinutes != null ? ` · actual ${o.actualMinutes}m` : ""}
-            {o.completedAt && ` · completed ${new Date(o.completedAt).toLocaleString()}`}
+            {t("vehicles.historyMeta", {
+              requested: fmtDateTime(o.requestedAt),
+              estimated: o.estimatedMinutes,
+              actualLine: o.actualMinutes != null ? t("vehicles.historyActualSuffix", { actual: o.actualMinutes }) : "",
+              completedLine: o.completedAt ? t("vehicles.historyCompletedSuffix", { completed: fmtDateTime(o.completedAt) }) : ""
+            })}
           </div>
           {o.notes && <pre className="notes">{o.notes}</pre>}
         </li>

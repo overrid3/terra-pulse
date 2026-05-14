@@ -1,10 +1,11 @@
+import { useTranslation } from "react-i18next";
 import { Mechanic, MechanicStatus } from "../types";
 
 const STATUS_COLOR: Record<MechanicStatus, string> = {
-  IDLE: "#3b82f6",
-  EN_ROUTE: "#f59e0b",
-  IN_PROGRESS: "#10b981",
-  OFF_DUTY: "#6b7280"
+  IDLE: "var(--color-state-info-fg, #3b82f6)",
+  EN_ROUTE: "var(--color-state-warn-fg, #f59e0b)",
+  IN_PROGRESS: "var(--color-state-success-fg, #10b981)",
+  OFF_DUTY: "var(--color-state-neutral-fg, #6b7280)"
 };
 
 type Props = {
@@ -14,9 +15,10 @@ type Props = {
 };
 
 export function MechanicList({ mechanics, selectedId, onSelect }: Props) {
+  const { t } = useTranslation();
   return (
     <aside className="panel mechanic-list">
-      <h2>Mechanics ({mechanics.length})</h2>
+      <h2>{t("dispatch.mechanicsTitle", { count: mechanics.length })}</h2>
       <ul>
         {mechanics.map((m) => {
           const isSel = m.id === selectedId;
@@ -30,7 +32,7 @@ export function MechanicList({ mechanics, selectedId, onSelect }: Props) {
               <div className="m-info">
                 <div className="m-name">{m.fullName}</div>
                 <div className="m-meta">
-                  <span>{m.status}</span>
+                  <span>{t(`mechanicStatus.${m.status}`)}</span>
                   {m.location && (
                     <span className="muted">
                       {m.location.lat.toFixed(3)}, {m.location.lng.toFixed(3)}
