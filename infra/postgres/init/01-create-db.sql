@@ -1,0 +1,3 @@
+-- Postgres init script. Database `terrapulse` is created by the postgres image
+-- via POSTGRES_DB env var. PostGIS extension is enabled by Flyway V1 migration
+-- (kept there to keep schema evolution single-sourced).
