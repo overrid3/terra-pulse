@@ -198,7 +198,9 @@
     "fieldStart": "Inizio",
     "fieldEnd": "Fine",
     "calendarHint": "Seleziona l'intervallo trascinando sul calendario. Affina sotto se necessario.",
-    "softWarnPast": "Inizio molto nel passato. Verifica."
+    "softWarnPast": "Inizio molto nel passato. Verifica.",
+    "viewMonth": "Mese",
+    "viewWeek": "Settimana"
   },
   "address": {
     "placeholderFallback": "Cerca un indirizzo (es. Piazza Duomo Milano)",

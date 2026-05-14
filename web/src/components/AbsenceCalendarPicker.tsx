@@ -15,12 +15,14 @@ import {
   startOfDay,
   differenceInCalendarDays
 } from "date-fns";
+import { useTranslation } from "react-i18next";
 import {
   AbsenceType,
   ABSENCE_TYPES,
   MechanicAbsence,
   UUID
 } from "../types";
+import { fmtDateTime } from "../i18n/format";
 
 const locales = { "en-US": undefined };
 const localizer = dateFnsLocalizer({
@@ -31,7 +33,7 @@ const localizer = dateFnsLocalizer({
   locales: locales as any
 });
 
-type Draft = {
+export type AbsenceDraft = {
   startAt: string;
   endAt: string;
   type: AbsenceType;
@@ -40,12 +42,11 @@ type Draft = {
 
 type Props = {
   mechanicId: UUID;
-  mechanicName: string;
   existing: MechanicAbsence[];
-  initialDraft?: Partial<Draft> | null;
+  initialDraft?: Partial<AbsenceDraft> | null;
   editingId?: UUID | null;
   submitting?: boolean;
-  onSubmit: (draft: Draft) => void;
+  onSubmit: (draft: AbsenceDraft) => void;
   onCancel: () => void;
 };
 
@@ -69,7 +70,6 @@ function isoLocalToInstant(s: string): string {
 
 export function AbsenceCalendarPicker({
   mechanicId,
-  mechanicName,
   existing,
   initialDraft,
   editingId,
@@ -77,6 +77,7 @@ export function AbsenceCalendarPicker({
   onSubmit,
   onCancel
 }: Props) {
+  const { t } = useTranslation();
   const [view, setView] = useState<View>("month");
   const [start, setStart] = useState<string>(instantToIsoLocal(initialDraft?.startAt ?? ""));
   const [end, setEnd] = useState<string>(instantToIsoLocal(initialDraft?.endAt ?? ""));
@@ -100,21 +101,19 @@ export function AbsenceCalendarPicker({
       existing
         .filter((a) => a.mechanicId === mechanicId)
         .map((a) => ({
-          title: `${a.type}${a.reason ? ` · ${a.reason}` : ""}`,
+          title: `${t(`absenceType.${a.type}`)}${a.reason ? ` · ${a.reason}` : ""}`,
           start: new Date(a.startAt),
           end: new Date(a.endAt),
           absenceId: a.id,
           absenceType: a.type,
           editing: editingId != null && a.id === editingId
         })),
-    [existing, mechanicId, editingId]
+    [existing, mechanicId, editingId, t]
   );
 
   function handleSelectSlot(slot: SlotInfo) {
     const s = slot.start as Date;
     const e = slot.end as Date;
-    // react-big-calendar month-view slots are all-day; the end is exclusive (next day at 00:00).
-    // Snap to 00:00 local start and 23:59:59 local end of the last selected day for all-day picks.
     const allDay =
       slot.slots && slot.slots.length > 0 &&
       s.getHours() === 0 && s.getMinutes() === 0 &&
@@ -122,9 +121,7 @@ export function AbsenceCalendarPicker({
       differenceInCalendarDays(e, s) >= 1;
 
     const startDate = allDay ? startOfDay(s) : s;
-    const endDate = allDay
-      ? endOfDay(new Date(e.getTime() - 1)) // last day in the range
-      : e;
+    const endDate = allDay ? endOfDay(new Date(e.getTime() - 1)) : e;
 
     setStart(instantToIsoLocal(startDate.toISOString()));
     setEnd(instantToIsoLocal(endDate.toISOString()));
@@ -136,7 +133,7 @@ export function AbsenceCalendarPicker({
     const now = new Date();
     const daysAgo = differenceInCalendarDays(now, d);
     if (daysAgo > 30) {
-      setWarn("start is more than 30 days in the past");
+      setWarn(t("absences.softWarnPast"));
     } else {
       setWarn(null);
     }
@@ -146,13 +143,13 @@ export function AbsenceCalendarPicker({
     e.preventDefault();
     setErr(null);
     if (!start || !end) {
-      setErr("start and end required");
+      setErr(t("errors.startEndRequired"));
       return;
     }
     const startIso = isoLocalToInstant(start);
     const endIso = isoLocalToInstant(end);
     if (new Date(endIso) <= new Date(startIso)) {
-      setErr("end must be after start");
+      setErr(t("errors.endAfterStart"));
       return;
     }
     onSubmit({
@@ -168,27 +165,9 @@ export function AbsenceCalendarPicker({
   );
 
   return (
-    <section className="panel">
-      <style>{`
-        .ds-cal-event-editing {
-          outline: 1.5px solid #1d4ed8;
-          outline-offset: -1px;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .ds-cal-event-editing { transition: none !important; animation: none !important; }
-        }
-        .ds-cal-wrap { height: 420px; }
-        .ds-cal-toolbar {
-          display: flex; gap: 6px; align-items: center;
-          margin-bottom: 8px;
-        }
-        .ds-cal-toolbar .spacer { flex: 1; }
-      `}</style>
-
-      <h2>{editingId ? "Edit absence" : "Add absence"} · {mechanicName}</h2>
-      <p className="muted">
-        Click and drag on the calendar to pick a range. Use the time inputs below for precision.
-      </p>
+    <div className="absence-picker">
+      <h3 style={{ marginTop: 0 }}>{editingId ? t("absences.edit") : t("absences.add")}</h3>
+      <p className="muted">{t("absences.calendarHint")}</p>
 
       <div className="ds-cal-toolbar">
         <button
@@ -196,19 +175,19 @@ export function AbsenceCalendarPicker({
           className={view === "month" ? "" : "ghost"}
           onClick={() => setView("month")}
         >
-          Month
+          {t("absences.viewMonth", { defaultValue: "Mese" })}
         </button>
         <button
           type="button"
           className={view === "week" ? "" : "ghost"}
           onClick={() => setView("week")}
         >
-          Week
+          {t("absences.viewWeek", { defaultValue: "Settimana" })}
         </button>
         <span className="spacer" />
         {start && end && !invalidRange && (
           <span className="muted">
-            {new Date(isoLocalToInstant(start)).toLocaleString()} to {new Date(isoLocalToInstant(end)).toLocaleString()}
+            {fmtDateTime(isoLocalToInstant(start))} → {fmtDateTime(isoLocalToInstant(end))}
           </span>
         )}
       </div>
@@ -239,14 +218,14 @@ export function AbsenceCalendarPicker({
         />
       </div>
 
-      <form className="absence-form form-panel" onSubmit={submit}>
+      <form className="absence-form" onSubmit={submit}>
         <div className="form-row">
-          <label>Type
+          <label>{t("absences.fieldType")}
             <select value={type} onChange={(e) => setType(e.target.value as AbsenceType)}>
-              {ABSENCE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              {ABSENCE_TYPES.map((tt) => <option key={tt} value={tt}>{t(`absenceType.${tt}`)}</option>)}
             </select>
           </label>
-          <label>Reason
+          <label>{t("absences.fieldReason")}
             <input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -255,7 +234,7 @@ export function AbsenceCalendarPicker({
           </label>
         </div>
         <div className="form-row">
-          <label>Start *
+          <label>{t("absences.fieldStart")} *
             <input
               required
               type="datetime-local"
@@ -266,7 +245,7 @@ export function AbsenceCalendarPicker({
               }}
             />
           </label>
-          <label>End *
+          <label>{t("absences.fieldEnd")} *
             <input
               required
               type="datetime-local"
@@ -282,13 +261,13 @@ export function AbsenceCalendarPicker({
             type="submit"
             disabled={Boolean(submitting) || invalidRange || !start || !end}
           >
-            Save
+            {t("common.save")}
           </button>
           <button type="button" className="ghost" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>
-    </section>
+    </div>
   );
 }

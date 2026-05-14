@@ -198,7 +198,9 @@
     "fieldStart": "Start",
     "fieldEnd": "End",
     "calendarHint": "Drag on the calendar to pick a range. Fine-tune below if needed.",
-    "softWarnPast": "Start is far in the past. Double-check."
+    "softWarnPast": "Start is far in the past. Double-check.",
+    "viewMonth": "Month",
+    "viewWeek": "Week"
   },
   "address": {
     "placeholderFallback": "Search address (e.g. Piazza Duomo Milano)",
