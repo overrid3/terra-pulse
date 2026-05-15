@@ -6,26 +6,29 @@ import { MechanicsPage } from "./pages/MechanicsPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { VehiclesPage } from "./pages/VehiclesPage";
 import { SkillsPage } from "./pages/SkillsPage";
+import { ToastProvider } from "./components/Toast";
 import { useDispatchSocket } from "./hooks/useDispatchSocket";
 
 export default function App() {
   useDispatchSocket();
   return (
-    <BrowserRouter>
-      <div className="app-shell">
-        <NavBar />
-        <div className="app-content">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dispatch" replace />} />
-            <Route path="/dispatch" element={<DispatchPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/mechanics" element={<MechanicsPage />} />
-            <Route path="/vehicles" element={<VehiclesPage />} />
-            <Route path="/skills" element={<SkillsPage />} />
-            <Route path="/clients" element={<ClientsPage />} />
-          </Routes>
+    <ToastProvider>
+      <BrowserRouter>
+        <div className="app-shell">
+          <NavBar />
+          <div className="app-content">
+            <Routes>
+              <Route path="/" element={<Navigate to="/dispatch" replace />} />
+              <Route path="/dispatch" element={<DispatchPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/mechanics" element={<MechanicsPage />} />
+              <Route path="/vehicles" element={<VehiclesPage />} />
+              <Route path="/skills" element={<SkillsPage />} />
+              <Route path="/clients" element={<ClientsPage />} />
+            </Routes>
+          </div>
         </div>
-      </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }

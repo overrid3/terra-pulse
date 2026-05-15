@@ -173,7 +173,20 @@
     "noClients": "no clients yet",
     "addClient": "Add Client",
     "selectClient": "Select a client to view details",
-    "active": "ACTIVE"
+    "active": "ACTIVE",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate",
+    "deactivateConfirm": "Deactivate {{name}}? New orders will be blocked.",
+    "reactivateConfirm": "Reactivate {{name}}?",
+    "deactivated": "Client deactivated",
+    "reactivated": "Client reactivated",
+    "filterAll": "All",
+    "filterActive": "Active",
+    "filterInactive": "Inactive",
+    "backToList": "Back to list",
+    "created": "Client created",
+    "updated": "Client updated",
+    "deleted": "Client deleted"
   },
   "sites": {
     "noSites": "No project sites yet",
@@ -184,12 +197,19 @@
     "fieldLat": "Latitude",
     "fieldLng": "Longitude",
     "fieldLocationLabel": "Location (human-readable)",
+    "fieldAddressLookup": "Address lookup",
+    "addressPlaceholder": "Search address (e.g. Via Roma 1, Milan)",
     "activeSites": "Active Sites",
     "openOrders": "Open Orders",
     "equipment": "Equipment",
     "personnel": "Personnel",
     "selectSite": "Project site",
-    "selectSitePlaceholder": "— select site —"
+    "selectSitePlaceholder": "— select site —",
+    "noLocation": "No location set",
+    "mapPreview": "Location preview",
+    "created": "Site created",
+    "updated": "Site updated",
+    "deleted": "Site deleted"
   },
   "skills": {
     "pageTitle": "Skills ({{count}})",
@@ -249,6 +269,10 @@
     "RESERVED": "Reserved",
     "IN_SERVICE": "In service",
     "OUT_OF_ORDER": "Out of order"
+  },
+  "clientState": {
+    "ACTIVE": "Active",
+    "INACTIVE": "Inactive"
   },
   "vehicleClass": {
     "EXCAVATOR": "Excavator",

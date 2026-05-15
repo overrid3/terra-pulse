@@ -1,9 +1,11 @@
 package com.terrapulse.api;
 
 import com.terrapulse.api.dto.ClientDtos.ClientDto;
+import com.terrapulse.api.dto.ClientDtos.ClientStateChangeDto;
 import com.terrapulse.api.dto.ClientDtos.ClientSummaryDto;
 import com.terrapulse.api.dto.ClientDtos.ClientUpsertDto;
 import com.terrapulse.domain.client.Client;
+import com.terrapulse.domain.client.ClientState;
 import com.terrapulse.domain.service.ServiceOrderState;
 import com.terrapulse.repository.ClientRepository;
 import com.terrapulse.repository.ServiceOrderRepository;
@@ -52,7 +54,7 @@ public class ClientResource {
                     c.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED);
             return new ClientSummaryDto(c.id, c.name, c.email, c.phone, c.vatNumber,
                     c.addressLine1, c.addressLine2, c.city, c.postalCode, c.country,
-                    sites, openOrders, c.createdAt, c.updatedAt);
+                    c.state, sites, openOrders, c.createdAt, c.updatedAt);
         }).toList();
     }
 
@@ -90,6 +92,30 @@ public class ClientResource {
                     .build());
         }
         copy(in, c);
+        return ClientDto.of(c);
+    }
+
+    @PUT
+    @Path("/{id}/state")
+    @Transactional
+    public ClientDto setState(@PathParam("id") UUID id, ClientStateChangeDto in) {
+        Client c = load(id);
+        if (in == null || in.state() == null)
+            throw new IllegalArgumentException("state required");
+        if (in.state() == ClientState.INACTIVE && c.state == ClientState.ACTIVE) {
+            long openOrders = serviceOrderRepo.count(
+                    "client.id = ?1 and state != ?2 and state != ?3",
+                    c.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED);
+            if (openOrders > 0) {
+                throw new WebApplicationException(Response.status(Response.Status.CONFLICT)
+                        .entity(java.util.Map.of(
+                                "error", "client_has_open_orders",
+                                "message", "Cannot deactivate client with " + openOrders + " open order(s)",
+                                "openOrders", openOrders))
+                        .build());
+            }
+        }
+        c.state = in.state();
         return ClientDto.of(c);
     }
 

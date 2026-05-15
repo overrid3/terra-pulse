@@ -173,7 +173,20 @@
     "noClients": "nessun cliente ancora",
     "addClient": "Aggiungi cliente",
     "selectClient": "Seleziona un cliente",
-    "active": "ATTIVO"
+    "active": "ATTIVO",
+    "deactivate": "Disattiva",
+    "reactivate": "Riattiva",
+    "deactivateConfirm": "Disattivare {{name}}? Verranno bloccati nuovi ordini.",
+    "reactivateConfirm": "Riattivare {{name}}?",
+    "deactivated": "Cliente disattivato",
+    "reactivated": "Cliente riattivato",
+    "filterAll": "Tutti",
+    "filterActive": "Attivi",
+    "filterInactive": "Inattivi",
+    "backToList": "Torna alla lista",
+    "created": "Cliente creato",
+    "updated": "Cliente aggiornato",
+    "deleted": "Cliente eliminato"
   },
   "sites": {
     "noSites": "Nessun sito di progetto",
@@ -189,7 +202,14 @@
     "equipment": "Mezzi",
     "personnel": "Personale",
     "selectSite": "Sito di lavoro",
-    "selectSitePlaceholder": "— seleziona sito —"
+    "selectSitePlaceholder": "— seleziona sito —",
+    "fieldAddressLookup": "Ricerca indirizzo",
+    "addressPlaceholder": "Cerca indirizzo (es. Via Roma 1, Milano)",
+    "noLocation": "Nessuna posizione",
+    "mapPreview": "Anteprima posizione",
+    "created": "Sito creato",
+    "updated": "Sito aggiornato",
+    "deleted": "Sito eliminato"
   },
   "skills": {
     "pageTitle": "Competenze ({{count}})",
@@ -249,6 +269,10 @@
     "RESERVED": "Prenotato",
     "IN_SERVICE": "In servizio",
     "OUT_OF_ORDER": "Fuori uso"
+  },
+  "clientState": {
+    "ACTIVE": "Attivo",
+    "INACTIVE": "Inattivo"
   },
   "vehicleClass": {
     "EXCAVATOR": "Escavatore",

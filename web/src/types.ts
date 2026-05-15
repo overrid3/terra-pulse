@@ -75,6 +75,9 @@ export type VehicleUpsert = {
   status: VehicleStatus;
 };
 
+export type ClientState = "ACTIVE" | "INACTIVE";
+export const CLIENT_STATES: ClientState[] = ["ACTIVE", "INACTIVE"];
+
 export type Client = {
   id: UUID;
   name: string;
@@ -86,11 +89,12 @@ export type Client = {
   city: string | null;
   postalCode: string | null;
   country: string | null;
+  state: ClientState;
   createdAt: string;
   updatedAt: string;
 };
 
-export type ClientUpsert = Omit<Client, "id" | "createdAt" | "updatedAt">;
+export type ClientUpsert = Omit<Client, "id" | "state" | "createdAt" | "updatedAt">;
 
 export type ClientSummary = {
   id: UUID;
@@ -103,6 +107,7 @@ export type ClientSummary = {
   city: string | null;
   postalCode: string | null;
   country: string | null;
+  state: ClientState;
   siteCount: number;
   openOrderCount: number;
   createdAt: string;

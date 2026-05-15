@@ -1,6 +1,7 @@
 package com.terrapulse.api.dto;
 
 import com.terrapulse.domain.client.Client;
+import com.terrapulse.domain.client.ClientState;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,13 +21,14 @@ public final class ClientDtos {
             String city,
             String postalCode,
             String country,
+            ClientState state,
             Instant createdAt,
             Instant updatedAt
     ) {
         public static ClientDto of(Client c) {
             return new ClientDto(c.id, c.name, c.email, c.phone, c.vatNumber,
                     c.addressLine1, c.addressLine2, c.city, c.postalCode, c.country,
-                    c.createdAt, c.updatedAt);
+                    c.state, c.createdAt, c.updatedAt);
         }
     }
 
@@ -53,9 +55,12 @@ public final class ClientDtos {
             String city,
             String postalCode,
             String country,
+            ClientState state,
             long siteCount,
             long openOrderCount,
             java.time.Instant createdAt,
             java.time.Instant updatedAt
     ) {}
+
+    public record ClientStateChangeDto(ClientState state) {}
 }

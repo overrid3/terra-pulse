@@ -2,6 +2,8 @@ package com.terrapulse.domain.client;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -47,6 +49,10 @@ public class Client {
 
     @Column(name = "country", length = 64)
     public String country;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "state", nullable = false, length = 16)
+    public ClientState state = ClientState.ACTIVE;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
