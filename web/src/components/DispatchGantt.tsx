@@ -1,4 +1,4 @@
-import { useMemo, useState, DragEvent } from "react";
+import { useMemo, useState, DragEvent, KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   addDays, startOfDay, startOfMonth, endOfMonth, startOfWeek,
@@ -6,6 +6,13 @@ import {
 } from "date-fns";
 import { Mechanic, MechanicAbsence, ServiceOrder, UUID } from "../types";
 import { cn } from "@/lib/utils";
+
+// Per-event row layout. Stacking lanes prevents overlapping orders from
+// hiding each other; row min-height grows with lane count.
+const LANE_HEIGHT_PX = 28;
+const LANE_GAP_PX = 4;
+const ROW_PADDING_PX = 4;
+const BASE_ROW_MIN_HEIGHT_PX = 72;
 
 export type GanttView = "day" | "week" | "month";
 
@@ -115,6 +122,34 @@ export function DispatchGantt({
     return { start, end };
   }
 
+  // Greedy lane assignment: place each event in the first lane whose last
+  // event ends before this one starts. Returns lane index per order + total
+  // lanes used so the row can size itself.
+  function assignLanes(items: ServiceOrder[]): { laneByOrder: Map<string, number>; lanes: number } {
+    const sorted = [...items].sort((a, b) => {
+      return eventBounds(a).start.getTime() - eventBounds(b).start.getTime();
+    });
+    const laneEndTimes: number[] = [];
+    const laneByOrder = new Map<string, number>();
+    for (const o of sorted) {
+      const { start, end } = eventBounds(o);
+      let placed = false;
+      for (let i = 0; i < laneEndTimes.length; i++) {
+        if (laneEndTimes[i] <= start.getTime()) {
+          laneEndTimes[i] = end.getTime();
+          laneByOrder.set(o.id, i);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        laneByOrder.set(o.id, laneEndTimes.length);
+        laneEndTimes.push(end.getTime());
+      }
+    }
+    return { laneByOrder, lanes: Math.max(1, laneEndTimes.length) };
+  }
+
   function dropHint(e: DragEvent<HTMLDivElement>): DropPayload["hint"] {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -157,6 +192,19 @@ export function DispatchGantt({
     e.stopPropagation();
   }
 
+  function handleEventKeyDown(e: KeyboardEvent<HTMLDivElement>, orderId: string) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onSelectOrder(orderId);
+    }
+  }
+
+  function eventAriaLabel(o: ServiceOrder, mechanicName: string): string {
+    const { start, end } = eventBounds(o);
+    const fmt = view === "day" ? "HH:mm" : "MMM d HH:mm";
+    return `${o.vmrsCode}, ${o.title ?? o.vmrsDescription ?? ""}, ${mechanicName}, ${format(start, fmt)} to ${format(end, fmt)}, ${o.state}`;
+  }
+
   // Column template string for the grid background lines + header.
   const gridTemplate = `repeat(${cols.length}, minmax(0, 1fr))`;
 
@@ -165,10 +213,14 @@ export function DispatchGantt({
     view === "day" ? 0 : view === "week" ? 720 : Math.max(960, cols.length * 40);
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-[var(--color-surface-panel)] rounded-[var(--radius-md)] overflow-hidden">
+    <div
+      role="grid"
+      aria-label={t("dispatch.pageTitle")}
+      className="flex-1 min-h-0 flex flex-col bg-[var(--color-surface-panel)] rounded-[var(--radius-md)] overflow-hidden"
+    >
       {/* Header row */}
-      <div className="flex border-b border-[var(--color-hairline)] bg-[var(--color-surface-sunken)] shrink-0 sticky top-0 z-20">
-        <div className="w-48 shrink-0 border-r border-[var(--color-hairline)] flex items-center px-3 py-2 text-xs uppercase tracking-wider font-semibold text-[var(--color-text-muted)]">
+      <div role="row" className="flex border-b border-[var(--color-hairline)] bg-[var(--color-surface-sunken)] shrink-0 sticky top-0 z-20">
+        <div role="columnheader" className="w-48 shrink-0 border-r border-[var(--color-hairline)] flex items-center px-3 py-2 text-xs uppercase tracking-wider font-semibold text-[var(--color-text-muted)]">
           {t("mechanics.columnName")}
         </div>
         <div
@@ -178,6 +230,7 @@ export function DispatchGantt({
           {cols.map((c, i) => (
             <div
               key={i}
+              role="columnheader"
               className="border-r border-[var(--color-hairline)] flex items-center justify-center text-xs font-mono text-[var(--color-text-muted)] py-2"
             >
               {view === "day"   && `${String(c as number).padStart(2, "0")}:00`}
@@ -203,9 +256,22 @@ export function DispatchGantt({
           const initials = m.fullName.split(/\s+/).slice(0, 2).map((p) => p.charAt(0).toUpperCase()).join("");
           const rowOrders = ordersForRow(m.id);
           const rowAbsences = absencesForRow(m.id);
+          const { laneByOrder, lanes } = assignLanes(rowOrders);
+          const rowMinHeight = Math.max(
+            BASE_ROW_MIN_HEIGHT_PX,
+            ROW_PADDING_PX * 2 + lanes * LANE_HEIGHT_PX + (lanes - 1) * LANE_GAP_PX
+          );
           return (
-            <div key={m.id} className="flex border-b border-[var(--color-hairline)] min-h-[72px] group hover:bg-[var(--color-surface-sunken)] transition-colors">
-              <div className="w-48 shrink-0 border-r border-[var(--color-hairline)] sticky left-0 bg-[var(--color-surface-panel)] group-hover:bg-[var(--color-surface-sunken)] z-10 flex items-center gap-2 px-3 py-2">
+            <div
+              key={m.id}
+              role="row"
+              className="flex border-b border-[var(--color-hairline)] group hover:bg-[var(--color-surface-sunken)] transition-colors"
+              style={{ minHeight: rowMinHeight }}
+            >
+              <div
+                role="rowheader"
+                className="w-48 shrink-0 border-r border-[var(--color-hairline)] sticky left-0 bg-[var(--color-surface-panel)] group-hover:bg-[var(--color-surface-sunken)] z-10 flex items-center gap-2 px-3 py-2"
+              >
                 <div className="w-8 h-8 rounded bg-[var(--color-surface-container-highest)] border border-[var(--color-hairline)] flex items-center justify-center font-mono text-xs shrink-0">
                   {initials || "??"}
                 </div>
@@ -218,6 +284,8 @@ export function DispatchGantt({
                 </div>
               </div>
               <div
+                role="gridcell"
+                aria-label={`${m.fullName} timeline`}
                 className={cn(
                   "flex-1 relative",
                   hoverRow === m.id && "bg-[var(--color-brand-soft)]"
@@ -229,6 +297,7 @@ export function DispatchGantt({
               >
                 {/* Grid background */}
                 <div
+                  aria-hidden="true"
                   className="absolute inset-0 grid pointer-events-none"
                   style={{ gridTemplateColumns: gridTemplate }}
                 >
@@ -243,6 +312,8 @@ export function DispatchGantt({
                   return (
                     <div
                       key={a.id}
+                      role="img"
+                      aria-label={`${t(`absenceType.${a.type}`)}${a.reason ? `: ${a.reason}` : ""}`}
                       className={cn(
                         "absolute top-1 bottom-1 rounded-[var(--radius-sm)] border border-dashed flex items-center px-2 text-xs",
                         `absence-${a.type}`
@@ -256,29 +327,40 @@ export function DispatchGantt({
                     </div>
                   );
                 })}
-                {/* Orders (foreground, draggable) */}
+                {/* Orders (foreground, draggable, lane-stacked) */}
                 {rowOrders.map((o) => {
                   const { start, end } = eventBounds(o);
                   const pos = eventPosition(start, end);
                   if (!pos) return null;
+                  const lane = laneByOrder.get(o.id) ?? 0;
+                  const top = ROW_PADDING_PX + lane * (LANE_HEIGHT_PX + LANE_GAP_PX);
                   return (
                     <div
                       key={o.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={eventAriaLabel(o, m.fullName)}
                       draggable
                       onDragStart={(e) => handleEventDragStart(e, o.id)}
                       onClick={(e) => { e.stopPropagation(); onSelectOrder(o.id); }}
+                      onKeyDown={(e) => handleEventKeyDown(e, o.id)}
                       className={cn(
-                        "absolute top-2 bottom-2 rounded-[var(--radius-sm)] border px-2 py-1 cursor-grab active:cursor-grabbing flex flex-col justify-center overflow-hidden shadow-sm hover:brightness-95",
+                        "absolute rounded-[var(--radius-sm)] border px-2 py-1 cursor-grab active:cursor-grabbing flex flex-col justify-center overflow-hidden shadow-sm hover:brightness-95 active:brightness-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-1",
                         `state-${o.state}`
                       )}
-                      style={{ left: `${pos.leftPct}%`, right: `${pos.rightPct}%` }}
+                      style={{
+                        left: `${pos.leftPct}%`,
+                        right: `${pos.rightPct}%`,
+                        top,
+                        height: LANE_HEIGHT_PX,
+                        minWidth: "2rem"
+                      }}
                       title={o.title ?? o.vmrsCode}
                     >
                       <div className="flex items-center justify-between gap-1 min-w-0">
                         <span className="font-mono text-[10px] font-bold tracking-wider truncate">{o.vmrsCode}</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
+                        <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
                       </div>
-                      <div className="text-xs truncate">{o.title ?? o.vmrsDescription ?? o.vmrsCode}</div>
                     </div>
                   );
                 })}

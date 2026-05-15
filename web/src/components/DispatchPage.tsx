@@ -1,15 +1,14 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Filter, RefreshCw, Inbox, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
-import { View } from "react-big-calendar";
-import { addDays, addMonths, addWeeks, startOfDay } from "date-fns";
+import { addDays, addMonths, addWeeks, startOfDay, format } from "date-fns";
 import { mechanicsApi } from "../api/mechanics";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { absencesApi } from "../api/absences";
 import { queryKeys } from "../api/client";
-import { ResourceTimeline, CalEvent } from "./ResourceTimeline";
+import { DispatchGantt, GanttView, DropPayload } from "./DispatchGantt";
 import { ServiceOrderDrawer } from "./ServiceOrderDrawer";
 import { SearchInput } from "./SearchInput";
 import { ServiceOrder, UUID } from "../types";
@@ -20,8 +19,6 @@ import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-type DayChoice = "TODAY" | "TOMORROW";
 
 const PENDING_STATES = new Set(["REQUESTED", "QUOTED", "APPROVED"]);
 
@@ -36,13 +33,9 @@ export function DispatchPage() {
   const qc = useQueryClient();
   const [selectedMechanicId, setSelectedMechanicId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [day, setDay] = useState<DayChoice>("TODAY");
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<View>("day");
+  const [view, setView] = useState<GanttView>("day");
   const [date, setDate] = useState<Date>(startOfDay(new Date()));
-
-  // Order id being dragged from the pool (null = no external drag in progress).
-  const draggingFromPool = useRef<ServiceOrder | null>(null);
 
   const mechanicsQ = useQuery({ queryKey: queryKeys.mechanics,     queryFn: mechanicsApi.list });
   const ordersQ    = useQuery({ queryKey: queryKeys.serviceOrders, queryFn: serviceOrdersApi.list });
@@ -94,82 +87,85 @@ export function DispatchPage() {
 
   const filteredOrders = allOrders.filter(matchSearch);
 
-  function handleDayChoice(choice: DayChoice) {
-    setDay(choice);
-    const base = startOfDay(new Date());
-    setDate(choice === "TODAY" ? base : addDays(base, 1));
-    if (view !== "day") setView("day");
-  }
-
   function navigate(delta: -1 | 1) {
     if (view === "day")        setDate((d) => addDays(d, delta));
     else if (view === "week")  setDate((d) => addWeeks(d, delta));
     else                       setDate((d) => addMonths(d, delta));
   }
 
-  // External pool → calendar drop. RBC passes resource = mechanic id only in day view.
-  function onDropFromOutside({ resource }: { resource?: string | number }) {
-    const order = draggingFromPool.current;
-    draggingFromPool.current = null;
+  function jumpToday() {
+    setDate(startOfDay(new Date()));
+  }
+
+  function rangeLabel(): string {
+    if (view === "day")   return format(date, "EEE dd MMM yyyy");
+    if (view === "week")  return `${format(date, "MMM dd")} – ${format(addDays(date, 6), "MMM dd, yyyy")}`;
+    return format(date, "MMMM yyyy");
+  }
+
+  function lookupOrder(id: string): ServiceOrder | undefined {
+    return allOrders.find((o) => o.id === id);
+  }
+
+  // Pool → mechanic row.
+  function onDropFromPool(payload: DropPayload) {
+    // The pool card sets payload data; we need the order id from it.
+    // Pool drop handler in Gantt reads dataTransfer separately — we re-derive here via a single-shot ref.
+    // To keep API simple, the Gantt passes only mechanicId+hint. The id is on dataTransfer; we retrieve via lastPoolDragId.
+    const orderId = lastPoolDragId.current;
+    lastPoolDragId.current = null;
+    if (!orderId) return;
+    const order = lookupOrder(orderId);
     if (!order) return;
-    if (!resource) {
-      toast.error("Drop on a mechanic row (day view) to dispatch");
-      return;
-    }
-    const mechanicId = String(resource);
     if (order.state !== "APPROVED") {
       toast.error(`Order must be APPROVED to dispatch (current: ${order.state})`);
       return;
     }
-    dispatchMut.mutate({ id: order.id as UUID, mechanicId: mechanicId as UUID });
+    dispatchMut.mutate({ id: order.id as UUID, mechanicId: payload.mechanicId });
+    if (payload.hint?.hour != null) {
+      showVisualSlotHint(payload.hint.hour);
+    }
   }
 
-  function dragFromOutsideItem(): CalEvent {
-    const o = draggingFromPool.current;
-    const now = new Date();
-    return {
-      title: o?.title ?? o?.vmrsCode ?? "",
-      start: now,
-      end: now,
-      resourceId: "",
-      kind: "order",
-      soId: o?.id,
-      orderState: o?.state
-    };
-  }
-
-  // Existing calendar event moved. Time changes are not persisted (POC). Mechanic changes call reassign.
-  function onEventMoved({ event, resourceId }: { event: CalEvent; resourceId?: string | number }) {
-    if (!event.soId) return;
-    const newMechanicId = resourceId ? String(resourceId) : event.resourceId;
-    if (newMechanicId === event.resourceId) {
-      toast.info("Time slots are visual only in this POC — backend stores no scheduled time");
+  function onMoveEvent(orderId: UUID, payload: DropPayload) {
+    const order = lookupOrder(orderId);
+    if (!order) return;
+    if (order.mechanicId === payload.mechanicId) {
+      showVisualSlotHint(payload.hint?.hour);
       return;
     }
-    reassignMut.mutate({ id: event.soId as UUID, mechanicId: newMechanicId as UUID });
+    reassignMut.mutate({ id: orderId, mechanicId: payload.mechanicId });
   }
+
+  // Backend has no scheduled-time field; visual hint helps users understand the
+  // limitation. Once per session is enough — repeated toasts on every drop are noise.
+  const VISUAL_SLOT_HINT_KEY = "tp.dispatch.visualSlotHintShown";
+  function showVisualSlotHint(hour: number | undefined) {
+    try {
+      if (sessionStorage.getItem(VISUAL_SLOT_HINT_KEY)) return;
+      sessionStorage.setItem(VISUAL_SLOT_HINT_KEY, "1");
+    } catch {
+      /* sessionStorage may be unavailable (private mode) — fall through */
+    }
+    const slot = hour != null ? `~${String(hour).padStart(2, "0")}:00` : "";
+    toast.info(`Time slots are visual only ${slot}— backend stores no scheduled time`);
+  }
+
+  // Pool drag bookkeeping: the Gantt onDrop receives mechanicId+hint but not the dragged
+  // order id (DispatchPage owns the pool). Stash it here at dragstart and read at drop.
+  const lastPoolDragId = useMemo(() => ({ current: null as string | null }), []);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <header className="bg-[var(--color-surface-panel)] border-b border-[var(--color-hairline)] flex flex-wrap items-center justify-between gap-3 px-4 h-auto sm:h-14 py-2 shrink-0">
+      <header className="bg-[var(--color-surface-panel)] border-b border-[var(--color-hairline)] flex flex-wrap items-center justify-between gap-3 px-4 py-2 shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="m-0 text-xl font-semibold tracking-tight text-[var(--color-text)]">
             {t("dispatch.pageTitle")}
           </h1>
           <ToggleGroup
             type="single"
-            value={day}
-            onValueChange={(v) => v && handleDayChoice(v as DayChoice)}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="TODAY">{t("dispatch.today")}</ToggleGroupItem>
-            <ToggleGroupItem value="TOMORROW">{t("dispatch.tomorrow")}</ToggleGroupItem>
-          </ToggleGroup>
-          <ToggleGroup
-            type="single"
             value={view}
-            onValueChange={(v) => v && setView(v as View)}
+            onValueChange={(v) => v && setView(v as GanttView)}
             variant="outline"
             size="sm"
           >
@@ -181,10 +177,16 @@ export function DispatchPage() {
             <Button variant="outline" size="sm" onClick={() => navigate(-1)} aria-label="previous">
               <ChevronLeft className="h-4 w-4" />
             </Button>
+            <Button variant="outline" size="sm" onClick={jumpToday}>
+              {t("dispatch.today")}
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigate(1)} aria-label="next">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+          <span className="text-sm font-mono text-[var(--color-text-muted)] hidden md:inline">
+            {rangeLabel()}
+          </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <SearchInput
@@ -216,27 +218,18 @@ export function DispatchPage() {
         </div>
       </header>
 
-      {view !== "day" && (
-        <div className="px-4 py-1.5 bg-[var(--color-warn-bg)] border-b border-[var(--color-hairline)] text-xs text-[var(--color-warn-fg)]">
-          {t("dispatch.resourceOnlyDayHint")}
-        </div>
-      )}
-
       <main className="flex-1 min-h-0 min-w-0 p-3 grid gap-3 grid-cols-[minmax(0,1fr)_320px]">
-        <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 min-w-0 overflow-hidden">
-          <ResourceTimeline
+        <section className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 min-w-0 overflow-hidden">
+          <DispatchGantt
             mechanics={mechanicsQ.data ?? []}
             orders={filteredOrders}
             absences={absencesQ.data ?? []}
             selectedMechanicId={selectedMechanicId}
             view={view}
-            onView={setView}
             date={date}
-            onNavigate={setDate}
             onSelectOrder={setSelectedOrderId}
-            onEventMoved={onEventMoved}
-            onDropFromOutside={onDropFromOutside}
-            dragFromOutsideItem={dragFromOutsideItem}
+            onMoveEvent={onMoveEvent}
+            onDropFromPool={onDropFromPool}
           />
         </section>
 
@@ -252,7 +245,11 @@ export function DispatchPage() {
               {unassigned.length}
             </span>
           </div>
-          <ul className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 list-none m-0">
+          <ul
+            role="list"
+            aria-label={t("dispatch.unassignedPool")}
+            className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 list-none m-0"
+          >
             {unassigned.length === 0 && (
               <li className="text-center text-[var(--color-text-muted)] text-sm py-6">
                 {t("dispatch.pendingNone")}
@@ -261,26 +258,37 @@ export function DispatchPage() {
             {unassigned.map((o) => {
               const badge = priorityBadge(o);
               const isCritical = o.state === "REQUESTED";
+              const label = `${o.vmrsCode}, ${o.title ?? o.vmrsDescription ?? ""}, ${badge.label}, ${o.clientName ?? ""}`;
               return (
                 <li
                   key={o.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={label}
+                  aria-pressed={o.id === selectedOrderId}
                   draggable
                   onDragStart={(e) => {
-                    draggingFromPool.current = o;
-                    // payload required for some browsers
-                    e.dataTransfer.setData("text/plain", o.id);
+                    lastPoolDragId.current = o.id;
+                    e.dataTransfer.setData("text/plain", `pool:${o.id}`);
                     e.dataTransfer.effectAllowed = "move";
                   }}
-                  onDragEnd={() => { draggingFromPool.current = null; }}
+                  onDragEnd={() => { /* keep ref until drop reads it; cleared in handler */ }}
                   className={cn(
                     "bg-[var(--color-surface-container)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-2.5 cursor-grab active:cursor-grabbing transition-colors hover:bg-[var(--color-surface-container-high)]",
                     "border-l-4",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-1",
                     isCritical
                       ? "border-l-[var(--color-danger-fg)]"
                       : "border-l-[var(--color-warn-fg)]",
                     o.id === selectedOrderId && "ring-1 ring-[var(--color-brand)]"
                   )}
                   onClick={() => setSelectedOrderId(o.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedOrderId(o.id);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <span className="font-mono text-xs font-bold text-[var(--color-text)] tracking-wider">
@@ -292,7 +300,7 @@ export function DispatchPage() {
                     {o.title ?? o.vmrsDescription ?? o.vmrsCode}
                   </div>
                   <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
-                    <MapPin className="h-3 w-3 shrink-0" />
+                    <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
                     <span className="truncate">
                       {o.clientName ?? `${o.siteLocation.lat.toFixed(3)}, ${o.siteLocation.lng.toFixed(3)}`}
                     </span>
