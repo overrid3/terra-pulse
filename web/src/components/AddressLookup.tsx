@@ -4,10 +4,11 @@ import { geoApi, GeocodeResult } from "../api/geo";
 
 type Props = {
   onPick: (hit: GeocodeResult) => void;
+  onChange?: (text: string) => void;
   placeholder?: string;
 };
 
-export function AddressLookup({ onPick, placeholder }: Props) {
+export function AddressLookup({ onPick, onChange, placeholder }: Props) {
   const { t } = useTranslation();
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<GeocodeResult[] | null>(null);
@@ -38,7 +39,7 @@ export function AddressLookup({ onPick, placeholder }: Props) {
       <div className="address-row">
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => { setQ(e.target.value); onChange?.(e.target.value); }}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void search(); } }}
           placeholder={placeholder ?? t("address.placeholderFallback")}
         />

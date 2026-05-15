@@ -60,37 +60,36 @@ function useIsMobile(breakpoint = 768) {
 }
 
 function useResizableListWidth() {
-  const [width, setWidth] = useState<number>(() => {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const initialWidth = useRef<number | null>(null);
+  if (initialWidth.current === null) {
     const raw = localStorage.getItem(LIST_WIDTH_KEY);
     const n = raw ? Number(raw) : NaN;
-    return Number.isFinite(n) && n >= MIN_LIST_WIDTH && n <= MAX_LIST_WIDTH ? n : DEFAULT_LIST_WIDTH;
-  });
-  const draggingRef = useRef(false);
+    initialWidth.current = Number.isFinite(n) && n >= MIN_LIST_WIDTH && n <= MAX_LIST_WIDTH ? n : DEFAULT_LIST_WIDTH;
+  }
 
   const startDrag = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    draggingRef.current = true;
     document.body.classList.add("clients-resizing");
 
+    const startX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const startWidth = panelRef.current?.offsetWidth ?? initialWidth.current!;
+
     const onMove = (ev: MouseEvent | TouchEvent) => {
-      if (!draggingRef.current) return;
-      const clientX = "touches" in ev ? ev.touches[0]?.clientX : ev.clientX;
+      const clientX = "touches" in ev ? ev.touches[0]?.clientX : (ev as MouseEvent).clientX;
       if (clientX == null) return;
-      // Layout has 14px padding around the layout container; subtract it for stable feel.
-      const next = Math.max(MIN_LIST_WIDTH, Math.min(MAX_LIST_WIDTH, clientX - 14));
-      setWidth(next);
+      const next = Math.max(MIN_LIST_WIDTH, Math.min(MAX_LIST_WIDTH, startWidth + (clientX - startX)));
+      if (panelRef.current) panelRef.current.style.width = `${next}px`;
     };
     const onUp = () => {
-      draggingRef.current = false;
       document.body.classList.remove("clients-resizing");
+      const raw = panelRef.current?.style.width;
+      const parsed = raw ? parseFloat(raw) : NaN;
+      if (Number.isFinite(parsed)) localStorage.setItem(LIST_WIDTH_KEY, String(parsed));
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("touchmove", onMove);
       window.removeEventListener("touchend", onUp);
-      setWidth((w) => {
-        localStorage.setItem(LIST_WIDTH_KEY, String(w));
-        return w;
-      });
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -98,7 +97,7 @@ function useResizableListWidth() {
     window.addEventListener("touchend", onUp);
   }, []);
 
-  return { width, startDrag, dragging: draggingRef };
+  return { panelRef, initialWidth: initialWidth.current!, startDrag };
 }
 
 export function ClientsPage() {
@@ -106,7 +105,7 @@ export function ClientsPage() {
   const qc = useQueryClient();
   const toast = useToast();
   const isMobile = useIsMobile();
-  const { width: listWidth, startDrag } = useResizableListWidth();
+  const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableListWidth();
 
   const clientsQ = useQuery({ queryKey: queryKeys.clients, queryFn: clientsApi.list });
 
@@ -225,7 +224,8 @@ export function ClientsPage() {
       {/* Left: client list */}
       <div
         className="client-list-panel"
-        style={{ ["--clients-list-width" as string]: `${listWidth}px` }}
+        ref={listPanelRef}
+        style={{ width: listInitialWidth }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
           <h2>{t("clients.pageTitle", { count: clientsQ.data?.length ?? 0 })}</h2>
@@ -494,11 +494,6 @@ function ClientDetailView({
                 {site.locationLabel && (
                   <div className="site-location-label">{site.locationLabel}</div>
                 )}
-                {site.lat != null && site.lng != null && !site.locationLabel && (
-                  <div className="site-location-label mono">
-                    {site.lat.toFixed(4)}, {site.lng.toFixed(4)}
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -664,23 +659,16 @@ function SiteFormPanel({
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState(editing?.name ?? "");
-  const [lat, setLat] = useState<string>(editing?.lat != null ? String(editing.lat) : "");
-  const [lng, setLng] = useState<string>(editing?.lng != null ? String(editing.lng) : "");
-  const [locationLabel, setLocationLabel] = useState<string>(editing?.locationLabel ?? "");
+  const [lat, setLat] = useState<number | null>(editing?.lat ?? null);
+  const [lng, setLng] = useState<number | null>(editing?.lng ?? null);
+  const [locationLabel, setLocationLabel] = useState<string | null>(editing?.locationLabel ?? null);
 
   function submit(e: FormEvent) {
     e.preventDefault();
-    onSubmit({
-      name,
-      lat: lat ? Number(lat) : null,
-      lng: lng ? Number(lng) : null,
-      locationLabel: locationLabel || null
-    });
+    onSubmit({ name, lat, lng, locationLabel });
   }
 
-  const numLat = lat ? Number(lat) : NaN;
-  const numLng = lng ? Number(lng) : NaN;
-  const hasCoords = Number.isFinite(numLat) && Number.isFinite(numLng);
+  const hasCoords = lat != null && lng != null;
 
   return (
     <>
@@ -700,35 +688,26 @@ function SiteFormPanel({
           <label>{t("sites.fieldAddressLookup")}
             <AddressLookup
               onPick={(h) => {
-                setLat(String(h.lat));
-                setLng(String(h.lng));
+                setLat(h.lat);
+                setLng(h.lng);
                 setLocationLabel(h.displayName);
+              }}
+              onChange={(text) => {
+                setLocationLabel(text || null);
+                if (!text) { setLat(null); setLng(null); }
               }}
               placeholder={t("sites.addressPlaceholder")}
             />
           </label>
 
-          <label>{t("sites.fieldLocationLabel")}
-            <input
-              value={locationLabel}
-              placeholder="e.g. Via Roma 1, Milan, IT"
-              onChange={(e) => setLocationLabel(e.target.value)}
-            />
-          </label>
-          <div className="form-row">
-            <label>{t("sites.fieldLat")}
-              <input type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} />
-            </label>
-            <label>{t("sites.fieldLng")}
-              <input type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} />
-            </label>
-          </div>
-
           {hasCoords && (
             <div>
+              {locationLabel && (
+                <div className="site-location-label" style={{ marginBottom: 6 }}>{locationLabel}</div>
+              )}
               <div className="site-meta-label" style={{ marginBottom: 4 }}>{t("sites.mapPreview")}</div>
               <div className="site-map-wrap">
-                <SiteMap lat={numLat} lng={numLng} label={locationLabel || name} height={200} />
+                <SiteMap lat={lat!} lng={lng!} label={locationLabel || name} height={200} />
               </div>
             </div>
           )}
