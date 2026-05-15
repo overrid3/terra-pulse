@@ -38,10 +38,21 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 public class ReservationResource {
 
-    @Inject ReservationRepository repo;
-    @Inject VehicleRepository vehicleRepo;
-    @Inject MechanicRepository mechanicRepo;
-    @Inject ClientRepository clientRepo;
+    private final ReservationRepository repo;
+    private final VehicleRepository vehicleRepo;
+    private final MechanicRepository mechanicRepo;
+    private final ClientRepository clientRepo;
+
+    @Inject
+    public ReservationResource(ReservationRepository repo,
+                               VehicleRepository vehicleRepo,
+                               MechanicRepository mechanicRepo,
+                               ClientRepository clientRepo) {
+        this.repo = repo;
+        this.vehicleRepo = vehicleRepo;
+        this.mechanicRepo = mechanicRepo;
+        this.clientRepo = clientRepo;
+    }
 
     @GET
     public List<ReservationDto> list(@QueryParam("vehicleId") UUID vehicleId,

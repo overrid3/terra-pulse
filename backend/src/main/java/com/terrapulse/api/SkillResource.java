@@ -24,7 +24,12 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 public class SkillResource {
 
-    @Inject SkillRepository repo;
+    private final SkillRepository repo;
+
+    @Inject
+    public SkillResource(SkillRepository repo) {
+        this.repo = repo;
+    }
 
     public record SkillDto(UUID id, String name, Instant createdAt) {
         public static SkillDto of(Skill s) { return new SkillDto(s.id, s.name, s.createdAt); }

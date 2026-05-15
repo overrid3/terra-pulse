@@ -19,8 +19,14 @@ import jakarta.ws.rs.core.MediaType;
 @IfBuildProfile("dev")
 public class DevResource {
 
-    @Inject MechanicRepository mechanicRepo;
-    @Inject MechanicResource mechanicResource;
+    private final MechanicRepository mechanicRepo;
+    private final MechanicResource mechanicResource;
+
+    @Inject
+    public DevResource(MechanicRepository mechanicRepo, MechanicResource mechanicResource) {
+        this.mechanicRepo = mechanicRepo;
+        this.mechanicResource = mechanicResource;
+    }
 
     @POST
     @Path("/simulate-move")

@@ -27,6 +27,7 @@ import com.terrapulse.ws.DispatchEvent;
 import com.terrapulse.ws.DispatchEventBus;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.PATCH;
@@ -47,16 +48,39 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 public class ServiceOrderResource {
 
-    @Inject ServiceOrderRepository repo;
-    @Inject VehicleRepository vehicleRepo;
-    @Inject MechanicRepository mechanicRepo;
-    @Inject ClientRepository clientRepo;
-    @Inject VmrsCodeRepository vmrsRepo;
-    @Inject SiteRepository siteRepo;
-    @Inject EstimationService estimation;
-    @Inject GeometrySupport geo;
-    @Inject TitleGenerator titleGenerator;
-    @Inject DispatchEventBus bus;
+    private final ServiceOrderRepository repo;
+    private final VehicleRepository vehicleRepo;
+    private final MechanicRepository mechanicRepo;
+    private final ClientRepository clientRepo;
+    private final VmrsCodeRepository vmrsRepo;
+    private final SiteRepository siteRepo;
+    private final EstimationService estimation;
+    private final GeometrySupport geo;
+    private final TitleGenerator titleGenerator;
+    private final DispatchEventBus bus;
+
+    @Inject
+    public ServiceOrderResource(ServiceOrderRepository repo,
+                                VehicleRepository vehicleRepo,
+                                MechanicRepository mechanicRepo,
+                                ClientRepository clientRepo,
+                                VmrsCodeRepository vmrsRepo,
+                                SiteRepository siteRepo,
+                                EstimationService estimation,
+                                GeometrySupport geo,
+                                TitleGenerator titleGenerator,
+                                DispatchEventBus bus) {
+        this.repo = repo;
+        this.vehicleRepo = vehicleRepo;
+        this.mechanicRepo = mechanicRepo;
+        this.clientRepo = clientRepo;
+        this.vmrsRepo = vmrsRepo;
+        this.siteRepo = siteRepo;
+        this.estimation = estimation;
+        this.geo = geo;
+        this.titleGenerator = titleGenerator;
+        this.bus = bus;
+    }
 
     @GET
     public List<ServiceOrderDto> list(@QueryParam("state") ServiceOrderState state,

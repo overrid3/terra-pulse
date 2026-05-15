@@ -27,8 +27,14 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 public class MechanicAbsenceResource {
 
-    @Inject MechanicRepository mechanics;
-    @Inject MechanicAbsenceRepository absences;
+    private final MechanicRepository mechanics;
+    private final MechanicAbsenceRepository absences;
+
+    @Inject
+    public MechanicAbsenceResource(MechanicRepository mechanics, MechanicAbsenceRepository absences) {
+        this.mechanics = mechanics;
+        this.absences = absences;
+    }
 
     public record AbsenceDto(
             UUID id,

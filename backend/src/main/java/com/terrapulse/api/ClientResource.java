@@ -30,9 +30,18 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 public class ClientResource {
 
-    @Inject ClientRepository repo;
-    @Inject SiteRepository siteRepo;
-    @Inject ServiceOrderRepository serviceOrderRepo;
+    private final ClientRepository repo;
+    private final SiteRepository siteRepo;
+    private final ServiceOrderRepository serviceOrderRepo;
+
+    @Inject
+    public ClientResource(ClientRepository repo,
+                          SiteRepository siteRepo,
+                          ServiceOrderRepository serviceOrderRepo) {
+        this.repo = repo;
+        this.siteRepo = siteRepo;
+        this.serviceOrderRepo = serviceOrderRepo;
+    }
 
     @GET
     public List<ClientSummaryDto> list() {

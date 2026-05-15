@@ -30,11 +30,14 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 public class VehicleResource {
 
-    @Inject
-    VehicleRepository repo;
+    private final VehicleRepository repo;
+    private final SiteRepository siteRepo;
 
     @Inject
-    SiteRepository siteRepo;
+    public VehicleResource(VehicleRepository repo, SiteRepository siteRepo) {
+        this.repo = repo;
+        this.siteRepo = siteRepo;
+    }
 
     @GET
     public List<VehicleDto> list() {

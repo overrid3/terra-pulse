@@ -37,12 +37,17 @@ public class GeoResource {
             defaultValue = "TerraPulse-POC (contact: support@terrapulse.local)")
     String userAgent;
 
-    @Inject ObjectMapper json;
+    private final ObjectMapper json;
 
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
+
+    @Inject
+    public GeoResource(ObjectMapper json) {
+        this.json = json;
+    }
 
     public record GeocodeResult(double lat, double lng, String displayName) {}
 

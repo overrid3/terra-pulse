@@ -38,11 +38,24 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 public class MechanicResource {
 
-    @Inject MechanicRepository repo;
-    @Inject SkillRepository skills;
-    @Inject GeometrySupport geo;
-    @Inject NearestMechanicService nearest;
-    @Inject DispatchEventBus bus;
+    private final MechanicRepository repo;
+    private final SkillRepository skills;
+    private final GeometrySupport geo;
+    private final NearestMechanicService nearest;
+    private final DispatchEventBus bus;
+
+    @Inject
+    public MechanicResource(MechanicRepository repo,
+                            SkillRepository skills,
+                            GeometrySupport geo,
+                            NearestMechanicService nearest,
+                            DispatchEventBus bus) {
+        this.repo = repo;
+        this.skills = skills;
+        this.geo = geo;
+        this.nearest = nearest;
+        this.bus = bus;
+    }
 
     @GET
     public List<MechanicDto> list() {

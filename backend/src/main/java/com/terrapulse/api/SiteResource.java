@@ -21,16 +21,27 @@ import java.util.UUID;
 @Produces(MediaType.APPLICATION_JSON)
 public class SiteResource {
 
-    @Inject SiteRepository repo;
-    @Inject ClientRepository clientRepo;
-    @Inject ServiceOrderRepository serviceOrderRepo;
-    @Inject VehicleRepository vehicleRepo;
+    private final SiteRepository repo;
+    private final ClientRepository clientRepo;
+    private final ServiceOrderRepository serviceOrderRepo;
+    private final VehicleRepository vehicleRepo;
+
+    @Inject
+    public SiteResource(SiteRepository repo,
+                        ClientRepository clientRepo,
+                        ServiceOrderRepository serviceOrderRepo,
+                        VehicleRepository vehicleRepo) {
+        this.repo = repo;
+        this.clientRepo = clientRepo;
+        this.serviceOrderRepo = serviceOrderRepo;
+        this.vehicleRepo = vehicleRepo;
+    }
 
     @GET
     public List<SiteDto> list(@PathParam("clientId") UUID clientId) {
         if (clientRepo.findById(clientId) == null) throw new NotFoundException();
         return repo.findByClientId(clientId).stream()
-                .map(s -> toDto(s))
+                .map(this::toDto)
                 .toList();
     }
 
