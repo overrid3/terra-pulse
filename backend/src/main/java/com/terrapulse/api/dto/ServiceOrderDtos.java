@@ -78,5 +78,10 @@ public final class ServiceOrderDtos {
 
     public record SimulateMoveRequest(UUID mechanicId, double lat, double lng) {}
 
-    public record OverrideStateRequest(ServiceOrderState state, String reason) {}
+    public record OverrideStateRequest(
+            ServiceOrderState state,
+            String reason,
+            UUID mechanicId,
+            Integer actualMinutes
+    ) {}
 }
