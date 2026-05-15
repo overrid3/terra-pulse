@@ -5,7 +5,7 @@ import App from "./App";
 import "./i18n";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "leaflet/dist/leaflet.css";
-import "./styles.css";
+import "./index.css";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, staleTime: 5_000 } }
