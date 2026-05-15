@@ -1,6 +1,15 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import {
+  Users,
+  Plus,
+  Pencil,
+  Trash2,
+  ArrowLeft,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react";
 import { clientsApi } from "../api/clients";
 import { sitesApi } from "../api/sites";
 import { queryKeys } from "../api/client";
@@ -11,6 +20,11 @@ import {
 import { useToast } from "../components/Toast";
 import { AddressLookup } from "../components/AddressLookup";
 import { SiteMap } from "../components/SiteMap";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type Filter = "ALL" | "ACTIVE" | "INACTIVE";
 
@@ -143,7 +157,7 @@ export function ClientsPage() {
       : null;
 
   const isDetailView = panelMode.type !== "empty";
-  const rootClass = `clients-layout ${isMobile && isDetailView ? "mobile-detail" : ""}`;
+  const mobileDetail = isMobile && isDetailView;
 
   function invalidateClients() { qc.invalidateQueries({ queryKey: queryKeys.clients }); }
   function invalidateSites(clientId: UUID) { qc.invalidateQueries({ queryKey: queryKeys.sites(clientId) }); }
@@ -220,29 +234,42 @@ export function ClientsPage() {
   const goBackToList = () => setPanelMode({ type: "empty" });
 
   return (
-    <div className={rootClass}>
+    <div
+      className={cn(
+        "flex-1 flex min-h-0 p-2 md:p-3.5 gap-0 relative",
+        "flex-col md:flex-row"
+      )}
+    >
       {/* Left: client list */}
       <div
-        className="client-list-panel"
+        className={cn(
+          "flex flex-col gap-2 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-hidden",
+          "md:min-w-[240px] md:max-w-[560px] md:shrink-0",
+          "w-full",
+          mobileDetail && "hidden md:flex"
+        )}
         ref={listPanelRef}
-        style={{ width: listInitialWidth }}
+        style={{ width: isMobile ? undefined : listInitialWidth }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <h2>{t("clients.pageTitle", { count: clientsQ.data?.length ?? 0 })}</h2>
-          <button
-            className="ghost"
+        <div className="flex justify-between items-center gap-2">
+          <h2 className="m-0">{t("clients.pageTitle", { count: clientsQ.data?.length ?? 0 })}</h2>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setPanelMode({ type: "clientForm", editing: null })}
           >
-            + {t("clients.addClient")}
-          </button>
+            <Plus className="w-4 h-4" />
+            {t("clients.addClient")}
+          </Button>
         </div>
-        <input
-          className="client-list-search"
+        <Input
+          type="text"
           placeholder={t("common.find") + "…"}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          className="w-full bg-[var(--color-surface-sunken)]"
         />
-        <div className="seg-control" style={{ alignSelf: "flex-start" }}>
+        <div className="seg-control self-start">
           <button type="button" className={filter === "ALL" ? "active" : ""} onClick={() => setFilter("ALL")}>
             {t("clients.filterAll")}
           </button>
@@ -253,54 +280,78 @@ export function ClientsPage() {
             {t("clients.filterInactive")}
           </button>
         </div>
-        <div className="client-list-scroll">
-          {clients.map((c) => (
-            <div
-              key={c.id}
-              className={`client-card ${selectedClientId === c.id ? "selected" : ""} ${c.state === "INACTIVE" ? "inactive" : ""}`}
-              onClick={() => setPanelMode({ type: "detail", clientId: c.id })}
-            >
-              <div className="client-card-header">
-                <span className="client-card-name">{c.name}</span>
-                <span className={`status-dot ${clientDot(c)}`} />
-              </div>
-              <div className="client-card-counts">
-                <div>
-                  <div className="client-card-count-label">{t("sites.activeSites")}</div>
-                  <div className="client-card-count-value">{c.siteCount}</div>
+        <div className="flex-1 overflow-y-auto flex flex-col gap-1">
+          {clients.map((c) => {
+            const isSelected = selectedClientId === c.id;
+            const isInactive = c.state === "INACTIVE";
+            return (
+              <div
+                key={c.id}
+                className={cn(
+                  "cursor-pointer p-2.5 border rounded-[var(--radius-sm)] transition-colors",
+                  "border-[var(--color-hairline)] bg-[var(--color-surface-panel)] hover:bg-[var(--color-surface-container)]",
+                  isSelected && "bg-[var(--color-surface-container-high)] border-[var(--color-brand)]",
+                  isInactive && "opacity-60"
+                )}
+                onClick={() => setPanelMode({ type: "detail", clientId: c.id })}
+              >
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="font-semibold text-[var(--text-base)] text-[var(--color-text)]">{c.name}</span>
+                  <span className={`status-dot ${clientDot(c)}`} />
                 </div>
-                <div>
-                  <div className="client-card-count-label">{t("sites.openOrders")}</div>
-                  <div className="client-card-count-value">{c.openOrderCount}</div>
+                <div className="grid grid-cols-2 gap-1">
+                  <div>
+                    <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+                      {t("sites.activeSites")}
+                    </div>
+                    <div className="font-mono text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                      {c.siteCount}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+                      {t("sites.openOrders")}
+                    </div>
+                    <div className="font-mono text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                      {c.openOrderCount}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {clients.length === 0 && (
-            <p className="muted" style={{ padding: "8px 0" }}>
+            <p className="text-[var(--text-sm)] text-[var(--color-text-muted)] py-2">
               {clientsQ.data?.length === 0 ? t("clients.noClients") : t("errors.noMatches")}
             </p>
           )}
         </div>
       </div>
 
-      {/* Drag handle (desktop only via CSS) */}
+      {/* Drag handle (desktop only) */}
       {!isMobile && (
         <div
-          className="clients-split-handle"
+          className="clients-split-handle group hidden md:flex shrink-0 w-3 cursor-col-resize items-center justify-center relative touch-none select-none"
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize"
           onMouseDown={startDrag}
           onTouchStart={startDrag}
-        />
+        >
+          <div className="w-0.5 h-9 bg-[var(--color-hairline)] rounded-sm transition-colors group-hover:bg-[var(--color-brand)]" />
+        </div>
       )}
 
       {/* Right: detail / form panel */}
-      <div className="client-detail-panel">
+      <div
+        className={cn(
+          "flex-1 min-w-0 flex flex-col bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] overflow-hidden",
+          !mobileDetail && isMobile && "hidden md:flex"
+        )}
+      >
         {panelMode.type === "empty" && (
-          <div className="detail-empty-state">
-            <span className="material-symbols-outlined">group</span>
+          <div className="flex-1 flex flex-col items-center justify-center text-[var(--color-text-muted)] gap-2">
+            <Users className="w-12 h-12 opacity-40" />
             <span>{t("clients.selectClient")}</span>
           </div>
         )}
@@ -396,10 +447,17 @@ export function ClientsPage() {
 
 function MobileBack({ onClick, label }: { onClick: () => void; label: string }) {
   return (
-    <button type="button" className="clients-mobile-back" onClick={onClick} aria-label={label}>
-      <span className="material-symbols-outlined">arrow_back</span>
+    <Button
+      variant="ghost"
+      size="sm"
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="md:hidden inline-flex items-center gap-1 text-[var(--color-text-muted)]"
+    >
+      <ArrowLeft className="w-5 h-5" />
       <span>{label}</span>
-    </button>
+    </Button>
   );
 }
 
@@ -426,73 +484,118 @@ function ClientDetailView({
   const isActive = client.state === "ACTIVE";
   return (
     <>
-      <div className="client-detail-header">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="client-detail-title-row">
+      <div className="p-3.5 px-4 bg-[var(--color-surface-sunken)] border-b border-[var(--color-hairline)] flex justify-between items-start shrink-0">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
             {isMobile && <MobileBack onClick={onBack} label={t("clients.backToList")} />}
-            <h2 className="client-detail-name">{client.name}</h2>
-            <span className={`client-state-badge ${isActive ? "client-state-badge--active" : "client-state-badge--inactive"}`}>
-              {t(`clientState.${client.state}`)}
-            </span>
+            <h2 className="text-[var(--text-lg)] font-semibold m-0">{client.name}</h2>
+            {isActive ? (
+              <Badge
+                variant="outline"
+                className="border-[var(--color-brand)] text-[var(--color-brand)] bg-[var(--color-brand-soft)]"
+              >
+                {t(`clientState.${client.state}`)}
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="border-[var(--color-hairline-strong)] text-[var(--color-text-muted)] bg-[var(--color-surface-sunken)]"
+              >
+                {t(`clientState.${client.state}`)}
+              </Badge>
+            )}
           </div>
-          <div className="client-id-label">
-            {t("clients.columnEmail")}: <span className="mono">{client.email}</span>
-            {client.phone && <span style={{ marginLeft: 12 }}>{client.phone}</span>}
+          <div className="text-[var(--text-sm)] text-[var(--color-text-muted)]">
+            {t("clients.columnEmail")}: <span className="font-mono">{client.email}</span>
+            {client.phone && <span className="ml-3">{client.phone}</span>}
           </div>
         </div>
-        <div className="client-detail-actions">
-          <button onClick={onEdit}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+        <div className="flex gap-1.5 items-center">
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Pencil className="w-4 h-4" />
             {t("common.edit")}
-          </button>
-          <button onClick={onToggleState} disabled={togglingState}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-              {isActive ? "toggle_off" : "toggle_on"}
-            </span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={onToggleState} disabled={togglingState}>
+            {isActive ? <ToggleLeft className="w-4 h-4" /> : <ToggleRight className="w-4 h-4" />}
             {isActive ? t("clients.deactivate") : t("clients.reactivate")}
-          </button>
-          <button className="danger" onClick={onDelete}>
+          </Button>
+          <Button variant="destructive" size="sm" onClick={onDelete}>
+            <Trash2 className="w-4 h-4" />
             {t("common.delete")}
-          </button>
+          </Button>
         </div>
       </div>
-      <div className="client-detail-body">
-        <div className="sites-section-header">
-          <h3>{t("sites.activeSites")}</h3>
-          <button onClick={onAddSite}>+ {t("sites.addSite")}</button>
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex justify-between items-center border-b border-[var(--color-hairline)] pb-1.5 mb-3">
+          <h3 className="m-0 text-[var(--text-base)] font-semibold">{t("sites.activeSites")}</h3>
+          <Button variant="outline" size="sm" onClick={onAddSite}>
+            <Plus className="w-4 h-4" />
+            {t("sites.addSite")}
+          </Button>
         </div>
-        {sitesLoading && <p className="muted">{t("common.loading")}</p>}
-        {sites && sites.length === 0 && <p className="muted">{t("sites.noSites")}</p>}
+        {sitesLoading && (
+          <p className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("common.loading")}</p>
+        )}
+        {sites && sites.length === 0 && (
+          <p className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("sites.noSites")}</p>
+        )}
         {sites && sites.length > 0 && (
-          <div className="sites-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {sites.map((site) => (
-              <div key={site.id} className="site-card" style={{ cursor: "pointer" }} onClick={() => onViewSite(site.id)}>
-                <div className="site-card-header">
-                  <span className="site-card-name">{site.name}</span>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={(e) => e.stopPropagation()}>
+              <div
+                key={site.id}
+                className="border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 bg-[var(--color-surface-panel)] cursor-pointer"
+                onClick={() => onViewSite(site.id)}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold text-[var(--text-base)]">{site.name}</span>
+                  <div
+                    className="flex items-center gap-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <span className={`status-dot ${siteDot(site)}`} />
-                    <div className="site-card-actions">
-                      <button onClick={() => onEditSite(site)} title={t("common.edit")}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
-                      </button>
-                      <button className="danger" onClick={() => onDeleteSite(site)} title={t("common.delete")}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>
-                      </button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEditSite(site)}
+                        title={t("common.edit")}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => onDeleteSite(site)}
+                        title={t("common.delete")}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <div className="site-meta-grid">
+                <div className="grid grid-cols-2 gap-1 mb-1.5">
                   <div>
-                    <div className="site-meta-label">{t("sites.equipment")}</div>
-                    <div className="site-meta-value">{site.equipmentCount}</div>
+                    <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+                      {t("sites.equipment")}
+                    </div>
+                    <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+                      {site.equipmentCount}
+                    </div>
                   </div>
                   <div>
-                    <div className="site-meta-label">{t("sites.personnel")}</div>
-                    <div className="site-meta-value">{site.personnelCount}</div>
+                    <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+                      {t("sites.personnel")}
+                    </div>
+                    <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+                      {site.personnelCount}
+                    </div>
                   </div>
                 </div>
                 {site.locationLabel && (
-                  <div className="site-location-label">{site.locationLabel}</div>
+                  <div className="text-[var(--text-xs)] text-[var(--color-text-muted)] mt-1">
+                    {site.locationLabel}
+                  </div>
                 )}
               </div>
             ))}
@@ -519,19 +622,19 @@ function SiteDetailView({
   const { t } = useTranslation();
   if (loading) {
     return (
-      <div className="client-detail-body">
-        <p className="muted">{t("common.loading")}</p>
+      <div className="flex-1 overflow-y-auto p-4">
+        <p className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("common.loading")}</p>
       </div>
     );
   }
   if (!site) {
     return (
-      <div className="client-detail-body">
-        <button className="site-detail-back" onClick={onBackToClient}>
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
+      <div className="flex-1 overflow-y-auto p-4">
+        <Button variant="ghost" size="sm" onClick={onBackToClient}>
+          <ArrowLeft className="w-4 h-4" />
           {client.name}
-        </button>
-        <p className="muted">{t("sites.noSites")}</p>
+        </Button>
+        <p className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("sites.noSites")}</p>
       </div>
     );
   }
@@ -539,49 +642,66 @@ function SiteDetailView({
   const hasCoords = site.lat != null && site.lng != null;
   return (
     <>
-      <div className="client-detail-header">
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="p-3.5 px-4 bg-[var(--color-surface-sunken)] border-b border-[var(--color-hairline)] flex justify-between items-start shrink-0">
+        <div className="flex-1 min-w-0">
           {isMobile && <MobileBack onClick={onBackToList} label={t("clients.backToList")} />}
-          <button className="site-detail-back" onClick={onBackToClient}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
+          <Button variant="ghost" size="sm" onClick={onBackToClient} className="mb-1">
+            <ArrowLeft className="w-4 h-4" />
             {client.name}
-          </button>
-          <h2 className="client-detail-name">{site.name}</h2>
+          </Button>
+          <h2 className="text-[var(--text-lg)] font-semibold m-0">{site.name}</h2>
           {site.locationLabel && (
-            <div className="client-id-label">{site.locationLabel}</div>
+            <div className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{site.locationLabel}</div>
           )}
         </div>
-        <div className="client-detail-actions">
-          <button onClick={onEdit}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+        <div className="flex gap-1.5 items-center">
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Pencil className="w-4 h-4" />
             {t("common.edit")}
-          </button>
-          <button className="danger" onClick={onDelete}>{t("common.delete")}</button>
+          </Button>
+          <Button variant="destructive" size="sm" onClick={onDelete}>
+            <Trash2 className="w-4 h-4" />
+            {t("common.delete")}
+          </Button>
         </div>
       </div>
-      <div className="client-detail-body">
-        <div className="site-meta-grid" style={{ gridTemplateColumns: "1fr 1fr 1fr", marginBottom: 16 }}>
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="grid grid-cols-3 gap-1 mb-4">
           <div>
-            <div className="site-meta-label">{t("sites.equipment")}</div>
-            <div className="site-meta-value">{site.equipmentCount}</div>
+            <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+              {t("sites.equipment")}
+            </div>
+            <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+              {site.equipmentCount}
+            </div>
           </div>
           <div>
-            <div className="site-meta-label">{t("sites.personnel")}</div>
-            <div className="site-meta-value">{site.personnelCount}</div>
+            <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+              {t("sites.personnel")}
+            </div>
+            <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+              {site.personnelCount}
+            </div>
           </div>
           <div>
-            <div className="site-meta-label">{t("sites.openOrders")}</div>
-            <div className="site-meta-value">{site.openOrderCount}</div>
+            <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+              {t("sites.openOrders")}
+            </div>
+            <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+              {site.openOrderCount}
+            </div>
           </div>
         </div>
 
-        <h3 style={{ margin: "0 0 8px", fontSize: "var(--text-base)" }}>{t("sites.mapPreview")}</h3>
+        <h3 className="m-0 mb-2 text-[var(--text-base)] font-semibold">{t("sites.mapPreview")}</h3>
         {hasCoords ? (
-          <div className="site-map-wrap">
+          <div className="mt-3 border border-[var(--color-hairline)] rounded-[var(--radius-sm)] overflow-hidden">
             <SiteMap lat={site.lat!} lng={site.lng!} label={site.locationLabel ?? site.name} />
           </div>
         ) : (
-          <div className="site-map-empty">{t("sites.noLocation")}</div>
+          <div className="mt-3 p-6 bg-[var(--color-surface-sunken)] border border-dashed border-[var(--color-hairline)] rounded-[var(--radius-sm)] text-center text-[var(--color-text-muted)] text-[var(--text-sm)]">
+            {t("sites.noLocation")}
+          </div>
         )}
       </div>
     </>
@@ -615,31 +735,105 @@ function ClientFormPanel({
 
   return (
     <>
-      <div className="form-panel-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div className="p-3.5 px-4 bg-[var(--color-surface-sunken)] border-b border-[var(--color-hairline)] flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-1">
           {isMobile && <MobileBack onClick={onCancel} label={t("common.cancel")} />}
-          <h2>{editing ? t("clients.editClient", { name: editing.name }) : t("clients.newClient")}</h2>
+          <h2 className="m-0 text-[var(--text-lg)] font-semibold">
+            {editing ? t("clients.editClient", { name: editing.name }) : t("clients.newClient")}
+          </h2>
         </div>
-        {!isMobile && <button className="ghost" onClick={onCancel}>{t("common.cancel")}</button>}
+        {!isMobile && (
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            {t("common.cancel")}
+          </Button>
+        )}
       </div>
-      <div className="form-panel-body form-panel">
-        <form onSubmit={submit}>
-          <label>{t("clients.fieldName")} *<input required value={draft.name} onChange={(e) => set("name", e.target.value)} /></label>
-          <label>{t("clients.fieldEmail")} *<input required type="email" value={draft.email} onChange={(e) => set("email", e.target.value)} /></label>
-          <label>{t("clients.fieldPhone")}<input value={draft.phone ?? ""} onChange={(e) => set("phone", e.target.value)} /></label>
-          <label>{t("clients.fieldVat")}<input value={draft.vatNumber ?? ""} onChange={(e) => set("vatNumber", e.target.value)} /></label>
-          <label>{t("clients.fieldAddress1")}<input value={draft.addressLine1 ?? ""} onChange={(e) => set("addressLine1", e.target.value)} /></label>
-          <label>{t("clients.fieldAddress2")}<input value={draft.addressLine2 ?? ""} onChange={(e) => set("addressLine2", e.target.value)} /></label>
-          <div className="form-row">
-            <label>{t("clients.fieldCity")}<input value={draft.city ?? ""} onChange={(e) => set("city", e.target.value)} /></label>
-            <label>{t("clients.fieldPostal")}<input value={draft.postalCode ?? ""} onChange={(e) => set("postalCode", e.target.value)} /></label>
+      <div className="flex-1 overflow-y-auto p-4">
+        <form onSubmit={submit} className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="client-name">{t("clients.fieldName")} *</Label>
+            <Input
+              id="client-name"
+              required
+              value={draft.name}
+              onChange={(e) => set("name", e.target.value)}
+            />
           </div>
-          <label>{t("clients.fieldCountry")}<input value={draft.country ?? ""} onChange={(e) => set("country", e.target.value)} /></label>
-          <div className="form-actions">
-            <button type="submit" className="primary" disabled={submitting}>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="client-email">{t("clients.fieldEmail")} *</Label>
+            <Input
+              id="client-email"
+              required
+              type="email"
+              value={draft.email}
+              onChange={(e) => set("email", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="client-phone">{t("clients.fieldPhone")}</Label>
+            <Input
+              id="client-phone"
+              value={draft.phone ?? ""}
+              onChange={(e) => set("phone", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="client-vat">{t("clients.fieldVat")}</Label>
+            <Input
+              id="client-vat"
+              value={draft.vatNumber ?? ""}
+              onChange={(e) => set("vatNumber", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="client-addr1">{t("clients.fieldAddress1")}</Label>
+            <Input
+              id="client-addr1"
+              value={draft.addressLine1 ?? ""}
+              onChange={(e) => set("addressLine1", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="client-addr2">{t("clients.fieldAddress2")}</Label>
+            <Input
+              id="client-addr2"
+              value={draft.addressLine2 ?? ""}
+              onChange={(e) => set("addressLine2", e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="client-city">{t("clients.fieldCity")}</Label>
+              <Input
+                id="client-city"
+                value={draft.city ?? ""}
+                onChange={(e) => set("city", e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="client-postal">{t("clients.fieldPostal")}</Label>
+              <Input
+                id="client-postal"
+                value={draft.postalCode ?? ""}
+                onChange={(e) => set("postalCode", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="client-country">{t("clients.fieldCountry")}</Label>
+            <Input
+              id="client-country"
+              value={draft.country ?? ""}
+              onChange={(e) => set("country", e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 mt-1.5">
+            <Button type="submit" variant="default" disabled={submitting}>
               {editing ? t("common.save") : t("common.create")}
-            </button>
-            <button type="button" className="ghost" onClick={onCancel}>{t("common.cancel")}</button>
+            </Button>
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              {t("common.cancel")}
+            </Button>
           </div>
         </form>
       </div>
@@ -672,20 +866,33 @@ function SiteFormPanel({
 
   return (
     <>
-      <div className="form-panel-header">
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div className="p-3.5 px-4 bg-[var(--color-surface-sunken)] border-b border-[var(--color-hairline)] flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-1">
           {isMobile && <MobileBack onClick={onCancel} label={t("common.cancel")} />}
-          <h2>{editing ? t("sites.editSite") : t("sites.addSite")}</h2>
+          <h2 className="m-0 text-[var(--text-lg)] font-semibold">
+            {editing ? t("sites.editSite") : t("sites.addSite")}
+          </h2>
         </div>
-        {!isMobile && <button className="ghost" onClick={onCancel}>{t("common.cancel")}</button>}
+        {!isMobile && (
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            {t("common.cancel")}
+          </Button>
+        )}
       </div>
-      <div className="form-panel-body form-panel">
-        <form onSubmit={submit}>
-          <label>{t("sites.fieldName")} *
-            <input required value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
+      <div className="flex-1 overflow-y-auto p-4">
+        <form onSubmit={submit} className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="site-name">{t("sites.fieldName")} *</Label>
+            <Input
+              id="site-name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
 
-          <label>{t("sites.fieldAddressLookup")}
+          <div className="flex flex-col gap-1">
+            <Label>{t("sites.fieldAddressLookup")}</Label>
             <AddressLookup
               onPick={(h) => {
                 setLat(h.lat);
@@ -698,25 +905,31 @@ function SiteFormPanel({
               }}
               placeholder={t("sites.addressPlaceholder")}
             />
-          </label>
+          </div>
 
           {hasCoords && (
             <div>
               {locationLabel && (
-                <div className="site-location-label" style={{ marginBottom: 6 }}>{locationLabel}</div>
+                <div className="text-[var(--text-xs)] text-[var(--color-text-muted)] mb-1.5">
+                  {locationLabel}
+                </div>
               )}
-              <div className="site-meta-label" style={{ marginBottom: 4 }}>{t("sites.mapPreview")}</div>
-              <div className="site-map-wrap">
+              <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em] mb-1">
+                {t("sites.mapPreview")}
+              </div>
+              <div className="mt-1 border border-[var(--color-hairline)] rounded-[var(--radius-sm)] overflow-hidden">
                 <SiteMap lat={lat!} lng={lng!} label={locationLabel || name} height={200} />
               </div>
             </div>
           )}
 
-          <div className="form-actions">
-            <button type="submit" className="primary" disabled={submitting}>
+          <div className="flex gap-2 mt-1.5">
+            <Button type="submit" variant="default" disabled={submitting}>
               {editing ? t("common.save") : t("common.create")}
-            </button>
-            <button type="button" className="ghost" onClick={onCancel}>{t("common.cancel")}</button>
+            </Button>
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              {t("common.cancel")}
+            </Button>
           </div>
         </form>
       </div>
