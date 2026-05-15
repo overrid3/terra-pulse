@@ -21,6 +21,16 @@ import {
   MechanicAbsence,
   UUID
 } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 
 const locales = { "en-US": undefined };
 const localizer = dateFnsLocalizer({
@@ -171,13 +181,13 @@ export function AbsenceCalendarPicker({
       : null;
 
   return (
-    <form className="absence-picker" onSubmit={submit}>
-      <header className="absence-picker-head">
-        <h3 className="picker-heading">
+    <form className="flex flex-col gap-2.5" onSubmit={submit}>
+      <header className="flex items-center justify-between gap-2">
+        <h3 className="mt-1.5 mb-2 text-[var(--text-base)] font-semibold">
           {editingId ? t("absences.edit") : t("absences.add")}
         </h3>
         {days != null && (
-          <span className="absence-picker-summary muted">
+          <span className="text-[var(--text-xs)] text-[var(--color-text-subtle)]">
             {t("absences.daysSummary", {
               count: days,
               defaultValue: "{{count}} day(s)"
@@ -186,10 +196,11 @@ export function AbsenceCalendarPicker({
         )}
       </header>
 
-      <div className="absence-picker-grid">
-        <label>
-          {t("absences.fieldStart")} *
-          <input
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="absence-start">{t("absences.fieldStart")} *</Label>
+          <Input
+            id="absence-start"
             required
             type="datetime-local"
             value={start}
@@ -198,93 +209,105 @@ export function AbsenceCalendarPicker({
               if (e.target.value) softWarn(new Date(isoLocalToInstant(e.target.value)));
             }}
           />
-        </label>
-        <label>
-          {t("absences.fieldEnd")} *
-          <input
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="absence-end">{t("absences.fieldEnd")} *</Label>
+          <Input
+            id="absence-end"
             required
             type="datetime-local"
             value={end}
             onChange={(e) => setEnd(e.target.value)}
           />
-        </label>
-        <label>
-          {t("absences.fieldType")}
-          <select value={type} onChange={(e) => setType(e.target.value as AbsenceType)}>
-            {ABSENCE_TYPES.map((tt) => (
-              <option key={tt} value={tt}>{t(`absenceType.${tt}`)}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          {t("absences.fieldReason")}
-          <input
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="absence-type">{t("absences.fieldType")}</Label>
+          <Select value={type} onValueChange={(v) => v && setType(v as AbsenceType)}>
+            <SelectTrigger id="absence-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ABSENCE_TYPES.map((tt) => (
+                <SelectItem key={tt} value={tt}>{t(`absenceType.${tt}`)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="absence-reason">{t("absences.fieldReason")}</Label>
+          <Input
+            id="absence-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             maxLength={255}
           />
-        </label>
+        </div>
       </div>
 
-      <button
+      <Button
         type="button"
-        className="ghost absence-picker-toggle"
+        variant="ghost"
+        size="sm"
         aria-expanded={showCalendar}
         onClick={() => setShowCalendar((v) => !v)}
+        className="self-start"
       >
         {showCalendar
           ? t("absences.hideCalendar", { defaultValue: "Hide calendar" })
           : t("absences.pickVisually", { defaultValue: "Pick on calendar" })}
-      </button>
+      </Button>
 
       {showCalendar && (
-        <div className="absence-picker-cal">
-          <p className="muted" style={{ margin: "0 0 6px" }}>
+        <div className="h-[320px] p-2 bg-[var(--color-surface-sunken)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] flex flex-col">
+          <p className="text-[var(--text-xs)] text-[var(--color-text-subtle)] mb-1.5">
             {t("absences.calendarHint")}
           </p>
-          <Calendar
-            localizer={localizer}
-            events={events}
-            view="week"
-            views={["week"]}
-            onView={() => { /* locked to week */ }}
-            defaultDate={new Date()}
-            selectable
-            onSelectSlot={handleSelectSlot}
-            longPressThreshold={50}
-            step={60}
-            timeslots={1}
-            min={new Date(new Date().setHours(6, 0, 0, 0))}
-            max={new Date(new Date().setHours(20, 0, 0, 0))}
-            style={{ height: "100%" }}
-            eventPropGetter={(ev: any) => {
-              const e = ev as CalEvent;
-              const cls = [
-                "rbc-event",
-                e.absenceType ? `absence-${e.absenceType}` : "",
-                e.editing ? "ds-cal-event-editing" : ""
-              ]
-                .filter(Boolean)
-                .join(" ");
-              return { className: cls };
-            }}
-          />
+          <div className="flex-1 min-h-0">
+            <Calendar
+              localizer={localizer}
+              events={events}
+              view="week"
+              views={["week"]}
+              onView={() => { /* locked to week */ }}
+              defaultDate={new Date()}
+              selectable
+              onSelectSlot={handleSelectSlot}
+              longPressThreshold={50}
+              step={60}
+              timeslots={1}
+              min={new Date(new Date().setHours(6, 0, 0, 0))}
+              max={new Date(new Date().setHours(20, 0, 0, 0))}
+              style={{ height: "100%" }}
+              eventPropGetter={(ev: any) => {
+                const e = ev as CalEvent;
+                const cls = [
+                  "rbc-event",
+                  e.absenceType ? `absence-${e.absenceType}` : "",
+                  e.editing ? "ds-cal-event-editing" : ""
+                ]
+                  .filter(Boolean)
+                  .join(" ");
+                return { className: cls };
+              }}
+            />
+          </div>
         </div>
       )}
 
-      {err && <p className="error">{err}</p>}
-      {!err && warn && <p className="muted">{warn}</p>}
+      {err && <p className="text-[var(--color-danger-text)] text-[var(--text-sm)]">{err}</p>}
+      {!err && warn && <p className="text-[var(--text-sm)] text-[var(--color-text-subtle)]">{warn}</p>}
 
-      <div className="form-actions">
-        <button
+      <div className="flex gap-2 mt-1.5">
+        <Button
           type="submit"
+          variant="default"
           disabled={Boolean(submitting) || invalidRange || !start || !end}
         >
           {t("common.save")}
-        </button>
-        <button type="button" className="ghost" onClick={onCancel}>
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           {t("common.cancel")}
-        </button>
+        </Button>
       </div>
     </form>
   );

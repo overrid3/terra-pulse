@@ -6,6 +6,16 @@ import { queryKeys } from "../api/client";
 import { AbsenceUpsert, MechanicAbsence, UUID } from "../types";
 import { fmtDateTime } from "../i18n/format";
 import { AbsenceCalendarPicker, AbsenceDraft } from "./AbsenceCalendarPicker";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 
 type Props = { mechanicId: UUID; mechanicName: string };
 
@@ -59,44 +69,83 @@ export function AbsencesPanel({ mechanicId, mechanicName }: Props) {
   }
 
   return (
-    <section className="panel">
-      <div className="filters">
-        <h2>{t("absences.panelTitle", { name: mechanicName })}</h2>
+    <section
+      className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0"
+      style={{ gridArea: "absences" }}
+    >
+      <div className="flex items-center gap-3.5 mb-2.5 flex-wrap justify-between">
+        <h2 className="text-[var(--text-base)] font-semibold m-0">
+          {t("absences.panelTitle", { name: mechanicName })}
+        </h2>
         {!pickerOpen && (
-          <button onClick={() => setAdding(true)}>{t("absences.add")}</button>
+          <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
+            {t("absences.add")}
+          </Button>
         )}
       </div>
-      <p className="muted">{t("absences.panelHelp")}</p>
+      <p className="text-[var(--text-sm)] text-[var(--color-text-subtle)] mb-2.5">
+        {t("absences.panelHelp")}
+      </p>
 
-      <table className="data-table absences-table">
-        <thead>
-          <tr>
-            <th>{t("absences.columnType")}</th>
-            <th>{t("absences.columnStart")}</th>
-            <th>{t("absences.columnEnd")}</th>
-            <th>{t("absences.columnReason")}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((a) => (
-            <tr key={a.id} className={editing?.id === a.id ? "selected" : ""}>
-              <td><span className={`badge absence-${a.type}`}>{t(`absenceType.${a.type}`)}</span></td>
-              <td className="muted">{fmtDateTime(a.startAt)}</td>
-              <td className="muted">{fmtDateTime(a.endAt)}</td>
-              <td>{a.reason ?? t("common.dash")}</td>
-              <td className="row-actions">
-                <button onClick={() => { setEditing(a); setAdding(false); }}>{t("common.edit")}</button>
-                <button
-                  className="danger"
-                  onClick={() => confirm(t("common.deleteConfirm", { label: t(`absenceType.${a.type}`) })) && deleteMut.mutate(a.id)}
-                >{t("common.delete")}</button>
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 && <tr><td colSpan={5} className="muted">{t("absences.noneScheduled")}</td></tr>}
-        </tbody>
-      </table>
+      <div className="mb-3">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("absences.columnType")}</TableHead>
+              <TableHead>{t("absences.columnStart")}</TableHead>
+              <TableHead>{t("absences.columnEnd")}</TableHead>
+              <TableHead>{t("absences.columnReason")}</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((a) => (
+              <TableRow
+                key={a.id}
+                data-state={editing?.id === a.id ? "selected" : undefined}
+              >
+                <TableCell>
+                  <Badge variant="secondary" className={`absence-${a.type}`}>
+                    {t(`absenceType.${a.type}`)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-[var(--color-text-subtle)]">
+                  {fmtDateTime(a.startAt)}
+                </TableCell>
+                <TableCell className="text-[var(--color-text-subtle)]">
+                  {fmtDateTime(a.endAt)}
+                </TableCell>
+                <TableCell>{a.reason ?? t("common.dash")}</TableCell>
+                <TableCell>
+                  <div className="flex gap-1 whitespace-nowrap justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setEditing(a); setAdding(false); }}
+                    >
+                      {t("common.edit")}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => confirm(t("common.deleteConfirm", { label: t(`absenceType.${a.type}`) })) && deleteMut.mutate(a.id)}
+                    >
+                      {t("common.delete")}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-[var(--color-text-subtle)]">
+                  {t("absences.noneScheduled")}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {pickerOpen && (
         <AbsenceCalendarPicker

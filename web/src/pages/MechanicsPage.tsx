@@ -1,12 +1,34 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Plus } from "lucide-react";
 import { mechanicsApi, MechanicUpsert } from "../api/mechanics";
 import { skillsApi } from "../api/skills";
 import { queryKeys } from "../api/client";
 import { Mechanic, MechanicStatus } from "../types";
 import { AddressLookup } from "../components/AddressLookup";
 import { AbsencesPanel } from "../components/AbsencesPanel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 const STATUSES: MechanicStatus[] = ["IDLE", "EN_ROUTE", "IN_PROGRESS", "OFF_DUTY"];
 
@@ -93,118 +115,259 @@ export function MechanicsPage() {
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
 
+  const total = qc.data?.length ?? 0;
+  const available = qc.data?.filter((m) => m.status === "IDLE").length ?? 0;
+  const inField = qc.data?.filter((m) => m.status === "EN_ROUTE" || m.status === "IN_PROGRESS").length ?? 0;
+  const offDuty = qc.data?.filter((m) => m.status === "OFF_DUTY").length ?? 0;
+
+  const statCardClass =
+    "bg-[var(--color-surface-container-highest)] border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3 gap-1.5";
+  const statLabelClass =
+    "text-[var(--text-xs)] font-semibold tracking-[0.04em] uppercase text-[var(--color-text-subtle)]";
+  const statValueBase =
+    "font-mono text-[1.4rem] font-medium leading-none text-[var(--color-text)]";
+
+  const mainClass = editing
+    ? "flex-1 min-h-0 p-3.5 grid gap-3.5"
+    : "flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]";
+  const mainStyle = editing
+    ? {
+        gridTemplateColumns: "1.6fr 1fr",
+        gridTemplateAreas: "'list form' 'absences absences'"
+      } as React.CSSProperties
+    : undefined;
+
   return (
-    <main className={`page-grid ${editing ? "three-row" : "two-col"}`}>
-      <section className="panel">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <h2 style={{ margin: 0 }}>{t("mechanics.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
-          <button className="primary" type="button" onClick={() => { setEditing(null); setDraft(EMPTY); setError(null); }}>
-            + {t("mechanics.newMechanic")}
-          </button>
+    <main className={mainClass} style={mainStyle}>
+      <section
+        className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0"
+        style={editing ? { gridArea: "list" } : undefined}
+      >
+        <div className="flex items-center justify-between mb-2.5">
+          <h2 className="m-0 text-[var(--text-base)] font-semibold">
+            {t("mechanics.pageTitle", { count: total })}
+          </h2>
+          <Button
+            variant="default"
+            type="button"
+            onClick={() => { setEditing(null); setDraft(EMPTY); setError(null); }}
+          >
+            <Plus className="w-4 h-4" />
+            {t("mechanics.newMechanic")}
+          </Button>
         </div>
-        <div className="stat-grid">
-          <div className="stat-card">
-            <span className="stat-card-label">Total Roster</span>
-            <span className="stat-card-value">{qc.data?.length ?? 0}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-card-label">Available</span>
-            <span className="stat-card-value">{qc.data?.filter(m => m.status === 'IDLE').length ?? 0}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-card-label">In Field</span>
-            <span className="stat-card-value accent">{qc.data?.filter(m => m.status === 'EN_ROUTE' || m.status === 'IN_PROGRESS').length ?? 0}</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-card-label">Off Duty</span>
-            <span className="stat-card-value">{qc.data?.filter(m => m.status === 'OFF_DUTY').length ?? 0}</span>
-          </div>
+
+        <div className="grid grid-cols-4 gap-2.5 mb-3">
+          <Card className={statCardClass}>
+            <div className={statLabelClass}>Total Roster</div>
+            <div className={statValueBase}>{total}</div>
+          </Card>
+          <Card className={statCardClass}>
+            <div className={statLabelClass}>Available</div>
+            <div className={statValueBase}>{available}</div>
+          </Card>
+          <Card className={statCardClass}>
+            <div className={statLabelClass}>In Field</div>
+            <div className={cn(statValueBase, "text-[var(--color-brand-strong)]")}>{inField}</div>
+          </Card>
+          <Card className={statCardClass}>
+            <div className={statLabelClass}>Off Duty</div>
+            <div className={statValueBase}>{offDuty}</div>
+          </Card>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t("mechanics.columnName")}</th>
-              <th>{t("mechanics.columnStatus")}</th>
-              <th>{t("mechanics.columnSkills")}</th>
-              <th>{t("mechanics.columnLocation")}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("mechanics.columnName")}</TableHead>
+              <TableHead>{t("mechanics.columnStatus")}</TableHead>
+              <TableHead>{t("mechanics.columnSkills")}</TableHead>
+              <TableHead>{t("mechanics.columnLocation")}</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {qc.data?.map((m) => (
-              <tr key={m.id} className={editing?.id === m.id ? "selected" : ""}>
-                <td>
-                  <span className="cell-primary">
+              <TableRow key={m.id} data-state={editing?.id === m.id ? "selected" : undefined}>
+                <TableCell>
+                  <span className="inline-flex items-baseline gap-2 min-w-0">
                     <span>{m.fullName}</span>
-                    {m.phone && <span className="meta mono">{m.phone}</span>}
+                    {m.phone && (
+                      <span className="font-mono text-[var(--text-xs)] text-[var(--color-text-subtle)]">
+                        {m.phone}
+                      </span>
+                    )}
                   </span>
-                </td>
-                <td><span className={`badge status-${m.status}`}>{t(`mechanicStatus.${m.status}`)}</span></td>
-                <td>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className={`status-${m.status}`}>
+                    {t(`mechanicStatus.${m.status}`)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
                   {m.skills.length > 0 ? (
-                    <span className="cell-chips">
-                      {m.skills.map((s) => <span key={s} className="chip">{s}</span>)}
+                    <span className="flex flex-nowrap gap-1 max-w-full overflow-x-auto">
+                      {m.skills.map((s) => (
+                        <Badge key={s} variant="secondary" className="text-[var(--text-xs)]">
+                          {s}
+                        </Badge>
+                      ))}
                     </span>
-                  ) : <span className="muted">{t("common.dash")}</span>}
-                </td>
-                <td className="mono">{m.location ? `${m.location.lat.toFixed(4)}, ${m.location.lng.toFixed(4)}` : t("common.dash")}</td>
-                <td className="row-actions">
-                  <button onClick={() => loadForEdit(m)}>{t("common.edit")}</button>
-                  <button className="danger" onClick={() => confirm(t("common.deleteConfirm", { label: m.fullName })) && deleteMut.mutate(m.id)}>{t("common.delete")}</button>
-                </td>
-              </tr>
+                  ) : (
+                    <span className="text-[var(--color-text-subtle)]">{t("common.dash")}</span>
+                  )}
+                </TableCell>
+                <TableCell className="font-mono">
+                  {m.location
+                    ? `${m.location.lat.toFixed(4)}, ${m.location.lng.toFixed(4)}`
+                    : t("common.dash")}
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1 whitespace-nowrap justify-end">
+                    <Button variant="outline" size="sm" onClick={() => loadForEdit(m)}>
+                      {t("common.edit")}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => confirm(t("common.deleteConfirm", { label: m.fullName })) && deleteMut.mutate(m.id)}
+                    >
+                      {t("common.delete")}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ))}
-            {qc.data?.length === 0 && <tr><td colSpan={5} className="muted">{t("mechanics.noMechanics")}</td></tr>}
-          </tbody>
-        </table>
+            {qc.data?.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-[var(--color-text-subtle)]">
+                  {t("mechanics.noMechanics")}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </section>
 
-      <section className="panel form-panel">
-        <h2>{editing ? t("mechanics.editMechanic", { name: editing.fullName }) : t("mechanics.newMechanic")}</h2>
-        <form onSubmit={submit}>
-          <label>{t("mechanics.fieldFullName")} *<input required value={draft.fullName} onChange={(e) => set("fullName", e.target.value)} /></label>
-          <label>{t("mechanics.fieldPhone")}<input value={draft.phone} onChange={(e) => set("phone", e.target.value)} /></label>
-          <label>{t("mechanics.fieldStatus")}
-            <select value={draft.status} onChange={(e) => set("status", e.target.value as MechanicStatus)}>
-              {STATUSES.map((s) => <option key={s} value={s}>{t(`mechanicStatus.${s}`)}</option>)}
-            </select>
-          </label>
-          <div>
-            <label>
+      <section
+        className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0"
+        style={editing ? { gridArea: "form" } : undefined}
+      >
+        <h2 className="m-0 mb-3 text-[var(--text-base)] font-semibold">
+          {editing ? t("mechanics.editMechanic", { name: editing.fullName }) : t("mechanics.newMechanic")}
+        </h2>
+        <form onSubmit={submit} className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="mech-fullName">{t("mechanics.fieldFullName")} *</Label>
+            <Input
+              id="mech-fullName"
+              required
+              value={draft.fullName}
+              onChange={(e) => set("fullName", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="mech-phone">{t("mechanics.fieldPhone")}</Label>
+            <Input
+              id="mech-phone"
+              value={draft.phone}
+              onChange={(e) => set("phone", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="mech-status">{t("mechanics.fieldStatus")}</Label>
+            <Select
+              value={draft.status}
+              onValueChange={(v) => v && set("status", v as MechanicStatus)}
+            >
+              <SelectTrigger id="mech-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>{t(`mechanicStatus.${s}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>
               {t("mechanics.fieldSkills")}{" "}
-              <span className="muted">
+              <span className="text-[var(--color-text-subtle)] font-normal">
                 {t("mechanics.skillsManagedAt", { link: "" })}
-                <a href="/skills">/skills</a>
+                <a href="/skills" className="underline">/skills</a>
               </span>
-            </label>
+            </Label>
             {catalog.length === 0 ? (
-              <p className="muted">{t("mechanics.skillsCatalogEmpty")}</p>
+              <p className="text-[var(--text-sm)] text-[var(--color-text-subtle)] m-0">
+                {t("mechanics.skillsCatalogEmpty")}
+              </p>
             ) : (
-              <div className="checkbox-row">
+              <div className="flex gap-2.5 flex-wrap">
                 {catalog.map((s) => (
-                  <label key={s} className="checkbox">
-                    <input type="checkbox" checked={draft.skills.includes(s)} onChange={() => toggleSkill(s)} /> {s}
+                  <label
+                    key={s}
+                    className="inline-flex items-center gap-1.5 text-[var(--text-sm)]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={draft.skills.includes(s)}
+                      onChange={() => toggleSkill(s)}
+                    />
+                    {s}
                   </label>
                 ))}
               </div>
             )}
           </div>
-          <label>{t("mechanics.fieldAddressLookup")}
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="mech-address">{t("mechanics.fieldAddressLookup")}</Label>
             <AddressLookup
               onPick={(h) => setDraft((d) => ({ ...d, lat: String(h.lat), lng: String(h.lng) }))}
               placeholder={t("mechanics.addressPlaceholder")}
             />
-          </label>
-          <div className="form-row">
-            <label>{t("mechanics.fieldLat")}<input type="number" step="any" value={draft.lat} onChange={(e) => set("lat", e.target.value)} /></label>
-            <label>{t("mechanics.fieldLng")}<input type="number" step="any" value={draft.lng} onChange={(e) => set("lng", e.target.value)} /></label>
           </div>
-          {error && <p className="error">{error}</p>}
-          <div className="form-actions">
-            <button type="submit" disabled={createMut.isPending || patchMut.isPending}>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="mech-lat">{t("mechanics.fieldLat")}</Label>
+              <Input
+                id="mech-lat"
+                type="number"
+                step="any"
+                value={draft.lat}
+                onChange={(e) => set("lat", e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="mech-lng">{t("mechanics.fieldLng")}</Label>
+              <Input
+                id="mech-lng"
+                type="number"
+                step="any"
+                value={draft.lng}
+                onChange={(e) => set("lng", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-[var(--color-danger-text)] text-[var(--text-sm)] m-0">{error}</p>}
+
+          <div className="flex gap-2 mt-1.5">
+            <Button
+              type="submit"
+              variant="default"
+              disabled={createMut.isPending || patchMut.isPending}
+            >
               {editing ? t("common.save") : t("common.create")}
-            </button>
-            {editing && <button type="button" className="ghost" onClick={reset}>{t("common.cancel")}</button>}
+            </Button>
+            {editing && (
+              <Button type="button" variant="ghost" onClick={reset}>
+                {t("common.cancel")}
+              </Button>
+            )}
           </div>
         </form>
       </section>
