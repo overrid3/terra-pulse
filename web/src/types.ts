@@ -31,6 +31,7 @@ export type ServiceOrder = {
   mechanicId: UUID | null;
   clientId: UUID | null;
   siteId: UUID;
+  siteName?: string | null;
   clientName: string | null;
   vmrsCode: string;
   vmrsDescription?: string;
