@@ -258,24 +258,74 @@ public class ServiceOrderResource {
             throw new IllegalArgumentException("state required");
         }
         ServiceOrderState target = in.state();
-        if (target != ServiceOrderState.CANCELLED && target != ServiceOrderState.REQUESTED) {
-            throw new IllegalArgumentException(
-                    "override only allowed to CANCELLED or REQUESTED (got " + target + ")");
-        }
         ServiceOrder so = load(id);
         ServiceOrderState from = so.state;
+        java.time.Instant now = java.time.Instant.now();
 
         String reason = (in.reason() == null || in.reason().isBlank()) ? "no reason given" : in.reason();
-        String entry = "[override " + java.time.Instant.now() + "] " + from + " -> " + target + ": " + reason;
+        String entry = "[override " + now + "] " + from + " -> " + target + ": " + reason;
         so.notes = (so.notes == null || so.notes.isBlank()) ? entry : so.notes + "\n" + entry;
-
-        if (target == ServiceOrderState.REQUESTED) {
-            // Reopen: detach mechanic + clear lifecycle timestamps so the workflow restarts cleanly.
-            so.mechanic = null;
-            so.dispatchedAt = null;
-            so.startedAt = null;
-            so.completedAt = null;
-            so.actualMinutes = null;
+        switch (target) {
+            case REQUESTED, QUOTED, APPROVED -> {
+                so.mechanic = null;
+                so.dispatchedAt = null;
+                so.startedAt = null;
+                so.completedAt = null;
+                so.actualMinutes = null;
+            }
+            case DISPATCHED -> {
+                if (so.mechanic == null) {
+                    if (in.mechanicId() == null) {
+                        throw new IllegalArgumentException("mechanicId required to override to DISPATCHED");
+                    }
+                    so.mechanic = mechanicRepo.findById(in.mechanicId());
+                    if (so.mechanic == null) {
+                        throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    }
+                }
+                if (so.dispatchedAt == null) so.dispatchedAt = now;
+                so.startedAt = null;
+                so.completedAt = null;
+                so.actualMinutes = null;
+            }
+            case IN_PROGRESS -> {
+                if (so.mechanic == null) {
+                    if (in.mechanicId() == null) {
+                        throw new IllegalArgumentException("mechanicId required to override to IN_PROGRESS");
+                    }
+                    so.mechanic = mechanicRepo.findById(in.mechanicId());
+                    if (so.mechanic == null) {
+                        throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    }
+                }
+                if (so.dispatchedAt == null) so.dispatchedAt = now;
+                if (so.startedAt == null) so.startedAt = now;
+                so.completedAt = null;
+                so.actualMinutes = null;
+            }
+            case COMPLETED -> {
+                if (so.mechanic == null) {
+                    if (in.mechanicId() == null) {
+                        throw new IllegalArgumentException("mechanicId required to override to COMPLETED");
+                    }
+                    so.mechanic = mechanicRepo.findById(in.mechanicId());
+                    if (so.mechanic == null) {
+                        throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    }
+                }
+                if (so.dispatchedAt == null) so.dispatchedAt = now;
+                if (so.startedAt == null) so.startedAt = now;
+                if (so.actualMinutes == null) {
+                    if (in.actualMinutes() == null || in.actualMinutes() < 1) {
+                        throw new IllegalArgumentException("actualMinutes required to override to COMPLETED");
+                    }
+                    so.actualMinutes = in.actualMinutes();
+                }
+                if (so.completedAt == null) so.completedAt = now;
+            }
+            case CANCELLED -> {
+                // keep lifecycle fields for audit trail
+            }
         }
         so.state = target;
 
@@ -287,6 +337,7 @@ public class ServiceOrderResource {
         payload.put("reason", reason);
         bus.publish(com.terrapulse.ws.DispatchEvent.of(
                 com.terrapulse.ws.DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
+
         return ServiceOrderDto.of(so);
     }
 
