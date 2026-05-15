@@ -73,7 +73,8 @@
     "actionQuote": "Preventivo",
     "actionApprove": "Approva",
     "actionStart": "Avvia",
-    "actionComplete": "Completa"
+    "actionComplete": "Completa",
+    "selectMechanic": "Seleziona meccanico"
   },
   "orders": {
     "pageTitle": "Ordini di servizio",
@@ -111,11 +112,11 @@
     "selectPlaceholder": "— scegli —",
     "vehicleOption": "{{make}} {{model}} · {{serial}}",
     "overrideHeading": "Forza stato",
-    "overrideHelp": "Lo override admin scavalca il flusso normale. Sono ammessi solo CANCELLED e REQUESTED. Riaprire a REQUESTED rimuove il meccanico assegnato e i timestamp del ciclo.",
+    "overrideHelp": "Lo override admin scavalca il flusso normale e può impostare qualsiasi stato target. Usare con cautela.",
     "overrideTarget": "Target",
     "overrideReason": "Motivo",
     "overrideReasonPlaceholder": "Perché?",
-    "overrideApply": "Applica override",
+    "actionOverrideApply": "Applica override",
     "overrideCancelled": "ANNULLATO",
     "overrideReopen": "RIAPRI (REQUESTED)",
     "actionTitleEdit": "Modifica titolo",

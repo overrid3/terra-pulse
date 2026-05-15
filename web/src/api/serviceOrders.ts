@@ -12,8 +12,13 @@ export const serviceOrdersApi = {
   start:    (id: UUID)                               => api.post<ServiceOrder>(`/service-orders/${id}/start`),
   complete: (id: UUID, actualMinutes: number)        => api.post<ServiceOrder>(`/service-orders/${id}/complete`, { actualMinutes }),
   cancel:   (id: UUID)                               => api.post<ServiceOrder>(`/service-orders/${id}/cancel`),
-  override: (id: UUID, state: "CANCELLED" | "REQUESTED", reason: string) =>
-    api.post<ServiceOrder>(`/service-orders/${id}/override-state`, { state, reason }),
+  override: (id: UUID, body: {
+    state: "REQUESTED" | "QUOTED" | "APPROVED" | "DISPATCHED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+    reason: string;
+    mechanicId?: UUID;
+    actualMinutes?: number;
+  }) =>
+    api.post<ServiceOrder>(`/service-orders/${id}/override-state`, body),
   renameTitle: (id: UUID, title: string) =>
     api.patch<ServiceOrder>(`/service-orders/${id}/title`, { title }),
   create:   (body: { vehicleId: UUID; clientId: UUID; siteId: UUID; vmrsCode: string; title?: string; siteLocation?: { lat: number; lng: number }; notes?: string }) =>

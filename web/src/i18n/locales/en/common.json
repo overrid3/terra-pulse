@@ -73,7 +73,8 @@
     "actionQuote": "Quote",
     "actionApprove": "Approve",
     "actionStart": "Start",
-    "actionComplete": "Complete"
+    "actionComplete": "Complete",
+    "selectMechanic": "Select mechanic"
   },
   "orders": {
     "pageTitle": "Service orders",
@@ -111,11 +112,11 @@
     "selectPlaceholder": "— pick —",
     "vehicleOption": "{{make}} {{model}} · {{serial}}",
     "overrideHeading": "Override state",
-    "overrideHelp": "Admin override bypasses the normal workflow. Only CANCELLED and REQUESTED are allowed. Reopening to REQUESTED clears the assigned mechanic and lifecycle timestamps.",
+    "overrideHelp": "Admin override bypasses the normal workflow and can set any target state. Use with care.",
     "overrideTarget": "Target",
     "overrideReason": "Reason",
     "overrideReasonPlaceholder": "Why?",
-    "overrideApply": "Apply override",
+    "actionOverrideApply": "Apply override",
     "overrideCancelled": "CANCELLED",
     "overrideReopen": "REQUESTED (reopen)",
     "actionTitleEdit": "Edit title",

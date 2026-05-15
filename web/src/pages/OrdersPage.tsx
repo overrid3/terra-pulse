@@ -1,15 +1,17 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pencil, X, Plus } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { sitesApi } from "../api/sites";
 import { vehiclesApi } from "../api/vehicles";
 import { clientsApi } from "../api/clients";
 import { queryKeys } from "../api/client";
-import { ServiceOrder, ServiceOrderState, Site } from "../types";
+import { ServiceOrder, ServiceOrderState, Site, UUID } from "../types";
 import { AddressLookup } from "../components/AddressLookup";
 import { SearchInput } from "../components/SearchInput";
+import { OrderDetailsCard } from "../components/OrderDetailsCard";
+import { MechanicPicker } from "../components/MechanicPicker";
 import { fmtDateTime } from "../i18n/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,8 +88,18 @@ export function OrdersPage() {
 
   const createMut   = useMutation({ mutationFn: serviceOrdersApi.create, onSuccess: invalidate });
   const overrideMut = useMutation({
-    mutationFn: (args: { id: string; state: "CANCELLED" | "REQUESTED"; reason: string }) =>
-      serviceOrdersApi.override(args.id, args.state, args.reason),
+    mutationFn: (args: {
+      id: string;
+      state: ServiceOrderState;
+      reason: string;
+      mechanicId?: string;
+      actualMinutes?: number;
+    }) => serviceOrdersApi.override(args.id, {
+      state: args.state,
+      reason: args.reason,
+      mechanicId: args.mechanicId,
+      actualMinutes: args.actualMinutes,
+    }),
     onSuccess: invalidate
   });
   const renameMut = useMutation({
@@ -206,7 +218,8 @@ export function OrdersPage() {
           <OrderDetail
             order={selected}
             onClose={() => setSelected(null)}
-            onOverride={(state, reason) => overrideMut.mutate({ id: selected.id, state, reason })}
+            onOverride={(state, reason, mechanicId, actualMinutes) =>
+              overrideMut.mutate({ id: selected.id, state, reason, mechanicId, actualMinutes })}
             overriding={overrideMut.isPending}
             onRename={(title) => renameMut.mutate({ id: selected.id, title })}
             renaming={renameMut.isPending}
@@ -229,28 +242,83 @@ function OrderDetail({
 }: {
   order: ServiceOrder;
   onClose: () => void;
-  onOverride: (state: "CANCELLED" | "REQUESTED", reason: string) => void;
+  onOverride: (state: ServiceOrderState, reason: string, mechanicId?: string, actualMinutes?: number) => void;
   overriding: boolean;
   onRename: (title: string) => void;
   renaming: boolean;
 }) {
   const { t } = useTranslation();
-  const [overrideState, setOverrideState] = useState<"CANCELLED" | "REQUESTED">("CANCELLED");
+  const ALL_STATES: ServiceOrderState[] = ["REQUESTED", "QUOTED", "APPROVED", "DISPATCHED", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
+  const [overrideState, setOverrideState] = useState<ServiceOrderState>("CANCELLED");
   const [reason, setReason] = useState("");
-  const [titleDraft, setTitleDraft] = useState<string | null>(null);
-  const [titleErr, setTitleErr] = useState<string | null>(null);
+  const [mechanicId, setMechanicId] = useState<string | undefined>(order.mechanicId ?? undefined);
+  const [actualMinutes, setActualMinutes] = useState<number>(order.actualMinutes ?? order.estimatedMinutes);
 
-  const editingTitle = titleDraft !== null;
+  const needsMechanic =
+    (overrideState === "DISPATCHED" || overrideState === "IN_PROGRESS" || overrideState === "COMPLETED")
+    && !order.mechanicId;
+  const needsMinutes = overrideState === "COMPLETED" && order.actualMinutes == null;
 
-  function commitTitle() {
-    if (titleDraft === null) return;
-    const trimmed = titleDraft.trim();
-    if (!trimmed) { setTitleErr(t("errors.titleRequired")); return; }
-    if (trimmed.length > 120) { setTitleErr(t("errors.titleTooLong")); return; }
-    setTitleErr(null);
-    onRename(trimmed);
-    setTitleDraft(null);
+  const canSubmit =
+    overrideState !== order.state
+    && (!needsMechanic || !!mechanicId)
+    && (!needsMinutes || (actualMinutes > 0));
+
+  function submit() {
+    onOverride(
+      overrideState,
+      reason,
+      needsMechanic ? mechanicId : undefined,
+      needsMinutes ? actualMinutes : undefined,
+    );
   }
+
+  const overrideSlot = (
+    <div className="mt-4 border-t border-[var(--color-hairline)] pt-3">
+      <h3 className="mt-0 mb-1.5 text-[var(--text-base)] font-semibold text-[var(--color-text)]">
+        {t("orders.overrideHeading")}
+      </h3>
+      <p className="text-[var(--text-sm)] text-[var(--color-text-muted)] m-0 mb-2">
+        {t("orders.overrideHelp")}
+      </p>
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="override-target">{t("orders.overrideTarget")}</Label>
+          <Select value={overrideState} onValueChange={(v) => setOverrideState(v as ServiceOrderState)}>
+            <SelectTrigger id="override-target"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {ALL_STATES.map((s) => (
+                <SelectItem key={s} value={s}>{t(`state.${s}`)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="override-reason">{t("orders.overrideReason")}</Label>
+          <Input id="override-reason" value={reason} onChange={(e) => setReason(e.target.value)}
+                 placeholder={t("orders.overrideReasonPlaceholder")} />
+        </div>
+        {needsMechanic && (
+          <div className="flex flex-col gap-1 col-span-2">
+            <Label htmlFor="override-mechanic">{t("orders.fieldMechanic")}</Label>
+            <MechanicPicker id="override-mechanic" value={mechanicId} onChange={setMechanicId} />
+          </div>
+        )}
+        {needsMinutes && (
+          <div className="flex flex-col gap-1 col-span-2">
+            <Label htmlFor="override-minutes">{t("orders.fieldActual")}</Label>
+            <Input id="override-minutes" type="number" min={1} value={actualMinutes}
+                   onChange={(e) => setActualMinutes(Number(e.target.value))} />
+          </div>
+        )}
+      </div>
+      <div className="flex justify-end mt-2.5">
+        <Button variant="default" disabled={!canSubmit || overriding} onClick={submit}>
+          {t("orders.actionOverrideApply")}
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div>
@@ -260,68 +328,13 @@ function OrderDetail({
           <X className="h-4 w-4" />
         </Button>
       </div>
-      <dl>
-        <dt>{t("orders.columnTitle")}</dt>
-        <dd>
-          {editingTitle ? (
-            <span className="flex items-center gap-2 flex-wrap">
-              <Input
-                value={titleDraft ?? ""}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                maxLength={120}
-                autoFocus
-                className="flex-1 min-w-[140px]"
-              />
-              <Button variant="default" size="sm" onClick={commitTitle} disabled={renaming}>{t("orders.actionTitleSave")}</Button>
-              <Button variant="ghost" size="sm" onClick={() => { setTitleDraft(null); setTitleErr(null); }}>{t("common.cancel")}</Button>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-2">
-              <span>{order.title ?? t("common.dash")}</span>
-              <Button variant="ghost" size="sm" onClick={() => setTitleDraft(order.title ?? "")} aria-label={t("orders.actionTitleEdit")}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </span>
-          )}
-          {titleErr && <p className="text-[var(--text-sm)] text-[var(--color-danger)] m-0">{titleErr}</p>}
-        </dd>
-        <dt>{t("orders.columnState")}</dt><dd><Badge className={"state-" + order.state} variant="secondary">{t(`state.${order.state}`)}</Badge></dd>
-        <dt>{t("orders.columnVmrs")}</dt><dd className="font-mono">{order.vmrsCode}</dd>
-        <dt>{t("orders.fieldClient")}</dt><dd>{order.clientName ?? t("common.dash")}</dd>
-        <dt>{t("orders.fieldEstimated")}</dt><dd>{t("common.minutes", { count: order.estimatedMinutes })}</dd>
-        {order.actualMinutes != null && (<><dt>{t("orders.fieldActual")}</dt><dd>{t("common.minutes", { count: order.actualMinutes })}</dd></>)}
-        <dt>{t("orders.fieldSite")}</dt><dd className="font-mono">{order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}</dd>
-        <dt>{t("orders.fieldMechanic")}</dt><dd className="text-[var(--color-text-muted)] font-mono">{order.mechanicId ? order.mechanicId.slice(0, 8) + "…" : t("common.dash")}</dd>
-        <dt>{t("orders.fieldRequested")}</dt><dd className="text-[var(--color-text-muted)]">{fmtDateTime(order.requestedAt)}</dd>
-        {order.completedAt && <><dt>{t("orders.fieldCompleted")}</dt><dd className="text-[var(--color-text-muted)]">{fmtDateTime(order.completedAt)}</dd></>}
-        {order.notes && <><dt>{t("orders.fieldNotesHistory")}</dt><dd><pre className="font-mono text-[var(--text-xs)] bg-[var(--color-surface-sunken)] border border-[var(--color-hairline)] p-2 rounded-[var(--radius-sm)] whitespace-pre-wrap m-0 text-[var(--color-text)]">{order.notes}</pre></dd></>}
-      </dl>
-
-      <h3 className="mt-3.5 mb-1.5 text-[var(--text-base)] font-semibold text-[var(--color-text)]">{t("orders.overrideHeading")}</h3>
-      <p className="text-[var(--text-sm)] text-[var(--color-text-muted)] m-0 mb-2">{t("orders.overrideHelp")}</p>
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="override-target">{t("orders.overrideTarget")}</Label>
-          <Select value={overrideState} onValueChange={(v) => setOverrideState(v as "CANCELLED" | "REQUESTED")}>
-            <SelectTrigger id="override-target">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="CANCELLED">{t("orders.overrideCancelled")}</SelectItem>
-              <SelectItem value="REQUESTED">{t("orders.overrideReopen")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="override-reason">{t("orders.overrideReason")}</Label>
-          <Input id="override-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("orders.overrideReasonPlaceholder")} />
-        </div>
-      </div>
-      <div className="flex gap-2 mt-2.5">
-        <Button variant="destructive" disabled={overriding} onClick={() => onOverride(overrideState, reason)}>
-          {t("orders.overrideApply")}
-        </Button>
-      </div>
+      <OrderDetailsCard
+        order={order}
+        onRename={onRename}
+        renaming={renaming}
+        showNotes
+        overrideSlot={overrideSlot}
+      />
     </div>
   );
 }
