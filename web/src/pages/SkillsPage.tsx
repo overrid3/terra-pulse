@@ -5,6 +5,18 @@ import { skillsApi } from "../api/skills";
 import { queryKeys } from "../api/client";
 import { Skill } from "../types";
 import { fmtDateTime } from "../i18n/format";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export function SkillsPage() {
   const { t } = useTranslation();
@@ -49,40 +61,82 @@ export function SkillsPage() {
   }
 
   return (
-    <main className="page-grid two-col">
-      <section className="panel">
+    <main className="flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]">
+      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
         <h2>{t("skills.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
-        <p className="muted">{t("skills.help")}</p>
-        <table className="data-table">
-          <thead><tr><th>{t("skills.columnName")}</th><th>{t("skills.columnCreated")}</th><th></th></tr></thead>
-          <tbody>
-            {qc.data?.map((s) => (
-              <tr key={s.id} className={editing?.id === s.id ? "selected" : ""}>
-                <td>{s.name}</td>
-                <td className="muted">{s.createdAt ? fmtDateTime(s.createdAt) : t("common.dash")}</td>
-                <td className="row-actions">
-                  <button onClick={() => loadForEdit(s)}>{t("common.rename")}</button>
-                  <button className="danger" onClick={() => confirm(t("common.deleteConfirm", { label: s.name })) && deleteMut.mutate(s.id)}>{t("common.delete")}</button>
-                </td>
-              </tr>
-            ))}
-            {qc.data?.length === 0 && <tr><td colSpan={3} className="muted">{t("skills.noSkills")}</td></tr>}
-          </tbody>
-        </table>
+        <p className="text-[var(--color-text-muted)]">{t("skills.help")}</p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("skills.columnName")}</TableHead>
+              <TableHead>{t("skills.columnCreated")}</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {qc.data?.map((s) => {
+              const isSelected = editing?.id === s.id;
+              return (
+                <TableRow
+                  key={s.id}
+                  className={cn(isSelected && "bg-[var(--color-brand-soft)]")}
+                >
+                  <TableCell>{s.name}</TableCell>
+                  <TableCell className="text-[var(--color-text-muted)]">
+                    {s.createdAt ? fmtDateTime(s.createdAt) : t("common.dash")}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1 whitespace-nowrap justify-end">
+                      <Button variant="outline" size="sm" onClick={() => loadForEdit(s)}>
+                        {t("common.rename")}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => confirm(t("common.deleteConfirm", { label: s.name })) && deleteMut.mutate(s.id)}
+                      >
+                        {t("common.delete")}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {qc.data?.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="text-[var(--color-text-muted)]">
+                  {t("skills.noSkills")}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </section>
 
-      <section className="panel form-panel">
+      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
         <h2>{editing ? t("skills.renameSkill", { name: editing.name }) : t("skills.newSkill")}</h2>
-        <form onSubmit={submit}>
-          <label>{t("skills.fieldName")} *
-            <input required maxLength={64} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("skills.namePlaceholder")} />
-          </label>
-          {error && <p className="error">{error}</p>}
-          <div className="form-actions">
-            <button type="submit" disabled={createMut.isPending || renameMut.isPending}>
+        <form onSubmit={submit} className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="skill-name">{t("skills.fieldName")} *</Label>
+            <Input
+              id="skill-name"
+              required
+              maxLength={64}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("skills.namePlaceholder")}
+            />
+          </div>
+          {error && <p className="text-[var(--color-danger)]">{error}</p>}
+          <div className="flex gap-2 mt-1.5">
+            <Button type="submit" variant="default" disabled={createMut.isPending || renameMut.isPending}>
               {editing ? t("common.save") : t("common.create")}
-            </button>
-            {editing && <button type="button" className="ghost" onClick={reset}>{t("common.cancel")}</button>}
+            </Button>
+            {editing && (
+              <Button type="button" variant="ghost" onClick={reset}>
+                {t("common.cancel")}
+              </Button>
+            )}
           </div>
         </form>
       </section>
