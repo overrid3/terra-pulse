@@ -14,6 +14,7 @@ import { fmtDateTime } from "../i18n/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem
 } from "@/components/ui/select";
@@ -105,18 +106,19 @@ export function VehiclesPage() {
           </Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap mb-2.5">
-          <div className="seg-control">
+          <ToggleGroup
+            type="single"
+            value={statusFilter}
+            onValueChange={(v) => v && setStatusFilter(v)}
+            variant="outline"
+            size="sm"
+          >
             {["ALL", "AVAILABLE", "RESERVED", "IN_SERVICE", "OUT_OF_ORDER"].map(s => (
-              <button
-                key={s}
-                type="button"
-                className={statusFilter === s ? "active" : ""}
-                onClick={() => setStatusFilter(s)}
-              >
+              <ToggleGroupItem key={s} value={s}>
                 {s === "ALL" ? t("common.all") : t(`vehicleStatus.${s}`)}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
         </div>
         <Table>
           <TableHeader>

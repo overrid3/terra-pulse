@@ -22,6 +22,7 @@ import { AddressLookup } from "../components/AddressLookup";
 import { SiteMap } from "../components/SiteMap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -269,17 +270,18 @@ export function ClientsPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-full bg-[var(--color-surface-sunken)]"
         />
-        <div className="seg-control self-start">
-          <button type="button" className={filter === "ALL" ? "active" : ""} onClick={() => setFilter("ALL")}>
-            {t("clients.filterAll")}
-          </button>
-          <button type="button" className={filter === "ACTIVE" ? "active" : ""} onClick={() => setFilter("ACTIVE")}>
-            {t("clients.filterActive")}
-          </button>
-          <button type="button" className={filter === "INACTIVE" ? "active" : ""} onClick={() => setFilter("INACTIVE")}>
-            {t("clients.filterInactive")}
-          </button>
-        </div>
+        <ToggleGroup
+          type="single"
+          value={filter}
+          onValueChange={(v) => v && setFilter(v as typeof filter)}
+          variant="outline"
+          size="sm"
+          className="self-start"
+        >
+          <ToggleGroupItem value="ALL">{t("clients.filterAll")}</ToggleGroupItem>
+          <ToggleGroupItem value="ACTIVE">{t("clients.filterActive")}</ToggleGroupItem>
+          <ToggleGroupItem value="INACTIVE">{t("clients.filterInactive")}</ToggleGroupItem>
+        </ToggleGroup>
         <div className="flex-1 overflow-y-auto flex flex-col gap-1">
           {clients.map((c) => {
             const isSelected = selectedClientId === c.id;
