@@ -2,12 +2,19 @@
 
 /* ============================================================
    Design tokens — Precision Industrial (OKLCH)
+
+   Token strategy:
+   - `--color-brand-*` = our amber accent (renamed from --color-accent
+     to avoid collision with shadcn's accent token which means hover bg)
+   - `--color-*` shadcn-style tokens map to our surface/text/state
+     primitives so shadcn utility classes (bg-primary, text-muted-foreground,
+     border-ring, etc.) inherit the Precision Industrial palette
    ============================================================ */
 @theme {
-  /* Amber accent */
-  --color-accent: oklch(0.632 0.168 56);
-  --color-accent-strong: oklch(0.483 0.145 51);
-  --color-accent-soft: oklch(0.962 0.032 60);
+  /* Brand amber (was --color-accent in the pre-shadcn era) */
+  --color-brand: oklch(0.632 0.168 56);
+  --color-brand-strong: oklch(0.483 0.145 51);
+  --color-brand-soft: oklch(0.962 0.032 60);
 
   /* Text hierarchy */
   --color-ink: oklch(0.185 0.004 155);
@@ -46,6 +53,42 @@
   --color-quoted-fg: oklch(0.44 0.15 295);
   --color-quoted-bg: oklch(0.93 0.05 295);
 
+  /* ===== shadcn-style token vocabulary ===== */
+  /* Primary surfaces (page bg, default text) */
+  --color-background: var(--color-surface-app);
+  --color-foreground: var(--color-text);
+
+  /* Cards, popovers, panels */
+  --color-card: var(--color-surface-panel);
+  --color-card-foreground: var(--color-text);
+  --color-popover: var(--color-surface-elev);
+  --color-popover-foreground: var(--color-text);
+
+  /* Primary action (brand amber) */
+  --color-primary: var(--color-brand);
+  --color-primary-foreground: var(--color-surface-panel);
+
+  /* Secondary (neutral container) */
+  --color-secondary: var(--color-surface-container);
+  --color-secondary-foreground: var(--color-text);
+
+  /* Muted (de-emphasized text/bg) */
+  --color-muted: var(--color-surface-sunken);
+  --color-muted-foreground: var(--color-text-muted);
+
+  /* Accent in shadcn = hover bg surface (NOT brand amber) */
+  --color-accent: var(--color-surface-container);
+  --color-accent-foreground: var(--color-text);
+
+  /* Destructive */
+  --color-destructive: var(--color-danger-fg);
+  --color-destructive-foreground: var(--color-surface-panel);
+
+  /* Borders + form chrome */
+  --color-border: var(--color-hairline);
+  --color-input: var(--color-hairline);
+  --color-ring: var(--color-brand);
+
   /* Type scale */
   --text-xs: 0.72rem;
   --text-sm: 0.85rem;
@@ -53,8 +96,11 @@
   --text-lg: 1.05rem;
 
   /* Radii */
+  --radius: 4px;
   --radius-sm: 2px;
   --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
   --radius-pill: 999px;
 
   /* Overlay + shadow */
@@ -89,7 +135,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
@@ -145,7 +191,7 @@
   .status-dot.dot-OUT_OF_ORDER, .status-dot.dot-CANCELLED, .status-dot.dot-SICK {
     background: var(--color-danger-fg);
   }
-  .status-dot.dot-has-orders { background: var(--color-accent); }
+  .status-dot.dot-has-orders { background: var(--color-brand); }
   .status-dot.dot-has-sites  { background: oklch(0.65 0.14 145); }
   .status-dot.dot-inactive   { background: var(--color-hairline); }
 }
@@ -165,9 +211,9 @@
 .rbc-toolbar button:hover,
 .rbc-toolbar button:focus { background: var(--color-surface-sunken); }
 .rbc-toolbar button.rbc-active {
-  background: var(--color-accent-soft);
-  color: var(--color-accent-strong);
-  border-color: var(--color-accent);
+  background: var(--color-brand-soft);
+  color: var(--color-brand-strong);
+  border-color: var(--color-brand);
   box-shadow: none;
 }
 
@@ -192,20 +238,20 @@
   padding: 6px 4px;
   font-weight: 600;
 }
-.rbc-today { background: var(--color-accent-soft); }
+.rbc-today { background: var(--color-brand-soft); }
 .rbc-off-range-bg { background: var(--color-surface-sunken); }
-.rbc-current-time-indicator { background: var(--color-accent); height: 1px; }
+.rbc-current-time-indicator { background: var(--color-brand); height: 1px; }
 
 .rbc-event {
-  background: var(--color-accent);
-  border: 1px solid var(--color-accent-strong);
+  background: var(--color-brand);
+  border: 1px solid var(--color-brand-strong);
   color: var(--color-surface-panel);
   border-radius: var(--radius-sm);
   box-shadow: none;
   padding: 2px 6px;
   font-size: var(--text-xs);
 }
-.rbc-event.rbc-selected { background: var(--color-accent-strong); }
+.rbc-event.rbc-selected { background: var(--color-brand-strong); }
 
 .rbc-event.is-absence {
   opacity: 0.78;
@@ -261,7 +307,7 @@
 }
 
 .ds-cal-event-editing {
-  outline: 1.5px solid var(--color-accent);
+  outline: 1.5px solid var(--color-brand);
   outline-offset: -1px;
 }
 
