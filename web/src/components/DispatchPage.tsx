@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Filter, RefreshCw, Inbox, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
 import { addDays, addMonths, addWeeks, startOfDay, format } from "date-fns";
+import { DndContext, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core";
 import { mechanicsApi } from "../api/mechanics";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { absencesApi } from "../api/absences";
 import { queryKeys } from "../api/client";
-import { DispatchGantt, GanttView, DropPayload } from "./DispatchGantt";
+import { DispatchGantt, GanttView } from "./DispatchGantt";
 import { ServiceOrderDrawer } from "./ServiceOrderDrawer";
 import { SearchInput } from "./SearchInput";
 import { ServiceOrder, UUID } from "../types";
@@ -103,59 +104,33 @@ export function DispatchPage() {
     return format(date, "MMMM yyyy");
   }
 
-  function lookupOrder(id: string): ServiceOrder | undefined {
-    return allOrders.find((o) => o.id === id);
-  }
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
 
-  // Pool → mechanic row.
-  function onDropFromPool(payload: DropPayload) {
-    // The pool card sets payload data; we need the order id from it.
-    // Pool drop handler in Gantt reads dataTransfer separately — we re-derive here via a single-shot ref.
-    // To keep API simple, the Gantt passes only mechanicId+hint. The id is on dataTransfer; we retrieve via lastPoolDragId.
-    const orderId = lastPoolDragId.current;
-    lastPoolDragId.current = null;
-    if (!orderId) return;
-    const order = lookupOrder(orderId);
-    if (!order) return;
-    if (order.state !== "APPROVED") {
-      toast.error(`Order must be APPROVED to dispatch (current: ${order.state})`);
-      return;
-    }
-    dispatchMut.mutate({ id: order.id as UUID, mechanicId: payload.mechanicId });
-    if (payload.hint?.hour != null) {
-      showVisualSlotHint(payload.hint.hour);
+  function handleDragEnd(e: DragEndEvent) {
+    const a = e.active.data.current as
+      | { kind?: string; orderId?: string; orderState?: string; currentMechanicId?: string }
+      | undefined;
+    const o = e.over?.data.current as { kind?: string; mechanicId?: string } | undefined;
+    if (!a || !o || o.kind !== "row" || !o.mechanicId || !a.orderId) return;
+    const mechanicId = o.mechanicId as UUID;
+    const orderId = a.orderId as UUID;
+    if (a.kind === "pool") {
+      if (a.orderState !== "APPROVED") {
+        toast.error(`Order must be APPROVED to dispatch (current: ${a.orderState})`);
+        return;
+      }
+      dispatchMut.mutate({ id: orderId, mechanicId });
+    } else if (a.kind === "event") {
+      if (a.currentMechanicId === mechanicId) return;
+      reassignMut.mutate({ id: orderId, mechanicId });
     }
   }
-
-  function onMoveEvent(orderId: UUID, payload: DropPayload) {
-    const order = lookupOrder(orderId);
-    if (!order) return;
-    if (order.mechanicId === payload.mechanicId) {
-      showVisualSlotHint(payload.hint?.hour);
-      return;
-    }
-    reassignMut.mutate({ id: orderId, mechanicId: payload.mechanicId });
-  }
-
-  // Backend has no scheduled-time field; visual hint helps users understand the
-  // limitation. Once per session is enough — repeated toasts on every drop are noise.
-  const VISUAL_SLOT_HINT_KEY = "tp.dispatch.visualSlotHintShown";
-  function showVisualSlotHint(hour: number | undefined) {
-    try {
-      if (sessionStorage.getItem(VISUAL_SLOT_HINT_KEY)) return;
-      sessionStorage.setItem(VISUAL_SLOT_HINT_KEY, "1");
-    } catch {
-      /* sessionStorage may be unavailable (private mode) — fall through */
-    }
-    const slot = hour != null ? `~${String(hour).padStart(2, "0")}:00` : "";
-    toast.info(`Time slots are visual only ${slot}— backend stores no scheduled time`);
-  }
-
-  // Pool drag bookkeeping: the Gantt onDrop receives mechanicId+hint but not the dragged
-  // order id (DispatchPage owns the pool). Stash it here at dragstart and read at drop.
-  const lastPoolDragId = useMemo(() => ({ current: null as string | null }), []);
 
   return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
     <div className="flex-1 min-h-0 flex flex-col">
       <header className="bg-[var(--color-surface-panel)] border-b border-[var(--color-hairline)] flex flex-wrap items-center justify-between gap-3 px-4 py-2 shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
@@ -228,8 +203,6 @@ export function DispatchPage() {
             view={view}
             date={date}
             onSelectOrder={setSelectedOrderId}
-            onMoveEvent={onMoveEvent}
-            onDropFromPool={onDropFromPool}
           />
         </section>
 
@@ -260,52 +233,15 @@ export function DispatchPage() {
               const isCritical = o.state === "REQUESTED";
               const label = `${o.vmrsCode}, ${o.title ?? o.vmrsDescription ?? ""}, ${badge.label}, ${o.clientName ?? ""}`;
               return (
-                <li
+                <PoolCard
                   key={o.id}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={label}
-                  aria-pressed={o.id === selectedOrderId}
-                  draggable
-                  onDragStart={(e) => {
-                    lastPoolDragId.current = o.id;
-                    e.dataTransfer.setData("text/plain", `pool:${o.id}`);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onDragEnd={() => { /* keep ref until drop reads it; cleared in handler */ }}
-                  className={cn(
-                    "bg-[var(--color-surface-container)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-2.5 cursor-grab active:cursor-grabbing transition-colors hover:bg-[var(--color-surface-container-high)]",
-                    "border-l-4",
-                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-1",
-                    isCritical
-                      ? "border-l-[var(--color-danger-fg)]"
-                      : "border-l-[var(--color-warn-fg)]",
-                    o.id === selectedOrderId && "ring-1 ring-[var(--color-brand)]"
-                  )}
-                  onClick={() => setSelectedOrderId(o.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setSelectedOrderId(o.id);
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="font-mono text-xs font-bold text-[var(--color-text)] tracking-wider">
-                      {o.vmrsCode}
-                    </span>
-                    <Badge className={badge.cls} variant="secondary">{badge.label}</Badge>
-                  </div>
-                  <div className="text-sm font-medium text-[var(--color-text)] mb-1 truncate">
-                    {o.title ?? o.vmrsDescription ?? o.vmrsCode}
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
-                    <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
-                    <span className="truncate">
-                      {o.clientName ?? `${o.siteLocation.lat.toFixed(3)}, ${o.siteLocation.lng.toFixed(3)}`}
-                    </span>
-                  </div>
-                </li>
+                  order={o}
+                  isSelected={o.id === selectedOrderId}
+                  isCritical={isCritical}
+                  badge={badge}
+                  onSelect={setSelectedOrderId}
+                  label={label}
+                />
               );
             })}
           </ul>
@@ -316,5 +252,68 @@ export function DispatchPage() {
         <ServiceOrderDrawer order={selectedOrder} onClose={() => setSelectedOrderId(null)} />
       )}
     </div>
+    </DndContext>
+  );
+}
+
+function PoolCard({
+  order, isSelected, isCritical, badge, onSelect, label
+}: {
+  order: ServiceOrder;
+  isSelected: boolean;
+  isCritical: boolean;
+  badge: { label: string; cls: string };
+  onSelect: (id: string) => void;
+  label: string;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `pool:${order.id}`,
+    data: {
+      kind: "pool",
+      orderId: order.id,
+      orderState: order.state,
+    },
+  });
+  return (
+    <li
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      aria-pressed={isSelected}
+      onClick={() => onSelect(order.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(order.id);
+        }
+      }}
+      className={cn(
+        "bg-[var(--color-surface-container)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-2.5 cursor-grab active:cursor-grabbing transition-colors hover:bg-[var(--color-surface-container-high)]",
+        "border-l-4",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-1",
+        isCritical ? "border-l-[var(--color-danger-fg)]" : "border-l-[var(--color-warn-fg)]",
+        isSelected && "ring-1 ring-[var(--color-brand)]",
+        isDragging && "opacity-40"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <span className="font-mono text-xs font-bold text-[var(--color-text)] tracking-wider">
+          {order.vmrsCode}
+        </span>
+        <Badge className={badge.cls} variant="secondary">{badge.label}</Badge>
+      </div>
+      <div className="text-sm font-medium text-[var(--color-text)] mb-1 truncate">
+        {order.title ?? order.vmrsDescription ?? order.vmrsCode}
+      </div>
+      <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+        <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+        <span className="truncate">
+          {order.clientName ?? `${order.siteLocation.lat.toFixed(3)}, ${order.siteLocation.lng.toFixed(3)}`}
+        </span>
+      </div>
+    </li>
   );
 }
