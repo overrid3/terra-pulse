@@ -36,7 +36,11 @@
     "dash": "—",
     "deleteConfirm": "Eliminare {{label}}?",
     "minutesShort": "{{count}}m",
-    "minutes": "{{count}} min"
+    "minutes": "{{count}} min",
+    "search": "Cerca",
+    "filter": "Filtro",
+    "refresh": "Aggiorna",
+    "clear": "Pulisci"
   },
   "errors": {
     "generic": "Si è verificato un errore.",
@@ -48,6 +52,15 @@
     "noMatches": "nessun risultato"
   },
   "dispatch": {
+    "pageTitle": "Piano di dispacciamento",
+    "today": "Oggi",
+    "tomorrow": "Domani",
+    "searchPlaceholder": "Cerca ordini, meccanici…",
+    "unassignedPool": "Coda non assegnata",
+    "viewDay": "Giorno",
+    "viewWeek": "Settimana",
+    "viewMonth": "Mese",
+    "resourceOnlyDayHint": "Le righe dei meccanici sono visibili solo nella vista Giorno. Il drag-to-dispatch richiede la vista Giorno.",
     "pendingTitle": "Ordini pendenti ({{count}})",
     "pendingNone": "nessuno",
     "mechanicsTitle": "Meccanici ({{count}})",
@@ -106,7 +119,15 @@
     "overrideCancelled": "ANNULLATO",
     "overrideReopen": "RIAPRI (REQUESTED)",
     "actionTitleEdit": "Modifica titolo",
-    "actionTitleSave": "Salva titolo"
+    "actionTitleSave": "Salva titolo",
+    "pageSubtitle": "Workflow e storico di tutti gli ordini di servizio.",
+    "searchPlaceholder": "Cerca per titolo, VMRS, cliente…",
+    "filterOpen": "Aperti",
+    "filterAll": "Tutti",
+    "filterRequested": "Richiesti",
+    "filterDispatched": "Assegnati",
+    "filterInProgress": "In corso",
+    "filterCompleted": "Completati"
   },
   "mechanics": {
     "pageTitle": "Meccanici ({{count}})",
@@ -126,7 +147,23 @@
     "addressPlaceholder": "Cerca per pre-compilare lat/lng",
     "fieldLat": "Latitudine",
     "fieldLng": "Longitudine",
-    "noMechanics": "nessun meccanico ancora"
+    "noMechanics": "nessun meccanico ancora",
+    "pageTitle2": "Plancia meccanici",
+    "pageSubtitle": "Gestisci assegnazioni e monitora lo stato sul campo.",
+    "searchPlaceholder": "Cerca meccanici, competenze, ID…",
+    "addMechanic": "Aggiungi meccanico",
+    "statTotal": "Totale roster",
+    "statInField": "Sul campo",
+    "statAvailable": "Disponibili",
+    "statOffDuty": "Fuori servizio",
+    "columnAssignment": "Incarico",
+    "noAssignment": "—",
+    "manageOoo": "Gestisci assenze",
+    "oooSheetTitle": "Assenze · {{name}}",
+    "filterAll": "Tutti",
+    "filterAvailable": "Disponibili",
+    "filterInField": "Sul campo",
+    "filterOffDuty": "Fuori servizio"
   },
   "vehicles": {
     "pageTitle": "Mezzi ({{count}})",
@@ -143,6 +180,7 @@
     "typeLabel": "Tipo:",
     "allClasses": "Tutti i tipi",
     "registerUnit": "Registra mezzo",
+    "searchPlaceholder": "Cerca per matricola, marca, modello…",
     "newVehicle": "Nuovo mezzo",
     "editVehicle": "Modifica {{make}} {{model}}",
     "historyTitle": "Storico · {{make}} {{model}}",
@@ -228,7 +266,8 @@
     "renameSkill": "Rinomina {{name}}",
     "fieldName": "Nome",
     "namePlaceholder": "es. IDRAULICA",
-    "noSkills": "nessuna competenza ancora"
+    "noSkills": "nessuna competenza ancora",
+    "searchPlaceholder": "Cerca competenze…"
   },
   "absences": {
     "panelTitle": "Assenze · {{name}}",

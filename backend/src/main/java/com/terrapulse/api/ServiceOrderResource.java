@@ -198,6 +198,33 @@ public class ServiceOrderResource {
     }
 
     @POST
+    @Path("/{id}/reassign")
+    @Transactional
+    public ServiceOrderDto reassign(@PathParam("id") UUID id, DispatchRequest in) {
+        if (in == null || in.mechanicId() == null) {
+            throw new IllegalArgumentException("mechanicId required");
+        }
+        Mechanic m = mechanicRepo.findById(in.mechanicId());
+        if (m == null) throw new IllegalArgumentException("mechanicId not found");
+        ServiceOrder so = load(id);
+        if (so.state != ServiceOrderState.DISPATCHED && so.state != ServiceOrderState.IN_PROGRESS) {
+            throw new IllegalArgumentException("reassign only allowed in DISPATCHED or IN_PROGRESS (got " + so.state + ")");
+        }
+        UUID previous = so.mechanic != null ? so.mechanic.id : null;
+        so.mechanic = m;
+        ServiceOrderDto dto = ServiceOrderDto.of(so);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", so.id);
+        payload.put("fromState", so.state);
+        payload.put("toState", so.state);
+        payload.put("mechanicId", so.mechanic.id);
+        payload.put("previousMechanicId", previous);
+        payload.put("reassigned", true);
+        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
+        return dto;
+    }
+
+    @POST
     @Path("/{id}/start")
     @Transactional
     public ServiceOrderDto start(@PathParam("id") UUID id) {

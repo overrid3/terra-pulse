@@ -1,23 +1,24 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pencil, X } from "lucide-react";
+import { Pencil, X, Plus } from "lucide-react";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { sitesApi } from "../api/sites";
 import { vehiclesApi } from "../api/vehicles";
 import { clientsApi } from "../api/clients";
 import { queryKeys } from "../api/client";
-import { ServiceOrder, ServiceOrderState, SERVICE_ORDER_STATES, Site } from "../types";
+import { ServiceOrder, ServiceOrderState, Site } from "../types";
 import { AddressLookup } from "../components/AddressLookup";
+import { SearchInput } from "../components/SearchInput";
 import { fmtDateTime } from "../i18n/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const VMRS_OPTIONS = [
@@ -35,6 +36,21 @@ const CLOSED = new Set<ServiceOrderState>(["COMPLETED", "CANCELLED"]);
 
 const NONE = "__none";
 
+type StatusFilter = "OPEN" | "ALL" | "REQUESTED" | "DISPATCHED" | "IN_PROGRESS" | "COMPLETED";
+
+const STATUS_FILTERS: StatusFilter[] = ["OPEN", "ALL", "REQUESTED", "DISPATCHED", "IN_PROGRESS", "COMPLETED"];
+
+function matchStatusFilter(state: ServiceOrderState, f: StatusFilter): boolean {
+  switch (f) {
+    case "ALL":         return true;
+    case "OPEN":        return !CLOSED.has(state);
+    case "REQUESTED":   return state === "REQUESTED" || state === "QUOTED" || state === "APPROVED";
+    case "DISPATCHED":  return state === "DISPATCHED";
+    case "IN_PROGRESS": return state === "IN_PROGRESS";
+    case "COMPLETED":   return state === "COMPLETED" || state === "CANCELLED";
+  }
+}
+
 export function OrdersPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -42,17 +58,26 @@ export function OrdersPage() {
   const vehiclesQ = useQuery({ queryKey: queryKeys.vehicles,      queryFn: vehiclesApi.list });
   const clientsQ  = useQuery({ queryKey: queryKeys.clients,       queryFn: clientsApi.list });
 
-  const [showClosed, setShowClosed] = useState(false);
-  const [stateFilter, setStateFilter] = useState<ServiceOrderState | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("OPEN");
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<ServiceOrder | null>(null);
 
   const orders = useMemo(() => {
+    const q = search.trim().toLowerCase();
     const all = ordersQ.data ?? [];
     return all
-      .filter((o) => (showClosed ? true : !CLOSED.has(o.state)))
-      .filter((o) => (stateFilter === "ALL" ? true : o.state === stateFilter))
+      .filter((o) => matchStatusFilter(o.state, statusFilter))
+      .filter((o) => {
+        if (!q) return true;
+        return (
+          (o.title ?? "").toLowerCase().includes(q) ||
+          o.vmrsCode.toLowerCase().includes(q) ||
+          (o.clientName ?? "").toLowerCase().includes(q) ||
+          (o.vmrsDescription ?? "").toLowerCase().includes(q)
+        );
+      })
       .sort((a, b) => (b.requestedAt ?? "").localeCompare(a.requestedAt ?? ""));
-  }, [ordersQ.data, showClosed, stateFilter]);
+  }, [ordersQ.data, statusFilter, search]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: queryKeys.serviceOrders });
@@ -75,44 +100,60 @@ export function OrdersPage() {
 
   return (
     <main className="flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]">
-      <Card className="overflow-auto">
-        <CardContent className="p-3.5">
-          <div className="flex items-center justify-between gap-2.5 mb-3 flex-wrap">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="m-0 text-[var(--text-lg)] font-semibold">{t("orders.pageTitle")}</h2>
-              <Select value={stateFilter} onValueChange={(v) => setStateFilter(v as ServiceOrderState | "ALL")}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">{t("common.all")}</SelectItem>
-                  {SERVICE_ORDER_STATES.map((s) => (
-                    <SelectItem key={s} value={s}>{t(`state.${s}`)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <label className="flex items-center gap-1.5 text-[var(--text-sm)] text-[var(--color-text-muted)]">
-                <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
-                {t("orders.showClosed")}
-              </label>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("common.rows", { count: orders.length })}</span>
-              <Button variant="default" type="button" onClick={() => setSelected(null)}>
-                + {t("common.create")}
-              </Button>
-            </div>
+      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3">
+        <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)] m-0 mb-1">
+              {t("orders.pageTitle")}
+            </h2>
+            <p className="text-sm text-[var(--color-text-muted)] m-0">
+              {t("orders.pageSubtitle")}
+            </p>
           </div>
+          <Button variant="default" type="button" onClick={() => setSelected(null)} className="shrink-0">
+            <Plus className="h-4 w-4" />
+            {t("orders.newOrder")}
+          </Button>
+        </header>
+
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-[var(--color-surface-sunken)] border border-[var(--color-hairline)] rounded-[var(--radius-md)]">
+          <ToggleGroup
+            type="single"
+            value={statusFilter}
+            onValueChange={(v) => v && setStatusFilter(v as StatusFilter)}
+            variant="outline"
+            size="sm"
+          >
+            {STATUS_FILTERS.map((f) => (
+              <ToggleGroupItem key={f} value={f}>
+                {t(`orders.filter${f === "IN_PROGRESS" ? "InProgress" : f.charAt(0) + f.slice(1).toLowerCase()}`)}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={t("orders.searchPlaceholder")}
+            className="ml-auto w-full sm:w-72"
+          />
+
+          <span className="text-xs text-[var(--color-text-muted)] font-mono">
+            {t("common.rows", { count: orders.length })}
+          </span>
+        </div>
+
+        <div className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>{t("orders.columnState")}</TableHead>
-                <TableHead>{t("orders.columnTitle")}</TableHead>
-                <TableHead>{t("orders.columnVmrs")}</TableHead>
-                <TableHead>{t("orders.columnClient")}</TableHead>
-                <TableHead>{t("orders.columnEstimated")}</TableHead>
-                <TableHead>{t("orders.columnActual")}</TableHead>
-                <TableHead>{t("orders.columnRequested")}</TableHead>
+              <TableRow className="bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-sunken)]">
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">{t("orders.columnState")}</TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">{t("orders.columnTitle")}</TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">{t("orders.columnVmrs")}</TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">{t("orders.columnClient")}</TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)] text-right">{t("orders.columnEstimated")}</TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)] text-right">{t("orders.columnActual")}</TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">{t("orders.columnRequested")}</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -121,51 +162,64 @@ export function OrdersPage() {
                 <TableRow
                   key={o.id}
                   onClick={() => setSelected(o)}
-                  className={cn("cursor-pointer", selected?.id === o.id && "bg-[var(--color-brand-soft)]")}
+                  className={cn(
+                    "group cursor-pointer",
+                    selected?.id === o.id && "bg-[var(--color-brand-soft)] hover:bg-[var(--color-brand-soft)]"
+                  )}
                 >
                   <TableCell><Badge className={"state-" + o.state} variant="secondary">{t(`state.${o.state}`)}</Badge></TableCell>
-                  <TableCell>{o.title ?? <span className="text-[var(--color-text-muted)]">{t("common.dash")}</span>}</TableCell>
-                  <TableCell className="font-mono">{o.vmrsCode}</TableCell>
-                  <TableCell>{o.clientName ?? <span className="text-[var(--color-text-muted)]">{t("common.dash")}</span>}</TableCell>
-                  <TableCell>{t("common.minutesShort", { count: o.estimatedMinutes })}</TableCell>
-                  <TableCell>{o.actualMinutes ?? t("common.dash")}</TableCell>
-                  <TableCell className="text-[var(--color-text-muted)]">{fmtDateTime(o.requestedAt)}</TableCell>
-                  <TableCell className="flex gap-1 whitespace-nowrap justify-end">
-                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSelected(o); }}>{t("common.inspect")}</Button>
+                  <TableCell className="font-medium">{o.title ?? <span className="text-[var(--color-text-muted)] italic">{t("common.dash")}</span>}</TableCell>
+                  <TableCell>
+                    <span className="font-mono text-xs text-[var(--color-text)] bg-[var(--color-surface-container)] px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] whitespace-nowrap">
+                      {o.vmrsCode}
+                    </span>
+                  </TableCell>
+                  <TableCell>{o.clientName ?? <span className="text-[var(--color-text-muted)] italic">{t("common.dash")}</span>}</TableCell>
+                  <TableCell className="font-mono text-sm text-right">{t("common.minutesShort", { count: o.estimatedMinutes })}</TableCell>
+                  <TableCell className="font-mono text-sm text-right text-[var(--color-text-muted)]">{o.actualMinutes ?? t("common.dash")}</TableCell>
+                  <TableCell className="text-[var(--color-text-muted)] text-xs">{fmtDateTime(o.requestedAt)}</TableCell>
+                  <TableCell>
+                    <div
+                      className={cn(
+                        "flex gap-1 whitespace-nowrap justify-end transition-opacity",
+                        "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
+                        selected?.id === o.id && "opacity-100"
+                      )}
+                    >
+                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSelected(o); }}>{t("common.inspect")}</Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
               {orders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-[var(--color-text-muted)]">{t("orders.noOrders")}</TableCell>
+                  <TableCell colSpan={8} className="text-center text-[var(--color-text-muted)] py-6">{t("orders.noOrders")}</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <Card className="overflow-auto">
-        <CardContent className="p-3.5">
-          {selected ? (
-            <OrderDetail
-              order={selected}
-              onClose={() => setSelected(null)}
-              onOverride={(state, reason) => overrideMut.mutate({ id: selected.id, state, reason })}
-              overriding={overrideMut.isPending}
-              onRename={(title) => renameMut.mutate({ id: selected.id, title })}
-              renaming={renameMut.isPending}
-            />
-          ) : (
-            <NewOrderForm
-              vehicles={vehiclesQ.data ?? []}
-              clients={clientsQ.data ?? []}
-              onSubmit={(body) => createMut.mutate(body)}
-              submitting={createMut.isPending}
-            />
-          )}
-        </CardContent>
-      </Card>
+      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
+        {selected ? (
+          <OrderDetail
+            order={selected}
+            onClose={() => setSelected(null)}
+            onOverride={(state, reason) => overrideMut.mutate({ id: selected.id, state, reason })}
+            overriding={overrideMut.isPending}
+            onRename={(title) => renameMut.mutate({ id: selected.id, title })}
+            renaming={renameMut.isPending}
+          />
+        ) : (
+          <NewOrderForm
+            vehicles={vehiclesQ.data ?? []}
+            clients={clientsQ.data ?? []}
+            onSubmit={(body) => createMut.mutate(body)}
+            submitting={createMut.isPending}
+          />
+        )}
+      </section>
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { skillsApi } from "../api/skills";
 import { queryKeys } from "../api/client";
 import { Skill } from "../types";
 import { fmtDateTime } from "../i18n/format";
+import { SearchInput } from "../components/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,11 @@ export function SkillsPage() {
   const [editing, setEditing] = useState<Skill | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const client = useQueryClient();
+
+  const q = search.trim().toLowerCase();
+  const filtered = (qc.data ?? []).filter((s) => !q || s.name.toLowerCase().includes(q));
 
   const invalidate = () => {
     client.invalidateQueries({ queryKey: queryKeys.skills });
@@ -63,7 +68,15 @@ export function SkillsPage() {
   return (
     <main className="flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]">
       <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
-        <h2>{t("skills.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
+        <div className="flex items-center justify-between gap-3 mb-2.5 flex-wrap">
+          <h2 className="m-0">{t("skills.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={t("skills.searchPlaceholder")}
+            className="w-full sm:w-64"
+          />
+        </div>
         <p className="text-[var(--color-text-muted)]">{t("skills.help")}</p>
         <Table>
           <TableHeader>
@@ -74,7 +87,7 @@ export function SkillsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {qc.data?.map((s) => {
+            {filtered.map((s) => {
               const isSelected = editing?.id === s.id;
               return (
                 <TableRow
@@ -102,7 +115,7 @@ export function SkillsPage() {
                 </TableRow>
               );
             })}
-            {qc.data?.length === 0 && (
+            {filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={3} className="text-[var(--color-text-muted)]">
                   {t("skills.noSkills")}

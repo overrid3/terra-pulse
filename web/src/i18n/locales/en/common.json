@@ -36,7 +36,11 @@
     "dash": "—",
     "deleteConfirm": "Delete {{label}}?",
     "minutesShort": "{{count}}m",
-    "minutes": "{{count}} min"
+    "minutes": "{{count}} min",
+    "search": "Search",
+    "filter": "Filter",
+    "refresh": "Refresh",
+    "clear": "Clear"
   },
   "errors": {
     "generic": "Something went wrong.",
@@ -48,6 +52,15 @@
     "noMatches": "no matches"
   },
   "dispatch": {
+    "pageTitle": "Dispatch Board",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "searchPlaceholder": "Search orders, techs…",
+    "unassignedPool": "Unassigned Pool",
+    "viewDay": "Day",
+    "viewWeek": "Week",
+    "viewMonth": "Month",
+    "resourceOnlyDayHint": "Mechanic rows are only shown in Day view. Drag-to-dispatch requires Day view.",
     "pendingTitle": "Pending orders ({{count}})",
     "pendingNone": "none",
     "mechanicsTitle": "Mechanics ({{count}})",
@@ -106,7 +119,15 @@
     "overrideCancelled": "CANCELLED",
     "overrideReopen": "REQUESTED (reopen)",
     "actionTitleEdit": "Edit title",
-    "actionTitleSave": "Save title"
+    "actionTitleSave": "Save title",
+    "pageSubtitle": "Workflow and history for all service orders.",
+    "searchPlaceholder": "Search by title, VMRS, client…",
+    "filterOpen": "Open",
+    "filterAll": "All",
+    "filterRequested": "Requested",
+    "filterDispatched": "Dispatched",
+    "filterInProgress": "In-Progress",
+    "filterCompleted": "Completed"
   },
   "mechanics": {
     "pageTitle": "Mechanics ({{count}})",
@@ -126,7 +147,23 @@
     "addressPlaceholder": "Search to auto-fill lat/lng",
     "fieldLat": "Latitude",
     "fieldLng": "Longitude",
-    "noMechanics": "no mechanics yet"
+    "noMechanics": "no mechanics yet",
+    "pageTitle2": "Mechanics Board",
+    "pageSubtitle": "Manage assignments and track field status.",
+    "searchPlaceholder": "Search mechanics, skills, IDs…",
+    "addMechanic": "Add Mechanic",
+    "statTotal": "Total Roster",
+    "statInField": "In Field",
+    "statAvailable": "Available",
+    "statOffDuty": "Off Duty",
+    "columnAssignment": "Assignment",
+    "noAssignment": "—",
+    "manageOoo": "Manage OOO",
+    "oooSheetTitle": "Out of Office · {{name}}",
+    "filterAll": "All",
+    "filterAvailable": "Available",
+    "filterInField": "In Field",
+    "filterOffDuty": "Off Duty"
   },
   "vehicles": {
     "pageTitle": "Vehicles ({{count}})",
@@ -143,6 +180,7 @@
     "typeLabel": "Type:",
     "allClasses": "All Equipment",
     "registerUnit": "Register Unit",
+    "searchPlaceholder": "Search by serial, make, model…",
     "newVehicle": "New vehicle",
     "editVehicle": "Edit {{make}} {{model}}",
     "historyTitle": "History · {{make}} {{model}}",
@@ -228,7 +266,8 @@
     "renameSkill": "Rename {{name}}",
     "fieldName": "Name",
     "namePlaceholder": "e.g. HYDRAULICS",
-    "noSkills": "no skills yet"
+    "noSkills": "no skills yet",
+    "searchPlaceholder": "Search skills…"
   },
   "absences": {
     "panelTitle": "Absences · {{name}}",

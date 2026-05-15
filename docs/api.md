@@ -24,6 +24,16 @@ All bodies and responses are JSON. UUIDs are canonical 36-char strings. Timestam
 | PATCH  | `/{id}`                                               | body may include `{status, location: {lat,lng}}`. Location update fires `MECHANIC_LOCATION_UPDATED`; status change fires `MECHANIC_STATUS_CHANGED` |
 | DELETE | `/{id}`                                               |                                                    |
 
+## Sites `/api/sites`
+
+| Method | Path                              | Notes                                                                          |
+|--------|-----------------------------------|--------------------------------------------------------------------------------|
+| GET    | `/`                               | list all sites across clients as `SiteRefDto` (id, clientId, clientName, name, locationLabel). Used by Vehicles page to resolve `siteId → site name` |
+| GET    | `/clients/{clientId}/sites`       | list sites for a single client (full `SiteDto` with counts)                     |
+| POST   | `/clients/{clientId}/sites`       | create site under client                                                        |
+| PATCH  | `/clients/{clientId}/sites/{id}`  | partial update                                                                  |
+| DELETE | `/clients/{clientId}/sites/{id}`  |                                                                                 |
+
 ## Clients `/api/clients`
 
 | Method | Path     | Notes                                                                              |
@@ -55,6 +65,7 @@ All bodies and responses are JSON. UUIDs are canonical 36-char strings. Timestam
 | POST   | `/{id}/quote`                     |                                       | recomputes estimate from current VMRS row; transitions `REQUESTED → QUOTED`                                    |
 | POST   | `/{id}/approve`                   |                                       | `QUOTED → APPROVED`                                                                                            |
 | POST   | `/{id}/dispatch`                  | `{mechanicId}`                        | `APPROVED → DISPATCHED`. Required mechanic id.                                                                 |
+| POST   | `/{id}/reassign`                  | `{mechanicId}`                        | Reassign mechanic on a `DISPATCHED`/`IN_PROGRESS` order. State unchanged. Emits `SERVICE_ORDER_STATE_CHANGED` with `reassigned=true` and `previousMechanicId`. |
 | POST   | `/{id}/start`                     |                                       | `DISPATCHED → IN_PROGRESS`                                                                                     |
 | POST   | `/{id}/complete`                  | `{actualMinutes}`                     | `IN_PROGRESS → COMPLETED`                                                                                      |
 | POST   | `/{id}/cancel`                    |                                       | normal transition to `CANCELLED` (allowed from any non-terminal state except IN_PROGRESS via this endpoint — IN_PROGRESS must override) |

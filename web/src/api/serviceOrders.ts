@@ -8,6 +8,7 @@ export const serviceOrdersApi = {
   quote:    (id: UUID)                               => api.post<ServiceOrder>(`/service-orders/${id}/quote`),
   approve:  (id: UUID)                               => api.post<ServiceOrder>(`/service-orders/${id}/approve`),
   dispatch: (id: UUID, mechanicId: UUID)             => api.post<ServiceOrder>(`/service-orders/${id}/dispatch`, { mechanicId }),
+  reassign: (id: UUID, mechanicId: UUID)             => api.post<ServiceOrder>(`/service-orders/${id}/reassign`, { mechanicId }),
   start:    (id: UUID)                               => api.post<ServiceOrder>(`/service-orders/${id}/start`),
   complete: (id: UUID, actualMinutes: number)        => api.post<ServiceOrder>(`/service-orders/${id}/complete`, { actualMinutes }),
   cancel:   (id: UUID)                               => api.post<ServiceOrder>(`/service-orders/${id}/cancel`),

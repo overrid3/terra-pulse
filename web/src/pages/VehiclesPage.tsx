@@ -12,6 +12,7 @@ import {
   ServiceOrder, SiteRef, UUID
 } from "../types";
 import { fmtDateTime } from "../i18n/format";
+import { SearchInput } from "../components/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,7 @@ export function VehiclesPage() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [classFilter, setClassFilter] = useState<string>("ALL");
+  const [search, setSearch] = useState("");
 
   const invalidate = () => client.invalidateQueries({ queryKey: queryKeys.vehicles });
 
@@ -103,9 +105,14 @@ export function VehiclesPage() {
     setDraft((d) => ({ ...d, [k]: v }));
 
   const selectedId = mode.kind === "create" ? null : mode.vehicle.id;
+  const q = search.trim().toLowerCase();
   const vehicles = (vehiclesQ.data ?? []).filter(v =>
     (statusFilter === "ALL" || v.status === statusFilter) &&
-    (classFilter === "ALL" || v.vehicleClass === classFilter)
+    (classFilter === "ALL" || v.vehicleClass === classFilter) &&
+    (!q ||
+      v.serialNumber.toLowerCase().includes(q) ||
+      v.make.toLowerCase().includes(q) ||
+      v.model.toLowerCase().includes(q))
   );
 
   return (
@@ -141,7 +148,14 @@ export function VehiclesPage() {
             ))}
           </ToggleGroup>
 
-          <div className="flex items-center gap-1.5 ml-auto">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder={t("vehicles.searchPlaceholder")}
+            className="ml-auto w-full sm:w-64"
+          />
+
+          <div className="flex items-center gap-1.5">
             <span className="text-sm text-[var(--color-text-muted)]">{t("vehicles.typeLabel")}</span>
             <Select value={classFilter} onValueChange={setClassFilter}>
               <SelectTrigger size="sm" className="min-w-[160px]">
