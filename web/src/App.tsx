@@ -14,9 +14,9 @@ export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <div className="app-shell">
+        <div className="flex flex-row h-full overflow-hidden">
           <NavBar />
-          <div className="app-content">
+          <div className="flex-1 min-w-0 h-full overflow-y-auto bg-[var(--color-surface-app)] flex flex-col">
             <Routes>
               <Route path="/" element={<Navigate to="/dispatch" replace />} />
               <Route path="/dispatch" element={<DispatchPage />} />
