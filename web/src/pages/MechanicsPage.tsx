@@ -353,7 +353,7 @@ export function MechanicsPage() {
             </div>
           </div>
 
-          {error && <p className="text-[var(--color-danger-text)] text-[var(--text-sm)] m-0">{error}</p>}
+          {error && <p className="text-[var(--color-danger-fg)] text-[var(--text-sm)] m-0">{error}</p>}
 
           <div className="flex gap-2 mt-1.5">
             <Button

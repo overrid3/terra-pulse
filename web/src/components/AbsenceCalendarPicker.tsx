@@ -294,7 +294,7 @@ export function AbsenceCalendarPicker({
         </div>
       )}
 
-      {err && <p className="text-[var(--color-danger-text)] text-[var(--text-sm)]">{err}</p>}
+      {err && <p className="text-[var(--color-danger-fg)] text-[var(--text-sm)]">{err}</p>}
       {!err && warn && <p className="text-[var(--text-sm)] text-[var(--color-text-subtle)]">{warn}</p>}
 
       <div className="flex gap-2 mt-1.5">
