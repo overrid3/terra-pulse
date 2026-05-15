@@ -1,14 +1,15 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil, Trash2, X, Check, History as HistoryIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, History as HistoryIcon, MapPin } from "lucide-react";
 import { vehiclesApi } from "../api/vehicles";
+import { sitesApi } from "../api/sites";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
 import {
   Vehicle, VehicleUpsert,
   VEHICLE_CLASSES, VEHICLE_STATUSES,
-  ServiceOrder, UUID
+  ServiceOrder, SiteRef, UUID
 } from "../types";
 import { fmtDateTime } from "../i18n/format";
 import { Button } from "@/components/ui/button";
@@ -36,11 +37,22 @@ type PanelMode =
 
 export function VehiclesPage() {
   const { t } = useTranslation();
-  const qc = useQuery({ queryKey: queryKeys.vehicles, queryFn: vehiclesApi.list });
+  const client = useQueryClient();
+
+  const vehiclesQ = useQuery({ queryKey: queryKeys.vehicles, queryFn: vehiclesApi.list });
+  const sitesQ = useQuery({ queryKey: queryKeys.sitesAll, queryFn: sitesApi.listAll });
+
+  const siteById = useMemo(() => {
+    const map = new Map<UUID, SiteRef>();
+    (sitesQ.data ?? []).forEach((s) => map.set(s.id, s));
+    return map;
+  }, [sitesQ.data]);
+
   const [mode, setMode] = useState<PanelMode>({ kind: "create" });
   const [draft, setDraft] = useState<VehicleUpsert>(EMPTY);
   const [error, setError] = useState<string | null>(null);
-  const client = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [classFilter, setClassFilter] = useState<string>("ALL");
 
   const invalidate = () => client.invalidateQueries({ queryKey: queryKeys.vehicles });
 
@@ -90,22 +102,31 @@ export function VehiclesPage() {
   const set = <K extends keyof VehicleUpsert>(k: K, v: VehicleUpsert[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-
   const selectedId = mode.kind === "create" ? null : mode.vehicle.id;
-  const vehicles = (qc.data ?? []).filter(v => statusFilter === "ALL" || v.status === statusFilter);
+  const vehicles = (vehiclesQ.data ?? []).filter(v =>
+    (statusFilter === "ALL" || v.status === statusFilter) &&
+    (classFilter === "ALL" || v.vehicleClass === classFilter)
+  );
 
   return (
     <main className="flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]">
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
-        <div className="flex items-center justify-between mb-2.5">
-          <h2 className="m-0">{t("vehicles.pageTitle", { count: vehicles.length })}</h2>
-          <Button variant="default" type="button" onClick={reset}>
+      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3">
+        <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)] m-0 mb-1">
+              {t("vehicles.pageTitle", { count: vehicles.length })}
+            </h2>
+            <p className="text-sm text-[var(--color-text-muted)] m-0">
+              {t("vehicles.pageSubtitle")}
+            </p>
+          </div>
+          <Button variant="default" type="button" onClick={reset} className="shrink-0">
             <Plus className="h-4 w-4" />
-            {t("vehicles.newVehicle")}
+            {t("vehicles.registerUnit")}
           </Button>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap mb-2.5">
+        </header>
+
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-[var(--color-surface-sunken)] border border-[var(--color-hairline)] rounded-[var(--radius-md)]">
           <ToggleGroup
             type="single"
             value={statusFilter}
@@ -119,64 +140,128 @@ export function VehiclesPage() {
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
+
+          <div className="flex items-center gap-1.5 ml-auto">
+            <span className="text-sm text-[var(--color-text-muted)]">{t("vehicles.typeLabel")}</span>
+            <Select value={classFilter} onValueChange={setClassFilter}>
+              <SelectTrigger size="sm" className="min-w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("vehicles.allClasses")}</SelectItem>
+                {VEHICLE_CLASSES.map((c) => (
+                  <SelectItem key={c} value={c}>{t(`vehicleClass.${c}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("vehicles.columnMakeModel")}</TableHead>
-              <TableHead>{t("vehicles.columnSerial")}</TableHead>
-              <TableHead>{t("vehicles.columnClass")}</TableHead>
-              <TableHead>{t("vehicles.columnHours")}</TableHead>
-              <TableHead>{t("vehicles.columnStatus")}</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {vehicles.map((v) => (
-              <TableRow
-                key={v.id}
-                className={cn(selectedId === v.id && "bg-[var(--color-brand-soft)]")}
-              >
-                <TableCell>{v.make} {v.model}</TableCell>
-                <TableCell className="font-mono">{v.serialNumber}</TableCell>
-                <TableCell>{t(`vehicleClass.${v.vehicleClass}`)}</TableCell>
-                <TableCell className="font-mono">{Number(v.engineHours).toFixed(1)}</TableCell>
-                <TableCell>
-                  <Badge className={"status-" + v.status} variant="secondary">
-                    {t(`vehicleStatus.${v.status}`)}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1 whitespace-nowrap justify-end">
-                    <Button variant="outline" size="sm" onClick={() => loadForEdit(v)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                      {t("common.edit")}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => loadHistory(v)}>
-                      <HistoryIcon className="h-3.5 w-3.5" />
-                      {t("common.history")}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => confirm(t("common.deleteConfirm", { label: `${v.make} ${v.model}` })) && deleteMut.mutate(v.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {t("common.delete")}
-                    </Button>
-                  </div>
-                </TableCell>
+
+        <div className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-sunken)]">
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">
+                  {t("vehicles.columnSerial")}
+                </TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">
+                  {t("vehicles.columnMakeModel")}
+                </TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">
+                  {t("vehicles.columnStatus")}
+                </TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">
+                  {t("vehicles.columnLocation")}
+                </TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)] text-right">
+                  {t("vehicles.columnHours")}
+                </TableHead>
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)] text-right">
+                  {t("vehicles.columnNextService")}
+                </TableHead>
+                <TableHead></TableHead>
               </TableRow>
-            ))}
-            {vehicles.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-[var(--color-text-muted)]">
-                  {t("vehicles.noVehicles")}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {vehicles.map((v) => {
+                const site = v.siteId ? siteById.get(v.siteId) : undefined;
+                return (
+                  <TableRow
+                    key={v.id}
+                    className={cn(
+                      "group",
+                      selectedId === v.id && "bg-[var(--color-brand-soft)] hover:bg-[var(--color-brand-soft)]"
+                    )}
+                  >
+                    <TableCell>
+                      <span className="font-mono text-xs text-[var(--color-text)] bg-[var(--color-surface-container)] px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] whitespace-nowrap">
+                        {v.serialNumber}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium text-[var(--color-text)]">{v.make} {v.model}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">{t(`vehicleClass.${v.vehicleClass}`)}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={"status-" + v.status} variant="secondary">
+                        {t(`vehicleStatus.${v.status}`)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {site ? (
+                        <span className="inline-flex items-center gap-1 text-sm text-[var(--color-text)]">
+                          <MapPin className="h-3.5 w-3.5 text-[var(--color-text-muted)] shrink-0" />
+                          {site.name}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-[var(--color-text-subtle)] italic">
+                          {t("vehicles.locationUnassigned")}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-right">
+                      {Number(v.engineHours).toFixed(1)}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-right text-[var(--color-text-subtle)] italic">
+                      {t("vehicles.nextServiceTbd")}
+                    </TableCell>
+                    <TableCell>
+                      <div
+                        className={cn(
+                          "flex gap-1 whitespace-nowrap justify-end transition-opacity",
+                          "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
+                          selectedId === v.id && "opacity-100"
+                        )}
+                      >
+                        <Button variant="ghost" size="sm" onClick={() => loadForEdit(v)} aria-label={t("common.edit")}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => loadHistory(v)} aria-label={t("common.history")}>
+                          <HistoryIcon className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => confirm(t("common.deleteConfirm", { label: `${v.make} ${v.model}` })) && deleteMut.mutate(v.id)}
+                          aria-label={t("common.delete")}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-[var(--color-danger-fg)]" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {vehicles.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-[var(--color-text-muted)] py-6">
+                    {t("vehicles.noVehicles")}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </section>
 
       <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">

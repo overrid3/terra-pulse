@@ -128,6 +128,14 @@ export type Site = {
   updatedAt: string;
 };
 
+export type SiteRef = {
+  id: UUID;
+  clientId: UUID;
+  clientName: string;
+  name: string;
+  locationLabel: string | null;
+};
+
 export type SiteUpsert = {
   name: string;
   lat?: number | null;

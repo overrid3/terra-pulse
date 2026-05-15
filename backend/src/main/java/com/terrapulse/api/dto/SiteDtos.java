@@ -28,4 +28,12 @@ public final class SiteDtos {
             Double lng,
             String locationLabel
     ) {}
+
+    public record SiteRefDto(
+            UUID id,
+            UUID clientId,
+            String clientName,
+            String name,
+            String locationLabel
+    ) {}
 }
