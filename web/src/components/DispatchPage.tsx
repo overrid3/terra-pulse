@@ -34,13 +34,13 @@ export function DispatchPage() {
   );
 
   return (
-    <main className="dispatch">
+    <main className="grid grid-cols-[280px_minmax(0,1fr)_auto] gap-3 p-3 flex-1 min-h-0 min-w-0">
       <MechanicList
         mechanics={mechanicsQ.data ?? []}
         selectedId={selectedMechanicId}
         onSelect={setSelectedMechanicId}
       />
-      <section className="center">
+      <section className="flex flex-col gap-3 min-h-0 min-w-0">
         <PendingOrders
           orders={ordersQ.data ?? []}
           selectedOrderId={selectedOrderId}

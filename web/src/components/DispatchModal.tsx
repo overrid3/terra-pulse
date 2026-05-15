@@ -4,6 +4,15 @@ import { mechanicsApi } from "../api/mechanics";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
 import { ServiceOrder } from "../types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   order: ServiceOrder;
@@ -29,31 +38,49 @@ export function DispatchModal({ order, onClose }: Props) {
   });
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{t("dispatch.dispatchHeading", { title: order.title ?? order.vmrsCode })}</h3>
-        <p className="muted">
-          {t("dispatch.siteLabel")}: {order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}
-        </p>
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle>
+            {t("dispatch.dispatchHeading", { title: order.title ?? order.vmrsCode })}
+          </DialogTitle>
+          <DialogDescription>
+            {t("dispatch.siteLabel")}: {order.siteLocation.lat.toFixed(4)},{" "}
+            {order.siteLocation.lng.toFixed(4)}
+          </DialogDescription>
+        </DialogHeader>
         {isLoading && <p>{t("dispatch.loadingNearest")}</p>}
-        <ul className="nearest-list">
+        <ul className="list-none p-0 my-3">
           {nearest?.map((m, idx) => (
-            <li key={m.id}>
+            <li
+              key={m.id}
+              className="flex justify-between items-center p-2.5 border border-[var(--color-hairline)] rounded-[var(--radius-sm)] mb-1.5 hover:bg-[var(--color-surface-sunken)] transition-colors"
+            >
               <div>
-                <strong>{idx + 1}. {m.fullName}</strong>
-                <div className="muted">{t(`mechanicStatus.${m.status}`)} · {m.skills.join(", ")}</div>
+                <strong>
+                  {idx + 1}. {m.fullName}
+                </strong>
+                <div className="text-[var(--text-xs)] text-[var(--color-text-muted)]">
+                  {t(`mechanicStatus.${m.status}`)} · {m.skills.join(", ")}
+                </div>
               </div>
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 disabled={dispatchMut.isPending || m.status === "OFF_DUTY"}
                 onClick={() => dispatchMut.mutate(m.id)}
               >
                 {t("dispatch.actionDispatch")}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
-        <button className="ghost" onClick={onClose}>{t("common.cancel")}</button>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            {t("common.cancel")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

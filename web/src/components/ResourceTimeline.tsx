@@ -77,7 +77,7 @@ export function ResourceTimeline({
   const events: CalEvent[] = [...absenceEvents, ...orderEvents];
 
   return (
-    <div className="panel timeline">
+    <div className="flex-1 min-h-[400px] p-1 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] min-w-0 overflow-hidden">
       <Calendar
         localizer={localizer}
         events={events}
