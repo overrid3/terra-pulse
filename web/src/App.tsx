@@ -14,15 +14,17 @@ export default function App() {
     <BrowserRouter>
       <div className="app-shell">
         <NavBar />
-        <Routes>
-          <Route path="/" element={<Navigate to="/dispatch" replace />} />
-          <Route path="/dispatch" element={<DispatchPage />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/mechanics" element={<MechanicsPage />} />
-          <Route path="/vehicles" element={<VehiclesPage />} />
-          <Route path="/skills" element={<SkillsPage />} />
-          <Route path="/clients" element={<ClientsPage />} />
-        </Routes>
+        <div className="app-content">
+          <Routes>
+            <Route path="/" element={<Navigate to="/dispatch" replace />} />
+            <Route path="/dispatch" element={<DispatchPage />} />
+            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/mechanics" element={<MechanicsPage />} />
+            <Route path="/vehicles" element={<VehiclesPage />} />
+            <Route path="/skills" element={<SkillsPage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+          </Routes>
+        </div>
       </div>
     </BrowserRouter>
   );

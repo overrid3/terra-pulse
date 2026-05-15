@@ -2,21 +2,46 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
+const NAV_LINKS = [
+  { to: "/dispatch",  icon: "route",                key: "nav.dispatch" },
+  { to: "/orders",    icon: "assignment",            key: "nav.orders" },
+  { to: "/mechanics", icon: "engineering",           key: "nav.mechanics" },
+  { to: "/vehicles",  icon: "construction",          key: "nav.vehicles" },
+  { to: "/skills",    icon: "workspace_premium",     key: "nav.skills" },
+  { to: "/clients",   icon: "group",                 key: "nav.clients" },
+];
+
 export function NavBar() {
   const { t } = useTranslation();
   return (
-    <header className="app-header">
-      <h1>{t("app.title")}</h1>
-      <nav>
-        <NavLink to="/dispatch"  className={({ isActive }) => isActive ? "active" : ""}>{t("nav.dispatch")}</NavLink>
-        <NavLink to="/orders"    className={({ isActive }) => isActive ? "active" : ""}>{t("nav.orders")}</NavLink>
-        <NavLink to="/mechanics" className={({ isActive }) => isActive ? "active" : ""}>{t("nav.mechanics")}</NavLink>
-        <NavLink to="/vehicles"  className={({ isActive }) => isActive ? "active" : ""}>{t("nav.vehicles")}</NavLink>
-        <NavLink to="/skills"    className={({ isActive }) => isActive ? "active" : ""}>{t("nav.skills")}</NavLink>
-        <NavLink to="/clients"   className={({ isActive }) => isActive ? "active" : ""}>{t("nav.clients")}</NavLink>
+    <aside className="app-sidebar">
+      <div className="sidebar-brand">
+        <div className="sidebar-brand-icon">
+          <span className="material-symbols-outlined">precision_manufacturing</span>
+        </div>
+        <div className="sidebar-brand-text">
+          <span className="sidebar-brand-name">TerraPulse</span>
+          <span className="sidebar-brand-tagline">Fleet Ops</span>
+        </div>
+      </div>
+
+      <nav className="sidebar-nav">
+        {NAV_LINKS.map(({ to, icon, key }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) => isActive ? "active" : ""}
+          >
+            <span className="material-symbols-outlined">{icon}</span>
+            {t(key)}
+          </NavLink>
+        ))}
       </nav>
-      <span className="muted">{t("app.tagline")}</span>
-      <LanguageSwitcher />
-    </header>
+
+      <div className="sidebar-footer">
+        <span className="sidebar-footer-label">{t("app.tagline")}</span>
+        <LanguageSwitcher />
+      </div>
+    </aside>
   );
 }

@@ -96,7 +96,30 @@ export function MechanicsPage() {
   return (
     <main className={`page-grid ${editing ? "three-row" : "two-col"}`}>
       <section className="panel">
-        <h2>{t("mechanics.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <h2 style={{ margin: 0 }}>{t("mechanics.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
+          <button className="primary" type="button" onClick={() => { setEditing(null); setDraft(EMPTY); setError(null); }}>
+            + {t("mechanics.newMechanic")}
+          </button>
+        </div>
+        <div className="stat-grid">
+          <div className="stat-card">
+            <span className="stat-card-label">Total Roster</span>
+            <span className="stat-card-value">{qc.data?.length ?? 0}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-card-label">Available</span>
+            <span className="stat-card-value">{qc.data?.filter(m => m.status === 'IDLE').length ?? 0}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-card-label">In Field</span>
+            <span className="stat-card-value accent">{qc.data?.filter(m => m.status === 'EN_ROUTE' || m.status === 'IN_PROGRESS').length ?? 0}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-card-label">Off Duty</span>
+            <span className="stat-card-value">{qc.data?.filter(m => m.status === 'OFF_DUTY').length ?? 0}</span>
+          </div>
+        </div>
         <table className="data-table">
           <thead>
             <tr>

@@ -2,10 +2,11 @@ import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { serviceOrdersApi } from "../api/serviceOrders";
+import { sitesApi } from "../api/sites";
 import { vehiclesApi } from "../api/vehicles";
 import { clientsApi } from "../api/clients";
 import { queryKeys } from "../api/client";
-import { ServiceOrder, ServiceOrderState, SERVICE_ORDER_STATES } from "../types";
+import { ServiceOrder, ServiceOrderState, SERVICE_ORDER_STATES, Site } from "../types";
 import { AddressLookup } from "../components/AddressLookup";
 import { fmtDateTime } from "../i18n/format";
 
@@ -63,16 +64,28 @@ export function OrdersPage() {
   return (
     <main className="page-grid two-col">
       <section className="panel">
-        <div className="filters">
-          <h2>{t("orders.pageTitle")}</h2>
-          <label><input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} /> {t("orders.showClosed")}</label>
-          <label>{t("orders.filterState")}
-            <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value as any)}>
-              <option value="ALL">{t("common.all")}</option>
-              {SERVICE_ORDER_STATES.map((s) => <option key={s} value={s}>{t(`state.${s}`)}</option>)}
-            </select>
-          </label>
-          <span className="muted">{t("common.rows", { count: orders.length })}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <h2 style={{ margin: 0 }}>{t("orders.pageTitle")}</h2>
+            <div className="seg-control">
+              <button type="button" className={stateFilter === "ALL" ? "active" : ""} onClick={() => setStateFilter("ALL")}>{t("common.all")}</button>
+              {SERVICE_ORDER_STATES.map((s) => (
+                <button key={s} type="button" className={stateFilter === s ? "active" : ""} onClick={() => setStateFilter(s as any)}>
+                  {t(`state.${s}`)}
+                </button>
+              ))}
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+              <input type="checkbox" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
+              {t("orders.showClosed")}
+            </label>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <span className="muted">{t("common.rows", { count: orders.length })}</span>
+            <button className="primary" type="button" onClick={() => setSelected(null)}>
+              + {t("common.create")}
+            </button>
+          </div>
         </div>
         <table className="data-table">
           <thead>
@@ -223,7 +236,7 @@ function NewOrderForm({
 }: {
   vehicles: { id: string; make: string; model: string; serialNumber: string }[];
   clients: { id: string; name: string }[];
-  onSubmit: (body: { vehicleId: string; clientId: string; vmrsCode: string; title?: string; siteLocation: { lat: number; lng: number }; notes?: string }) => void;
+  onSubmit: (body: { vehicleId: string; clientId: string; siteId: string; vmrsCode: string; title?: string; siteLocation?: { lat: number; lng: number }; notes?: string }) => void;
   submitting: boolean;
 }) {
   const { t } = useTranslation();
@@ -234,13 +247,28 @@ function NewOrderForm({
   const [lat, setLat] = useState("45.46");
   const [lng, setLng] = useState("9.19");
   const [notes, setNotes] = useState("");
+  const [siteId, setSiteId] = useState("");
+
+  const sitesQ = useQuery({
+    queryKey: ["sites", clientId],
+    queryFn: () => sitesApi.list(clientId),
+    enabled: !!clientId
+  });
+
+  const handleClientChange = (newClientId: string) => {
+    setClientId(newClientId);
+    setSiteId("");
+  };
+
+  const selectedSite: Site | undefined = sitesQ.data?.find(s => s.id === siteId);
+  const siteHasCoords = selectedSite && selectedSite.lat != null && selectedSite.lng != null;
 
   function submit(e: FormEvent) {
     e.preventDefault();
     onSubmit({
-      vehicleId, clientId, vmrsCode,
+      vehicleId, clientId, siteId, vmrsCode,
       title: title.trim() || undefined,
-      siteLocation: { lat: Number(lat), lng: Number(lng) },
+      siteLocation: siteHasCoords ? undefined : { lat: Number(lat), lng: Number(lng) },
       notes: notes || undefined
     });
   }
@@ -260,11 +288,23 @@ function NewOrderForm({
           </select>
         </label>
         <label>{t("orders.fieldClient")} *
-          <select required value={clientId} onChange={(e) => setClientId(e.target.value)}>
+          <select required value={clientId} onChange={(e) => handleClientChange(e.target.value)}>
             <option value="">{t("orders.selectPlaceholder")}</option>
             {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
+        {clientId && (
+          <label>{t("sites.selectSite")} *
+            <select required value={siteId} onChange={(e) => setSiteId(e.target.value)}>
+              <option value="">{t("sites.selectSitePlaceholder")}</option>
+              {(sitesQ.data ?? []).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.locationLabel ? ` — ${s.locationLabel}` : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>{t("orders.fieldVmrs")}
           <select value={vmrsCode} onChange={(e) => setVmrsCode(e.target.value)}>
             {VMRS_OPTIONS.map((v) => <option key={v.code} value={v.code}>{v.label}</option>)}
@@ -273,19 +313,28 @@ function NewOrderForm({
         <label>{t("orders.fieldTitle")}
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} />
         </label>
-        <label>{t("orders.fieldAddressLookup")}
-          <AddressLookup
-            onPick={(h) => { setLat(String(h.lat)); setLng(String(h.lng)); }}
-            placeholder={t("orders.addressPlaceholder")}
-          />
-        </label>
-        <div className="form-row">
-          <label>{t("orders.fieldLat")} *<input required type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} /></label>
-          <label>{t("orders.fieldLng")} *<input required type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} /></label>
-        </div>
+        {!siteHasCoords && (
+          <>
+            <label>{t("orders.fieldAddressLookup")}
+              <AddressLookup
+                onPick={(h) => { setLat(String(h.lat)); setLng(String(h.lng)); }}
+                placeholder={t("orders.addressPlaceholder")}
+              />
+            </label>
+            <div className="form-row">
+              <label>{t("orders.fieldLat")} *<input required type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} /></label>
+              <label>{t("orders.fieldLng")} *<input required type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} /></label>
+            </div>
+          </>
+        )}
+        {siteHasCoords && selectedSite && (
+          <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
+            Location: {selectedSite.locationLabel ?? `${selectedSite.lat?.toFixed(4)}, ${selectedSite.lng?.toFixed(4)}`}
+          </p>
+        )}
         <label>{t("orders.fieldNotes")}<textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
         <div className="form-actions">
-          <button type="submit" disabled={submitting || !vehicleId || !clientId}>{t("orders.newOrder")}</button>
+          <button type="submit" disabled={submitting || !vehicleId || !clientId || !siteId}>{t("orders.newOrder")}</button>
         </div>
       </form>
     </>

@@ -2,6 +2,7 @@ package com.terrapulse.domain.service;
 
 import com.terrapulse.domain.client.Client;
 import com.terrapulse.domain.mechanic.Mechanic;
+import com.terrapulse.domain.site.Site;
 import com.terrapulse.domain.vehicle.Vehicle;
 import com.terrapulse.domain.vmrs.VmrsCode;
 import jakarta.persistence.Column;
@@ -41,6 +42,10 @@ public class ServiceOrder {
     @ManyToOne
     @JoinColumn(name = "client_id")
     public Client client;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "site_id", nullable = false)
+    public Site site;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "vmrs_code", nullable = false)

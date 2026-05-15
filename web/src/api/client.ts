@@ -1,3 +1,5 @@
+import { UUID } from "../types";
+
 const BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8080/api";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -27,5 +29,6 @@ export const queryKeys = {
   vehicles:     ["vehicles"] as const,
   clients:      ["clients"] as const,
   skills:       ["skills"] as const,
-  absences:     ["absences"] as const
+  absences:     ["absences"] as const,
+  sites:        (clientId: UUID) => ["sites", clientId] as const
 };

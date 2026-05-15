@@ -41,4 +41,21 @@ public final class ClientDtos {
             String postalCode,
             String country
     ) {}
+
+    public record ClientSummaryDto(
+            UUID id,
+            String name,
+            String email,
+            String phone,
+            String vatNumber,
+            String addressLine1,
+            String addressLine2,
+            String city,
+            String postalCode,
+            String country,
+            long siteCount,
+            long openOrderCount,
+            java.time.Instant createdAt,
+            java.time.Instant updatedAt
+    ) {}
 }

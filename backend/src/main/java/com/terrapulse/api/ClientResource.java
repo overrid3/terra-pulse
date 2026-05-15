@@ -1,9 +1,13 @@
 package com.terrapulse.api;
 
 import com.terrapulse.api.dto.ClientDtos.ClientDto;
+import com.terrapulse.api.dto.ClientDtos.ClientSummaryDto;
 import com.terrapulse.api.dto.ClientDtos.ClientUpsertDto;
 import com.terrapulse.domain.client.Client;
+import com.terrapulse.domain.service.ServiceOrderState;
 import com.terrapulse.repository.ClientRepository;
+import com.terrapulse.repository.ServiceOrderRepository;
+import com.terrapulse.repository.SiteRepository;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DELETE;
@@ -27,10 +31,20 @@ import java.util.UUID;
 public class ClientResource {
 
     @Inject ClientRepository repo;
+    @Inject SiteRepository siteRepo;
+    @Inject ServiceOrderRepository serviceOrderRepo;
 
     @GET
-    public List<ClientDto> list() {
-        return repo.listAll().stream().map(ClientDto::of).toList();
+    public List<ClientSummaryDto> list() {
+        return repo.listAll().stream().map(c -> {
+            long sites = siteRepo.count("client.id = ?1", c.id);
+            long openOrders = serviceOrderRepo.count(
+                    "client.id = ?1 and state != ?2 and state != ?3",
+                    c.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED);
+            return new ClientSummaryDto(c.id, c.name, c.email, c.phone, c.vatNumber,
+                    c.addressLine1, c.addressLine2, c.city, c.postalCode, c.country,
+                    sites, openOrders, c.createdAt, c.updatedAt);
+        }).toList();
     }
 
     @GET

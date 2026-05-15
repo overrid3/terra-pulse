@@ -15,6 +15,6 @@ export const serviceOrdersApi = {
     api.post<ServiceOrder>(`/service-orders/${id}/override-state`, { state, reason }),
   renameTitle: (id: UUID, title: string) =>
     api.patch<ServiceOrder>(`/service-orders/${id}/title`, { title }),
-  create:   (body: { vehicleId: UUID; clientId: UUID; vmrsCode: string; title?: string; siteLocation: { lat: number; lng: number }; notes?: string }) =>
+  create:   (body: { vehicleId: UUID; clientId: UUID; siteId: UUID; vmrsCode: string; title?: string; siteLocation?: { lat: number; lng: number }; notes?: string }) =>
     api.post<ServiceOrder>("/service-orders", body)
 };

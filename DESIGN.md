@@ -1,75 +1,77 @@
 ---
 name: TerraPulse
 description: Real-time service-order and reservation board for an earthmoving fleet.
+design-system: Precision Industrial
 colors:
-  accent:           "oklch(0.58 0.16 38)"
-  accent-strong:    "oklch(0.50 0.17 38)"
-  accent-soft:      "oklch(0.94 0.05 50)"
-  ink:              "oklch(0.22 0.018 60)"
-  ink-elevated:     "oklch(0.30 0.020 60)"
-  ink-soft:         "oklch(0.86 0.014 70)"
-  ink-muted:        "oklch(0.72 0.014 70)"
-  text:             "oklch(0.26 0.016 60)"
-  text-muted:       "oklch(0.54 0.014 65)"
-  text-subtle:      "oklch(0.44 0.014 65)"
-  surface-app:      "oklch(0.970 0.008 78)"
-  surface-panel:    "oklch(0.992 0.005 80)"
-  surface-elev:     "oklch(0.992 0.005 80)"
-  surface-sunken:   "oklch(0.955 0.010 75)"
-  hairline:         "oklch(0.885 0.012 72)"
-  hairline-strong:  "oklch(0.62 0.04 60)"
-  danger-fg:        "oklch(0.50 0.18 25)"
-  danger-bg:        "oklch(0.94 0.05 25)"
-  danger-hairline:  "oklch(0.84 0.07 25)"
-  warn-fg:          "oklch(0.50 0.13 82)"
-  warn-bg:          "oklch(0.95 0.06 85)"
-  success-fg:       "oklch(0.45 0.13 150)"
-  success-bg:       "oklch(0.93 0.06 150)"
-  info-fg:          "oklch(0.46 0.12 230)"
-  info-bg:          "oklch(0.94 0.035 225)"
-  neutral-fg:       "oklch(0.42 0.014 65)"
+  accent:                    "oklch(0.632 0.168 56)"    # #d97706 Precision Amber — primary actions
+  accent-strong:             "oklch(0.483 0.145 51)"    # #8d4b00 Deep Amber — hover, brand text
+  accent-soft:               "oklch(0.962 0.032 60)"    # amber tint for selected rows
+  text:                      "oklch(0.185 0.004 155)"   # #1a1c1a near-neutral dark
+  text-muted:                "oklch(0.382 0.042 44)"    # #554336 warm brownish secondary
+  text-subtle:               "oklch(0.566 0.038 50)"    # #887364 table headers, captions
+  surface-app:               "oklch(0.972 0.006 80)"    # #faf9f6 page background
+  surface-panel:             "oklch(0.999 0.001 80)"    # #ffffff sidebar, panels
+  surface-elev:              "oklch(0.999 0.001 80)"    # modal sheet
+  surface-sunken:            "oklch(0.958 0.007 80)"    # #f4f3f0 insets, table headers
+  surface-container:         "oklch(0.943 0.007 78)"    # #efeeeb hover, filter bar
+  surface-container-high:    "oklch(0.929 0.007 76)"    # #e9e8e5 selected nav item
+  surface-container-highest: "oklch(0.914 0.007 76)"    # #e3e2df stat cards
+  hairline:                  "oklch(0.822 0.032 52)"    # #dbc2b0 borders
+  hairline-strong:           "oklch(0.566 0.038 50)"    # #887364 focused field
+  danger-fg:                 "oklch(0.509 0.185 25)"
+  danger-bg:                 "oklch(0.928 0.046 20)"
+  danger-hairline:           "oklch(0.84 0.07 25)"
+  warn-fg:                   "oklch(0.50 0.13 82)"
+  warn-bg:                   "oklch(0.95 0.06 85)"
+  success-fg:                "oklch(0.45 0.13 150)"
+  success-bg:                "oklch(0.93 0.06 150)"
+  info-fg:                   "oklch(0.46 0.12 230)"
+  info-bg:                   "oklch(0.94 0.035 225)"
+  neutral-fg:                "oklch(0.566 0.038 50)"
   neutral-bg:       "oklch(0.92 0.012 70)"
   quoted-fg:        "oklch(0.44 0.15 295)"
   quoted-bg:        "oklch(0.93 0.05 295)"
 typography:
+  body-font:  "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+  mono-font:  "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
   page-heading:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif"
+    fontFamily: "body-font"
     fontSize: "1.05rem"
     fontWeight: 600
     lineHeight: 1.3
   panel-heading:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif"
+    fontFamily: "body-font"
     fontSize: "1.05rem"
     fontWeight: 600
     lineHeight: 1.3
   sub-heading:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif"
+    fontFamily: "body-font"
     fontSize: "0.875rem"
     fontWeight: 600
     lineHeight: 1.4
   body:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif"
+    fontFamily: "body-font"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.45
   meta:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif"
+    fontFamily: "body-font"
     fontSize: "0.85rem"
     fontWeight: 400
     lineHeight: 1.4
   label:
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif"
+    fontFamily: "body-font"
     fontSize: "0.72rem"
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "0.04em"
   mono:
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
+    fontFamily: "mono-font"
     fontSize: "0.92em"
     fontWeight: 400
 rounded:
-  sm: "6px"
-  md: "8px"
+  sm: "2px"
+  md: "4px"
   pill: "999px"
 spacing:
   xs: "4px"

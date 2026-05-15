@@ -21,11 +21,13 @@ public final class VehicleDtos {
             BigDecimal engineHours,
             VehicleStatus status,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            UUID siteId
     ) {
         public static VehicleDto of(Vehicle v) {
             return new VehicleDto(v.id, v.make, v.model, v.serialNumber, v.vehicleClass,
-                    v.engineHours, v.status, v.createdAt, v.updatedAt);
+                    v.engineHours, v.status, v.createdAt, v.updatedAt,
+                    v.site != null ? v.site.id : null);
         }
     }
 
@@ -40,7 +42,8 @@ public final class VehicleDtos {
 
     public record VehiclePatchDto(
             BigDecimal engineHours,
-            VehicleStatus status
+            VehicleStatus status,
+            UUID siteId
     ) {}
 
     public record VehicleUpdateDto(

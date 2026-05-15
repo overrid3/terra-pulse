@@ -170,7 +170,26 @@
     "fieldCity": "Città",
     "fieldPostal": "CAP",
     "fieldCountry": "Paese",
-    "noClients": "nessun cliente ancora"
+    "noClients": "nessun cliente ancora",
+    "addClient": "Aggiungi cliente",
+    "selectClient": "Seleziona un cliente",
+    "active": "ATTIVO"
+  },
+  "sites": {
+    "noSites": "Nessun sito di progetto",
+    "addSite": "Aggiungi sito",
+    "editSite": "Modifica sito",
+    "deleteSiteConfirm": "Eliminare il sito {{name}}?",
+    "fieldName": "Nome sito",
+    "fieldLat": "Latitudine",
+    "fieldLng": "Longitudine",
+    "fieldLocationLabel": "Posizione (testo)",
+    "activeSites": "Siti attivi",
+    "openOrders": "Ordini aperti",
+    "equipment": "Mezzi",
+    "personnel": "Personale",
+    "selectSite": "Sito di lavoro",
+    "selectSitePlaceholder": "— seleziona sito —"
   },
   "skills": {
     "pageTitle": "Competenze ({{count}})",

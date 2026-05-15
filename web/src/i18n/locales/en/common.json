@@ -170,7 +170,26 @@
     "fieldCity": "City",
     "fieldPostal": "Postal code",
     "fieldCountry": "Country",
-    "noClients": "no clients yet"
+    "noClients": "no clients yet",
+    "addClient": "Add Client",
+    "selectClient": "Select a client to view details",
+    "active": "ACTIVE"
+  },
+  "sites": {
+    "noSites": "No project sites yet",
+    "addSite": "Add site",
+    "editSite": "Edit site",
+    "deleteSiteConfirm": "Delete site {{name}}?",
+    "fieldName": "Site name",
+    "fieldLat": "Latitude",
+    "fieldLng": "Longitude",
+    "fieldLocationLabel": "Location (human-readable)",
+    "activeSites": "Active Sites",
+    "openOrders": "Open Orders",
+    "equipment": "Equipment",
+    "personnel": "Personnel",
+    "selectSite": "Project site",
+    "selectSitePlaceholder": "— select site —"
   },
   "skills": {
     "pageTitle": "Skills ({{count}})",

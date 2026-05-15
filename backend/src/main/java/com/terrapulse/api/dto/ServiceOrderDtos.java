@@ -17,6 +17,7 @@ public final class ServiceOrderDtos {
             UUID mechanicId,
             UUID clientId,
             String clientName,
+            UUID siteId,
             String vmrsCode,
             String vmrsDescription,
             ServiceOrderState state,
@@ -39,6 +40,7 @@ public final class ServiceOrderDtos {
                     so.mechanic != null ? so.mechanic.id : null,
                     so.client != null ? so.client.id : null,
                     so.client != null ? so.client.name : null,
+                    so.site != null ? so.site.id : null,
                     so.vmrsCode.code,
                     so.vmrsCode.description,
                     so.state,
@@ -59,6 +61,7 @@ public final class ServiceOrderDtos {
     public record ServiceOrderCreateDto(
             UUID vehicleId,
             UUID clientId,
+            UUID siteId,
             String vmrsCode,
             LatLng siteLocation,
             String notes,

@@ -77,12 +77,34 @@ export function VehiclesPage() {
   const set = <K extends keyof VehicleUpsert>(k: K, v: VehicleUpsert[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
   const selectedId = mode.kind === "create" ? null : mode.vehicle.id;
+  const vehicles = (qc.data ?? []).filter(v => statusFilter === "ALL" || v.status === statusFilter);
 
   return (
     <main className="page-grid two-col">
       <section className="panel">
-        <h2>{t("vehicles.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <h2 style={{ margin: 0 }}>{t("vehicles.pageTitle", { count: vehicles.length })}</h2>
+          <button className="primary" type="button" onClick={reset}>
+            + {t("vehicles.newVehicle")}
+          </button>
+        </div>
+        <div className="toolbar" style={{ marginBottom: '10px' }}>
+          <div className="seg-control">
+            {["ALL", "AVAILABLE", "RESERVED", "IN_SERVICE", "OUT_OF_ORDER"].map(s => (
+              <button
+                key={s}
+                type="button"
+                className={statusFilter === s ? "active" : ""}
+                onClick={() => setStatusFilter(s)}
+              >
+                {s === "ALL" ? t("common.all") : t(`vehicleStatus.${s}`)}
+              </button>
+            ))}
+          </div>
+        </div>
         <table className="data-table">
           <thead>
             <tr>
@@ -95,7 +117,7 @@ export function VehiclesPage() {
             </tr>
           </thead>
           <tbody>
-            {qc.data?.map((v) => (
+            {vehicles.map((v) => (
               <tr key={v.id} className={selectedId === v.id ? "selected" : ""}>
                 <td>{v.make} {v.model}</td>
                 <td className="mono">{v.serialNumber}</td>
@@ -109,7 +131,7 @@ export function VehiclesPage() {
                 </td>
               </tr>
             ))}
-            {qc.data?.length === 0 && <tr><td colSpan={6} className="muted">{t("vehicles.noVehicles")}</td></tr>}
+            {vehicles.length === 0 && <tr><td colSpan={6} className="muted">{t("vehicles.noVehicles")}</td></tr>}
           </tbody>
         </table>
       </section>

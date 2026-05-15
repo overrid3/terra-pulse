@@ -4,7 +4,9 @@ import com.terrapulse.api.dto.VehicleDtos.VehicleCreateDto;
 import com.terrapulse.api.dto.VehicleDtos.VehicleDto;
 import com.terrapulse.api.dto.VehicleDtos.VehiclePatchDto;
 import com.terrapulse.api.dto.VehicleDtos.VehicleUpdateDto;
+import com.terrapulse.domain.site.Site;
 import com.terrapulse.domain.vehicle.Vehicle;
+import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -30,6 +32,9 @@ public class VehicleResource {
 
     @Inject
     VehicleRepository repo;
+
+    @Inject
+    SiteRepository siteRepo;
 
     @GET
     public List<VehicleDto> list() {
@@ -63,6 +68,11 @@ public class VehicleResource {
         Vehicle v = load(id);
         if (in.engineHours() != null) v.engineHours = in.engineHours();
         if (in.status() != null) v.status = in.status();
+        if (in.siteId() != null) {
+            Site site = siteRepo.findById(in.siteId());
+            if (site == null) throw new NotFoundException();
+            v.site = site;
+        }
         return VehicleDto.of(v);
     }
 

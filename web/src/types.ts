@@ -30,6 +30,7 @@ export type ServiceOrder = {
   vehicleId: UUID;
   mechanicId: UUID | null;
   clientId: UUID | null;
+  siteId: UUID;
   clientName: string | null;
   vmrsCode: string;
   vmrsDescription?: string;
@@ -60,6 +61,7 @@ export type Vehicle = {
   vehicleClass: VehicleClass;
   engineHours: number;
   status: VehicleStatus;
+  siteId: UUID | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -89,6 +91,44 @@ export type Client = {
 };
 
 export type ClientUpsert = Omit<Client, "id" | "createdAt" | "updatedAt">;
+
+export type ClientSummary = {
+  id: UUID;
+  name: string;
+  email: string;
+  phone: string | null;
+  vatNumber: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  postalCode: string | null;
+  country: string | null;
+  siteCount: number;
+  openOrderCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Site = {
+  id: UUID;
+  clientId: UUID;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  locationLabel: string | null;
+  openOrderCount: number;
+  equipmentCount: number;
+  personnelCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SiteUpsert = {
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+  locationLabel?: string | null;
+};
 
 export type Skill = {
   id: UUID;

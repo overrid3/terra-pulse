@@ -11,11 +11,13 @@ import com.terrapulse.domain.mechanic.Mechanic;
 import com.terrapulse.domain.service.ServiceOrder;
 import com.terrapulse.domain.service.ServiceOrderState;
 import com.terrapulse.domain.service.ServiceOrderStateMachine;
+import com.terrapulse.domain.site.Site;
 import com.terrapulse.domain.vehicle.Vehicle;
 import com.terrapulse.domain.vmrs.VmrsCode;
 import com.terrapulse.repository.ClientRepository;
 import com.terrapulse.repository.MechanicRepository;
 import com.terrapulse.repository.ServiceOrderRepository;
+import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
 import com.terrapulse.repository.VmrsCodeRepository;
 import com.terrapulse.service.EstimationService;
@@ -50,6 +52,7 @@ public class ServiceOrderResource {
     @Inject MechanicRepository mechanicRepo;
     @Inject ClientRepository clientRepo;
     @Inject VmrsCodeRepository vmrsRepo;
+    @Inject SiteRepository siteRepo;
     @Inject EstimationService estimation;
     @Inject GeometrySupport geo;
     @Inject TitleGenerator titleGenerator;
@@ -75,17 +78,33 @@ public class ServiceOrderResource {
         if (v == null) throw new IllegalArgumentException("vehicleId not found");
         VmrsCode c = vmrsRepo.findById(in.vmrsCode());
         if (c == null) throw new IllegalArgumentException("vmrsCode not found");
-        if (in.siteLocation() == null) throw new IllegalArgumentException("siteLocation required");
+        if (in.siteId() == null) throw new IllegalArgumentException("siteId required");
+        Site site = siteRepo.findById(in.siteId());
+        if (site == null) throw new IllegalArgumentException("siteId not found");
 
         ServiceOrder so = new ServiceOrder();
         so.vehicle = v;
         so.vmrsCode = c;
+        so.site = site;
+
+        // inherit client from site if not provided
+        Client resolvedClient = null;
         if (in.clientId() != null) {
-            Client client = clientRepo.findById(in.clientId());
-            if (client == null) throw new IllegalArgumentException("clientId not found");
-            so.client = client;
+            resolvedClient = clientRepo.findById(in.clientId());
+            if (resolvedClient == null) throw new IllegalArgumentException("clientId not found");
+        } else {
+            resolvedClient = site.client;
         }
-        so.siteLocation = geo.point(in.siteLocation().lng(), in.siteLocation().lat());
+        so.client = resolvedClient;
+
+        // use site coords if available, else fall back to explicit siteLocation
+        if (site.lat != null && site.lng != null) {
+            so.siteLocation = geo.point(site.lng, site.lat);
+        } else if (in.siteLocation() != null) {
+            so.siteLocation = geo.point(in.siteLocation().lng(), in.siteLocation().lat());
+        } else {
+            throw new IllegalArgumentException("siteLocation required when site has no coordinates");
+        }
         so.notes = in.notes();
         // Title: caller-supplied wins; blank/missing -> auto-generated mnemonic.
         if (in.title() == null || in.title().isBlank()) {

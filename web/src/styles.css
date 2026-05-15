@@ -1,82 +1,57 @@
 /* ============================================================
-   TerraPulse design tokens (DESIGN.md doctrine)
+   TerraPulse — Precision Industrial design tokens
 
-   Color philosophy: restrained palette, tinted warm neutrals
-   (chroma 0.005 to 0.014 tilted toward hue 70 ochre) plus a single
-   clay accent at hue 38. Semantic state palette pairs (bg + fg) keep
-   "same enum = same swatch everywhere". OKLCH throughout. No raw
-   hex, no #000, no #fff.
+   Color philosophy: warm off-white surfaces (hue 78-80), single amber
+   accent mapped from #d97706 → oklch(0.63 0.17 56). Semantic state
+   pairs unchanged (same enum = same swatch everywhere). OKLCH throughout.
 
-   Accent is clay (hue 38), deliberately separated from state-warn
-   amber (hue 82) so the One Voice Rule survives in pending-heavy
-   views. State-danger shifts toward brick (hue 25) for the same
-   reason: accent rarity vs. danger density never fight.
-
-   Token roles:
-     --color-accent           cobalt, primary action, selection, focus ring
-     --color-accent-strong    accent hover / active
-     --color-accent-soft      accent background tint (selected row, current nav)
-     --color-ink              highest-contrast text, nav bar background
-     --color-ink-soft         nav text on dark surfaces
-     --color-text             default body text
-     --color-text-muted       secondary text, meta lines
-     --color-text-subtle      uppercase table headers, label captions
-     --color-surface-app      page background
-     --color-surface-panel    card / panel surface
-     --color-surface-elev     modal sheet (only elevated surface)
-     --color-surface-sunken   inset surfaces (notes block, history items)
-     --color-hairline         1px borders + dividers
-     --color-hairline-strong  focused field border
-     --color-danger-fg/bg     errors, destructive intents
-     --color-warn-fg/bg       caution, REQUESTED-like states
-     --color-success-fg/bg    APPROVED, AVAILABLE, IN_PROGRESS-success variants
-     --color-info-fg/bg       neutral information, DISPATCHED, IDLE
-
-   State palette (paired bg/fg) covers:
-     ServiceOrderState: REQUESTED, QUOTED, APPROVED, DISPATCHED,
-                        IN_PROGRESS, COMPLETED, CANCELLED
-     MechanicStatus:    IDLE, EN_ROUTE, IN_PROGRESS, OFF_DUTY
-     VehicleStatus:     AVAILABLE, RESERVED, IN_SERVICE, OUT_OF_ORDER
-     AbsenceType:       VACATION, SICK, TRAINING, OTHER
-
-   Shared mappings (state-is-sacred):
-     IN_PROGRESS (order)   == IN_PROGRESS (mechanic)  -> success-ish green
-     DISPATCHED (order)    == IN_SERVICE (vehicle)    -> info blue
-     REQUESTED (order)     == RESERVED  (vehicle)
-                          == EN_ROUTE  (mechanic)
-                          == TRAINING  (absence)      -> warn amber
-     CANCELLED (order)     == OUT_OF_ORDER (vehicle)
-                          == SICK         (absence)   -> danger red
+   Precision Industrial hex → OKLCH mapping:
+     #faf9f6  surface/background     oklch(0.972 0.006 80)
+     #ffffff  surface-lowest         oklch(0.999 0.001 80)
+     #f4f3f0  surface-container-low  oklch(0.958 0.007 80)
+     #efeeeb  surface-container      oklch(0.943 0.007 78)
+     #e9e8e5  surface-container-high oklch(0.929 0.007 76)
+     #e3e2df  surface-container-high oklch(0.914 0.007 76)
+     #dbdad7  surface-dim            oklch(0.875 0.006 76)
+     #1a1c1a  on-surface             oklch(0.185 0.004 155)
+     #554336  on-surface-variant     oklch(0.382 0.042 44)
+     #887364  outline                oklch(0.566 0.038 50)
+     #dbc2b0  outline-variant        oklch(0.822 0.032 52)
+     #8d4b00  primary deep amber     oklch(0.483 0.145 51)
+     #d97706  primary action amber   oklch(0.632 0.168 56)
    ============================================================ */
 
 :root {
-  /* Clay accent (hue 38) */
-  --color-accent:          oklch(0.58 0.16 38);
-  --color-accent-strong:   oklch(0.50 0.17 38);
-  --color-accent-soft:     oklch(0.94 0.05 50);
+  /* Amber accent (hue 56 — "Precision Amber") */
+  --color-accent:          oklch(0.632 0.168 56);
+  --color-accent-strong:   oklch(0.483 0.145 51);
+  --color-accent-soft:     oklch(0.962 0.032 60);
 
-  /* Tinted warm ink + text (chroma 0.012-0.022 toward hue 60) */
-  --color-ink:             oklch(0.22 0.018 60);
-  --color-ink-elevated:    oklch(0.30 0.020 60);   /* nav hover on dark surface */
-  --color-ink-soft:        oklch(0.86 0.014 70);
-  --color-ink-muted:       oklch(0.72 0.014 70);   /* muted text on dark surface */
-  --color-text:            oklch(0.26 0.016 60);
-  --color-text-muted:      oklch(0.54 0.014 65);
-  --color-text-subtle:     oklch(0.44 0.014 65);
+  /* Text hierarchy (warm near-neutral to brownish) */
+  --color-ink:             oklch(0.185 0.004 155);   /* deepest text, sidebar brand */
+  --color-ink-elevated:    oklch(0.28 0.006 155);
+  --color-ink-soft:        oklch(0.86 0.006 78);
+  --color-ink-muted:       oklch(0.72 0.006 78);
+  --color-text:            oklch(0.185 0.004 155);   /* body text */
+  --color-text-muted:      oklch(0.382 0.042 44);    /* secondary text, meta */
+  --color-text-subtle:     oklch(0.566 0.038 50);    /* table headers, captions */
 
-  /* Surfaces (chroma 0.005 to 0.010 toward hue 75 warm cream) */
-  --color-surface-app:     oklch(0.970 0.008 78);
-  --color-surface-panel:   oklch(0.992 0.005 80);
-  --color-surface-elev:    oklch(0.992 0.005 80);
-  --color-surface-sunken:  oklch(0.955 0.010 75);
+  /* Surfaces */
+  --color-surface-app:              oklch(0.972 0.006 80);   /* page bg */
+  --color-surface-panel:            oklch(0.999 0.001 80);   /* panels, sidebar */
+  --color-surface-elev:             oklch(0.999 0.001 80);   /* modal */
+  --color-surface-sunken:           oklch(0.958 0.007 80);   /* insets, table header */
+  --color-surface-container:        oklch(0.943 0.007 78);   /* hover bg, filter bar */
+  --color-surface-container-high:   oklch(0.929 0.007 76);   /* selected item bg */
+  --color-surface-container-highest: oklch(0.914 0.007 76);  /* stat cards */
 
   /* Hairlines */
-  --color-hairline:        oklch(0.885 0.012 72);
-  --color-hairline-strong: oklch(0.62 0.04 60);
+  --color-hairline:        oklch(0.822 0.032 52);    /* #dbc2b0 outline-variant */
+  --color-hairline-strong: oklch(0.566 0.038 50);    /* #887364 outline */
 
-  /* Semantic foreground/background pairs */
-  --color-danger-fg:       oklch(0.50 0.18 25);
-  --color-danger-bg:       oklch(0.94 0.05 25);
+  /* Semantic state pairs (unchanged from previous system) */
+  --color-danger-fg:       oklch(0.509 0.185 25);
+  --color-danger-bg:       oklch(0.928 0.046 20);
   --color-danger-hairline: oklch(0.84 0.07 25);
 
   --color-warn-fg:         oklch(0.50 0.13 82);
@@ -88,29 +63,28 @@
   --color-info-fg:         oklch(0.46 0.12 230);
   --color-info-bg:         oklch(0.94 0.035 225);
 
-  --color-neutral-fg:      oklch(0.42 0.014 65);
-  --color-neutral-bg:      oklch(0.92 0.012 70);
+  --color-neutral-fg:      oklch(0.566 0.038 50);
+  --color-neutral-bg:      oklch(0.943 0.007 78);
 
-  /* Purple slot for QUOTED (single deviation outside the four semantics) */
   --color-quoted-fg:       oklch(0.44 0.15 295);
   --color-quoted-bg:       oklch(0.93 0.05 295);
 
-  /* Type scale (~1.2x ratio, body 0.875rem) */
+  /* Type scale */
   --text-xs:   0.72rem;
   --text-sm:   0.85rem;
   --text-base: 0.875rem;
   --text-lg:   1.05rem;
 
-  /* Radii */
-  --radius-sm: 6px;
-  --radius-md: 8px;
+  /* Radii — tight/machined industrial geometry */
+  --radius-sm: 2px;
+  --radius-md: 4px;
   --radius-pill: 999px;
 
-  /* Overlay scrim + modal shadow (single elevation step) */
-  --color-overlay-scrim:   oklch(0.22 0.018 60 / 0.5);
-  --shadow-modal:          0 8px 24px oklch(0.22 0.018 60 / 0.18);
+  /* Overlay scrim + modal shadow */
+  --color-overlay-scrim: oklch(0.185 0.004 155 / 0.5);
+  --shadow-modal: 0 8px 24px oklch(0.185 0.004 155 / 0.18);
 
-  /* Motion (ease-out-quart, 160ms) */
+  /* Motion */
   --motion-duration: 160ms;
   --motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
   --transition-default:
@@ -129,7 +103,7 @@
 html, body, #root { height: 100%; margin: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: var(--text-base);
   line-height: 1.45;
   color: var(--color-text);
@@ -139,10 +113,17 @@ body {
 }
 
 .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
-.mono  { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+.mono  { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
 .error { color: var(--color-danger-fg); margin: 6px 0; }
 
-.app-shell { display: flex; flex-direction: column; height: 100%; }
+/* Material Symbols helper */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 20px;
+  line-height: 1;
+  vertical-align: middle;
+  user-select: none;
+}
 
 /* Global focus ring (keyboard only) */
 :focus-visible {
@@ -152,28 +133,145 @@ body {
 }
 
 /* ============================================================
-   NavBar
+   App shell — sidebar layout
    ============================================================ */
 
-.app-header {
-  display: flex; align-items: center; gap: 18px;
-  padding: 10px 20px;
-  background: var(--color-ink);
-  color: var(--color-ink-soft);
+.app-shell {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--color-surface-app);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   Sidebar navigation
+   ============================================================ */
+
+.app-sidebar {
+  width: 256px;
+  min-width: 256px;
+  height: 100%;
+  border-right: 1px solid var(--color-hairline);
+  background: var(--color-surface-panel);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
   border-bottom: 1px solid var(--color-hairline);
 }
-.app-header h1 { font-size: var(--text-lg); margin: 0; color: var(--color-surface-panel); }
-.app-header nav { display: flex; gap: 4px; }
-.app-header nav a {
-  color: var(--color-ink-soft);
-  text-decoration: none;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  transition: var(--transition-default);
+
+.sidebar-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
-.app-header nav a:hover  { background: var(--color-ink-elevated); color: var(--color-surface-panel); }
-.app-header nav a.active { background: var(--color-accent); color: var(--color-surface-panel); }
-.app-header .muted { color: var(--color-ink-muted); margin-left: auto; }
+
+.sidebar-brand-icon .material-symbols-outlined {
+  color: var(--color-surface-panel);
+  font-size: 18px;
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-brand-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent-strong);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.sidebar-brand-tagline {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.65rem;
+  color: var(--color-text-subtle);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  transition: var(--transition-default);
+  border-left: 4px solid transparent;
+}
+
+.sidebar-nav a .material-symbols-outlined {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-nav a:hover {
+  background: var(--color-surface-container);
+  color: var(--color-text);
+}
+
+.sidebar-nav a.active {
+  background: var(--color-surface-container-high);
+  color: var(--color-accent-strong);
+  font-weight: 600;
+  border-left-color: var(--color-accent);
+  padding-left: 10px;
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--color-hairline);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sidebar-footer-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
 
 /* ============================================================
    Page grids + panels
@@ -186,18 +284,22 @@ body {
   flex: 1; min-height: 0;
   min-width: 0;
 }
+
 .page-grid {
-  flex: 1; min-height: 0; padding: 12px; display: grid; gap: 12px;
+  flex: 1; min-height: 0; padding: 14px; display: grid; gap: 14px;
 }
+
 .page-grid.two-col {
   grid-template-columns: 1.6fr 1fr;
 }
+
 .page-grid.three-row {
   grid-template-columns: 1.6fr 1fr;
   grid-template-areas:
     "list form"
     "absences absences";
 }
+
 .page-grid.three-row > .panel:nth-child(1) { grid-area: list; }
 .page-grid.three-row > .panel:nth-child(2) { grid-area: form; }
 .page-grid.three-row > .panel:nth-child(3) { grid-area: absences; }
@@ -210,7 +312,118 @@ body {
   overflow: auto;
   min-height: 0;
 }
+
 .panel h2 { margin: 0 0 10px; font-size: var(--text-lg); font-weight: 600; }
+
+/* ============================================================
+   Page header (title + CTA row above panel)
+   ============================================================ */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 0;
+  flex-shrink: 0;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.page-header .muted {
+  margin-top: 2px;
+  display: block;
+}
+
+/* ============================================================
+   Toolbar / filter bar
+   ============================================================ */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.seg-control {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: var(--color-surface-container);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.seg-control button {
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 1px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: var(--transition-default);
+}
+
+.seg-control button:hover:not(:disabled) {
+  background: var(--color-surface-panel);
+  color: var(--color-text);
+}
+
+.seg-control button.active {
+  background: var(--color-surface-panel);
+  color: var(--color-text);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   Stat grid (mechanics overview)
+   ============================================================ */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.stat-card {
+  background: var(--color-surface-container-highest);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stat-card-label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+.stat-card-value {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.stat-card-value.accent { color: var(--color-accent-strong); }
 
 /* ============================================================
    Mechanic list (Dispatch page)
@@ -228,8 +441,8 @@ body {
 .mechanic-list li:hover { background: var(--color-surface-sunken); }
 .mechanic-list li.selected { background: var(--color-accent-soft); }
 .mechanic-list .dot {
-  width: 12px; height: 12px; border-radius: 50%;
-  margin-top: 4px; flex: 0 0 12px;
+  width: 8px; height: 8px; border-radius: 50%;
+  margin-top: 5px; flex: 0 0 8px;
   background: var(--color-neutral-fg);
 }
 .mechanic-list .dot.status-IDLE        { background: var(--color-info-fg); }
@@ -292,11 +505,11 @@ body {
   border-color: var(--color-accent);
 }
 .po-state { font-size: var(--text-xs); font-weight: 600; color: var(--color-text-muted); }
-.po-code  { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.po-code  { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
 .po-mins  { font-size: var(--text-xs); color: var(--color-text-muted); }
 
 /* ============================================================
-   Drawer (Dispatch page) + descriptive lists
+   Drawer + descriptive lists
    ============================================================ */
 
 .drawer { width: 320px; }
@@ -325,10 +538,21 @@ button {
   transition: var(--transition-default);
 }
 button:hover:not(:disabled) {
-  background: var(--color-surface-sunken);
+  background: var(--color-surface-container);
   border-color: var(--color-hairline-strong);
 }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.primary {
+  background: var(--color-accent);
+  color: var(--color-surface-panel);
+  border-color: var(--color-accent);
+  font-weight: 500;
+}
+button.primary:hover:not(:disabled) {
+  background: var(--color-accent-strong);
+  border-color: var(--color-accent-strong);
+}
 
 button.danger {
   color: var(--color-danger-fg);
@@ -338,13 +562,14 @@ button.danger:hover:not(:disabled) {
   background: var(--color-danger-bg);
   border-color: var(--color-danger-fg);
 }
+
 button.ghost {
   background: transparent;
   border: 1px solid transparent;
   color: var(--color-text-muted);
 }
 button.ghost:hover:not(:disabled) {
-  background: var(--color-surface-sunken);
+  background: var(--color-surface-container);
   color: var(--color-text);
 }
 
@@ -356,7 +581,6 @@ button.ghost:hover:not(:disabled) {
   width: 80px;
 }
 
-/* Section heading inside a panel — rhythm marker, not a new region */
 .section-heading {
   margin: 14px 0 6px;
   font-size: var(--text-base);
@@ -365,7 +589,6 @@ button.ghost:hover:not(:disabled) {
 }
 .section-heading.override-heading { margin-top: 18px; }
 
-/* Picker heading sits flush with its panel separator */
 .picker-heading {
   margin: 0 0 6px;
   font-size: var(--text-base);
@@ -373,10 +596,7 @@ button.ghost:hover:not(:disabled) {
 }
 
 /* ============================================================
-   Badges (with leading state dot via ::before)
-
-   The "::before { background: currentColor }" trick lets every
-   colored variant inherit the dot color from its own foreground.
+   Badges (leading state dot via ::before)
    ============================================================ */
 
 .badge {
@@ -429,7 +649,38 @@ button.ghost:hover:not(:disabled) {
 .absence-OTHER    { background: var(--color-neutral-bg); color: var(--color-neutral-fg); }
 
 /* ============================================================
-   Modal (the only place box-shadow is allowed)
+   Status dot (inline, no pill shape — 8px circle)
+   ============================================================ */
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.dot-IDLE, .status-dot.dot-AVAILABLE {
+  background: var(--color-info-fg);
+}
+.status-dot.dot-EN_ROUTE, .status-dot.dot-RESERVED {
+  background: var(--color-warn-fg);
+}
+.status-dot.dot-IN_PROGRESS {
+  background: var(--color-success-fg);
+}
+.status-dot.dot-IN_SERVICE {
+  background: var(--color-info-fg);
+}
+.status-dot.dot-OFF_DUTY, .status-dot.dot-COMPLETED {
+  background: var(--color-neutral-fg);
+}
+.status-dot.dot-OUT_OF_ORDER, .status-dot.dot-CANCELLED, .status-dot.dot-SICK {
+  background: var(--color-danger-fg);
+}
+
+/* ============================================================
+   Modal
    ============================================================ */
 
 .modal-backdrop {
@@ -493,13 +744,12 @@ button.ghost:hover:not(:disabled) {
   font-weight: 600;
   padding-top: 6px;
   padding-bottom: 6px;
+  background: var(--color-surface-sunken);
 }
 .data-table tbody tr { cursor: pointer; }
 .data-table tr.selected { background: var(--color-accent-soft); }
-.data-table tr:hover:not(.selected) { background: var(--color-surface-sunken); }
+.data-table tr:hover:not(.selected) { background: var(--color-surface-container); }
 
-/* Multi-line cell support: name primary, dim meta trailing on same line.
-   Keeps the row to a single text line so cells align across columns. */
 .cell-primary {
   display: inline-flex;
   align-items: baseline;
@@ -513,7 +763,7 @@ button.ghost:hover:not(:disabled) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Chips inside a row stay on one line and scroll if they overflow. */
+
 .cell-chips {
   display: flex;
   flex-wrap: nowrap;
@@ -538,6 +788,19 @@ button.ghost:hover:not(:disabled) {
 .row-actions button { padding: 4px 8px; font-size: var(--text-xs); }
 .data-table td.row-actions,
 .data-table td:last-child { text-align: right; }
+
+/* ID badge in tables — mono chip */
+.id-badge {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background: var(--color-surface-container);
+  color: var(--color-text);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  white-space: nowrap;
+}
 
 /* ============================================================
    Forms
@@ -599,7 +862,7 @@ button.ghost:hover:not(:disabled) {
 }
 
 .notes {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: var(--text-xs);
   background: var(--color-surface-sunken);
   border: 1px solid var(--color-hairline);
@@ -691,10 +954,6 @@ button.ghost:hover:not(:disabled) {
 
 /* ============================================================
    react-big-calendar overrides (doctrine-aligned)
-
-   Goals: hairline borders on the grid, no shadows, neutral
-   surfaces, state-colored events. Theme imported by the lib stays
-   untouched (no separate theme file).
    ============================================================ */
 
 .rbc-calendar { font-size: var(--text-sm); color: var(--color-text); }
@@ -759,19 +1018,15 @@ button.ghost:hover:not(:disabled) {
 }
 .rbc-event.rbc-selected { background: var(--color-accent-strong); }
 
-/* Absence events: distinct from work blocks via diagonal hatch + dim
-   No italics, no color shift. The state palette still drives the hue. */
 .rbc-event.is-absence {
   opacity: 0.78;
   background-image: repeating-linear-gradient(
     135deg,
     transparent 0 4px,
-    oklch(0.992 0.005 80 / 0.20) 4px 5px
+    oklch(0.999 0.001 80 / 0.20) 4px 5px
   );
 }
 
-/* State-colored events (consumers add the class via eventPropGetter
-   if/when wired up; pairs match the badge palette). */
 .rbc-event.state-REQUESTED,
 .rbc-event.status-RESERVED,
 .rbc-event.status-EN_ROUTE,
@@ -828,16 +1083,9 @@ button.ghost:hover:not(:disabled) {
 }
 
 /* ============================================================
-   Absence calendar picker, language switcher, title editor
+   Absence calendar picker
    ============================================================ */
 
-/* ============================================================
-   Absence picker (list-first; calendar collapsed by default)
-
-   Layout doctrine: the absence table is the primary surface. The
-   picker is a compact form, not a workspace. Visual calendar lives
-   behind a toggle and is height-capped so it never dwarfs the list.
-   ============================================================ */
 .absence-picker {
   margin-top: 16px;
   border-top: 1px solid var(--color-hairline);
@@ -930,4 +1178,269 @@ button.ghost:hover:not(:disabled) {
 .title-row button.ghost {
   padding: 2px 6px;
   font-size: var(--text-xs);
+}
+
+/* ============================================================
+   Clients master-detail layout
+   ============================================================ */
+
+.clients-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  gap: 0;
+  padding: 14px;
+  gap: 14px;
+}
+
+.client-list-panel {
+  width: 300px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--color-surface-panel);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  overflow: hidden;
+}
+
+.client-list-panel h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.client-list-search {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-family: inherit;
+}
+.client-list-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.client-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.client-card {
+  padding: 10px 12px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--color-surface-panel);
+  transition: var(--transition-default);
+}
+.client-card:hover {
+  background: var(--color-surface-container);
+}
+.client-card.selected {
+  background: var(--color-surface-container-high);
+  border-color: var(--color-accent);
+}
+.client-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.client-card-name {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text);
+}
+.client-card-counts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.client-card-count-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.client-card-count-value {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+/* Status dot variants for clients/sites */
+.status-dot.dot-has-orders   { background: var(--color-accent); }
+.status-dot.dot-has-sites    { background: oklch(0.65 0.14 145); }
+.status-dot.dot-inactive     { background: var(--color-hairline); }
+
+.client-detail-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-panel);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.client-detail-header {
+  padding: 14px 16px;
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+.client-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.client-detail-name {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin: 0;
+}
+.client-active-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: oklch(0.962 0.032 60);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.client-id-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.client-detail-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.client-detail-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.sites-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-hairline);
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+.sites-section-header h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.sites-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.site-card {
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: var(--color-surface-panel);
+}
+.site-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.site-card-name {
+  font-weight: 600;
+  font-size: var(--text-base);
+}
+.site-card-actions {
+  display: flex;
+  gap: 4px;
+}
+.site-card-actions button {
+  padding: 3px 6px;
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
+}
+.site-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.site-meta-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.site-meta-value {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+.site-location-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.detail-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  gap: 8px;
+}
+.detail-empty-state .material-symbols-outlined {
+  font-size: 48px;
+  opacity: 0.4;
+}
+
+.form-panel-header {
+  padding: 14px 16px;
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.form-panel-header h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.form-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
 }
