@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "TerraPulse",
-    "tagline": "Live earthmoving fleet"
+    "tagline": "Dispatch. Coordinate. Deliver."
   },
   "nav": {
     "dispatch": "Dispatch",
@@ -73,7 +73,13 @@
     "actionQuote": "Quote",
     "actionApprove": "Approve",
     "actionStart": "Start",
-    "actionComplete": "Complete"
+    "actionComplete": "Complete",
+    "selectMechanic": "Select mechanic",
+    "newOrder": "New order",
+    "scheduleSuccess": "Order scheduled",
+    "rescheduleSuccess": "Schedule updated",
+    "conflictWarning": "Overlaps with {{title}} at {{time}}",
+    "addAbsence": "+ Absence"
   },
   "orders": {
     "pageTitle": "Service orders",
@@ -111,11 +117,11 @@
     "selectPlaceholder": "— pick —",
     "vehicleOption": "{{make}} {{model}} · {{serial}}",
     "overrideHeading": "Override state",
-    "overrideHelp": "Admin override bypasses the normal workflow. Only CANCELLED and REQUESTED are allowed. Reopening to REQUESTED clears the assigned mechanic and lifecycle timestamps.",
+    "overrideHelp": "Admin override bypasses the normal workflow and can set any target state. Use with care.",
     "overrideTarget": "Target",
     "overrideReason": "Reason",
     "overrideReasonPlaceholder": "Why?",
-    "overrideApply": "Apply override",
+    "actionOverrideApply": "Apply override",
     "overrideCancelled": "CANCELLED",
     "overrideReopen": "REQUESTED (reopen)",
     "actionTitleEdit": "Edit title",
@@ -127,7 +133,12 @@
     "filterRequested": "Requested",
     "filterDispatched": "Dispatched",
     "filterInProgress": "In-Progress",
-    "filterCompleted": "Completed"
+    "filterCompleted": "Completed",
+    "form": {
+      "estimation": "Estimation",
+      "estimationHint": "e.g. 1d, 2h30m, 90m",
+      "assignNow": "Optional: Assign now"
+    }
   },
   "mechanics": {
     "pageTitle": "Mechanics ({{count}})",
@@ -300,7 +311,7 @@
     "REQUESTED": "Requested",
     "QUOTED": "Quoted",
     "APPROVED": "Approved",
-    "DISPATCHED": "Dispatched",
+    "SCHEDULED": "Scheduled",
     "IN_PROGRESS": "In progress",
     "COMPLETED": "Completed",
     "CANCELLED": "Cancelled"

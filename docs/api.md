@@ -61,17 +61,29 @@ All bodies and responses are JSON. UUIDs are canonical 36-char strings. Timestam
 |--------|-----------------------------------|---------------------------------------|----------------------------------------------------------------------------------------------------------------|
 | GET    | `/?state=&mechanicId=`            |                                       | both filters optional                                                                                          |
 | GET    | `/{id}`                           |                                       |                                                                                                                |
-| POST   | `/`                               | `{vehicleId, clientId?, vmrsCode, siteLocation: {lat,lng}, notes?}` | creates in `REQUESTED`; `estimated_minutes` pre-populated from VMRS                                            |
+| POST   | `/`                               | `{vehicleId, clientId?, vmrsCode, siteLocation: {lat,lng}, notes?, estimation?, mechanicId?, scheduledStartAt?, scheduledEndAt?}` | creates in `REQUESTED`; `estimated_minutes` pre-populated from VMRS; optional `mechanicId`/`scheduledStartAt`/`scheduledEndAt` schedule the order immediately after creation |
 | POST   | `/{id}/quote`                     |                                       | recomputes estimate from current VMRS row; transitions `REQUESTED → QUOTED`                                    |
 | POST   | `/{id}/approve`                   |                                       | `QUOTED → APPROVED`                                                                                            |
-| POST   | `/{id}/dispatch`                  | `{mechanicId}`                        | `APPROVED → DISPATCHED`. Required mechanic id.                                                                 |
-| POST   | `/{id}/reassign`                  | `{mechanicId}`                        | Reassign mechanic on a `DISPATCHED`/`IN_PROGRESS` order. State unchanged. Emits `SERVICE_ORDER_STATE_CHANGED` with `reassigned=true` and `previousMechanicId`. |
-| POST   | `/{id}/start`                     |                                       | `DISPATCHED → IN_PROGRESS`                                                                                     |
+| POST   | `/{id}/schedule`                  | `{mechanicId, scheduledStartAt, scheduledEndAt}` | `APPROVED → SCHEDULED`. All three fields required. Conflict check: returns 409 `{error:"schedule_conflict"}` if the mechanic already has an overlapping SCHEDULED/IN_PROGRESS order. |
+| PATCH  | `/{id}/schedule`                  | `{mechanicId?, scheduledStartAt?, scheduledEndAt?}` | Update schedule on a `SCHEDULED` order (reassign and/or reschedule). At least one field required. Same conflict check as POST. State unchanged. Emits `SERVICE_ORDER_SCHEDULE_CHANGED`. |
+| POST   | `/{id}/start`                     |                                       | `SCHEDULED → IN_PROGRESS`                                                                                      |
 | POST   | `/{id}/complete`                  | `{actualMinutes}`                     | `IN_PROGRESS → COMPLETED`                                                                                      |
 | POST   | `/{id}/cancel`                    |                                       | normal transition to `CANCELLED` (allowed from any non-terminal state except IN_PROGRESS via this endpoint — IN_PROGRESS must override) |
 | POST   | `/{id}/override-state`            | `{state: "CANCELLED" \| "REQUESTED", reason: "…"}` | admin override; only those two targets are accepted; `REQUESTED` performs a hard reopen (clears mechanic + timestamps); audit appended to `notes`. |
 
 Invalid normal transitions return **409** with `{error:"illegal_state_transition", message: "Illegal state transition: FROM -> TO"}`.
+
+## Estimation `/api/estimation`
+
+| Method | Path     | Body                  | Notes                                                                                    |
+|--------|----------|-----------------------|------------------------------------------------------------------------------------------|
+| POST   | `/parse` | `{text: "1d 2h30m"}`  | Parses a human-readable duration string into minutes. Returns `{minutes: 150}`. Accepts `d`, `h`, `m` units in any combination. |
+
+## VMRS codes `/api/vmrs-codes`
+
+| Method | Path | Notes                                                                          |
+|--------|------|--------------------------------------------------------------------------------|
+| GET    | `/`  | Returns all VMRS codes as `[{code, description, srtMinutes, difficultyFactor}]` |
 
 ## Dev-only `/api/dev` (profile `dev`)
 
@@ -97,11 +109,12 @@ Server-push only. Inbound messages from clients are ignored.
 
 ### Event types and payloads
 
-| `type`                          | Payload (key fields)                                                                                                       |
-|---------------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| `SERVICE_ORDER_CREATED`         | Full `ServiceOrderDto`                                                                                                     |
-| `SERVICE_ORDER_STATE_CHANGED`   | `{ id, fromState, toState, mechanicId, dispatchedAt, startedAt, completedAt, actualMinutes, estimatedMinutes, override?, reason? }` |
-| `MECHANIC_LOCATION_UPDATED`     | `{ mechanicId, lat, lng, updatedAt }`                                                                                      |
-| `MECHANIC_STATUS_CHANGED`       | `{ mechanicId, fromStatus, toStatus, updatedAt }`                                                                          |
+| `type`                            | Payload (key fields)                                                                                                                                         |
+|-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `SERVICE_ORDER_CREATED`           | Full `ServiceOrderDto`                                                                                                                                       |
+| `SERVICE_ORDER_STATE_CHANGED`     | `{ id, fromState, toState, mechanicId, scheduledAt, scheduledStartAt, scheduledEndAt, startedAt, completedAt, actualMinutes, estimatedMinutes, override?, reason? }` |
+| `SERVICE_ORDER_SCHEDULE_CHANGED`  | `{ id, mechanicId, scheduledStartAt, scheduledEndAt, previousMechanicId? }`                                                                                  |
+| `MECHANIC_LOCATION_UPDATED`       | `{ mechanicId, lat, lng, updatedAt }`                                                                                                                        |
+| `MECHANIC_STATUS_CHANGED`         | `{ mechanicId, fromStatus, toStatus, updatedAt }`                                                                                                            |
 
 Client-side: `web/src/hooks/useDispatchSocket.ts` invalidates `["serviceOrders"]` for `SERVICE_ORDER_*` and `["mechanics"]` for `MECHANIC_*`.

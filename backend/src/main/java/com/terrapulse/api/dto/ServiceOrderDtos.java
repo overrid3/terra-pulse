@@ -18,6 +18,7 @@ public final class ServiceOrderDtos {
             UUID clientId,
             String clientName,
             UUID siteId,
+            String siteName,
             String vmrsCode,
             String vmrsDescription,
             ServiceOrderState state,
@@ -26,6 +27,8 @@ public final class ServiceOrderDtos {
             LatLng siteLocation,
             Instant requestedAt,
             Instant dispatchedAt,
+            Instant scheduledStartAt,
+            Instant scheduledEndAt,
             Instant startedAt,
             Instant completedAt,
             String notes,
@@ -41,6 +44,7 @@ public final class ServiceOrderDtos {
                     so.client != null ? so.client.id : null,
                     so.client != null ? so.client.name : null,
                     so.site != null ? so.site.id : null,
+                    so.site != null ? so.site.name : null,
                     so.vmrsCode.code,
                     so.vmrsCode.description,
                     so.state,
@@ -49,6 +53,8 @@ public final class ServiceOrderDtos {
                     LatLng.of(so.siteLocation),
                     so.requestedAt,
                     so.dispatchedAt,
+                    so.scheduledStartAt,
+                    so.scheduledEndAt,
                     so.startedAt,
                     so.completedAt,
                     so.notes,
@@ -65,16 +71,37 @@ public final class ServiceOrderDtos {
             String vmrsCode,
             LatLng siteLocation,
             String notes,
-            String title
+            String title,
+            String estimation,
+            UUID mechanicId,
+            Instant scheduledStartAt,
+            Instant scheduledEndAt
     ) {}
 
     public record TitleUpdateDto(String title) {}
 
-    public record DispatchRequest(UUID mechanicId) {}
+    public record ScheduleRequest(
+            UUID mechanicId,
+            Instant scheduledStartAt,
+            Instant scheduledEndAt
+    ) {}
+
+    public record PatchScheduleRequest(
+            UUID mechanicId,
+            Instant scheduledStartAt,
+            Instant scheduledEndAt
+    ) {}
 
     public record CompleteRequest(Integer actualMinutes) {}
 
     public record SimulateMoveRequest(UUID mechanicId, double lat, double lng) {}
 
-    public record OverrideStateRequest(ServiceOrderState state, String reason) {}
+    public record OverrideStateRequest(
+            ServiceOrderState state,
+            String reason,
+            UUID mechanicId,
+            Integer actualMinutes,
+            Instant scheduledStartAt,
+            Instant scheduledEndAt
+    ) {}
 }

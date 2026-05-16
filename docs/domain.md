@@ -10,7 +10,7 @@
 | `Reservation` (abstract, JOINED) | vehicle, client, start_at, end_at, hire_type, status | CHECK `end_at > start_at`; app-level overlap check |
 | `DryHireReservation` | daily_rate                                                    | Client supplies operator                    |
 | `WetHireReservation` | hourly_rate, operator_mechanic                                | Provider supplies certified operator        |
-| `ServiceOrder`    | vehicle, mechanic (nullable), client (nullable), vmrs_code, state, site_location, estimated/actual minutes | State machine below |
+| `ServiceOrder`    | vehicle, mechanic (nullable), client (nullable), vmrs_code, state, site_location, estimated/actual minutes, scheduled_start_at (nullable), scheduled_end_at (nullable) | State machine below |
 | `VmrsCode`        | code (PK, 9 digits), description, srt_minutes, difficulty_factor | Stub — 8 hardcoded rows in V4 migration     |
 
 All entity primary keys are `UUID` with `GenerationType.UUID` (Hibernate 6 generator). Timestamps are `TIMESTAMPTZ`.
@@ -26,7 +26,7 @@ All entity primary keys are `UUID` with `GenerationType.UUID` (Hibernate 6 gener
 ## Service order state machine
 
 ```
-REQUESTED ──► QUOTED ──► APPROVED ──► DISPATCHED ──► IN_PROGRESS ──► COMPLETED
+REQUESTED ──► QUOTED ──► APPROVED ──► SCHEDULED ──► IN_PROGRESS ──► COMPLETED
    │            │            │             │              │             ▲
    └────────────┴────────────┴─────────────┴──────────────┘             │
                           CANCELLED (terminal)                          │
@@ -39,12 +39,12 @@ REQUESTED ──► QUOTED ──► APPROVED ──► DISPATCHED ──► IN_
 
 ### Per-target guards (normal transitions)
 
-| Target       | Guard                                                  |
-|--------------|--------------------------------------------------------|
-| `QUOTED`     | `estimated_minutes` set                                |
-| `DISPATCHED` | `mechanic` non-null; auto-sets `dispatched_at`         |
-| `IN_PROGRESS`| auto-sets `started_at`                                 |
-| `COMPLETED`  | `actual_minutes` set; auto-sets `completed_at`         |
+| Target       | Guard                                                                                           |
+|--------------|-------------------------------------------------------------------------------------------------|
+| `QUOTED`     | `estimated_minutes` set                                                                         |
+| `SCHEDULED`  | `mechanic` non-null; `scheduled_start_at` + `scheduled_end_at` set; window must not overlap an existing SCHEDULED/IN_PROGRESS order for the same mechanic; auto-sets `scheduled_at` |
+| `IN_PROGRESS`| source state must be `SCHEDULED`; auto-sets `started_at`                                        |
+| `COMPLETED`  | `actual_minutes` set; auto-sets `completed_at`                                                  |
 
 Invalid transitions throw `IllegalStateTransitionException` → HTTP 409.
 

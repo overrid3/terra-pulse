@@ -1,8 +1,9 @@
 package com.terrapulse.api;
 
 import com.terrapulse.api.dto.ServiceOrderDtos.CompleteRequest;
-import com.terrapulse.api.dto.ServiceOrderDtos.DispatchRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.OverrideStateRequest;
+import com.terrapulse.api.dto.ServiceOrderDtos.PatchScheduleRequest;
+import com.terrapulse.api.dto.ServiceOrderDtos.ScheduleRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderCreateDto;
 import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderDto;
 import com.terrapulse.api.dto.ServiceOrderDtos.TitleUpdateDto;
@@ -20,6 +21,7 @@ import com.terrapulse.repository.ServiceOrderRepository;
 import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
 import com.terrapulse.repository.VmrsCodeRepository;
+import com.terrapulse.service.EstimationParser;
 import com.terrapulse.service.EstimationService;
 import com.terrapulse.service.GeometrySupport;
 import com.terrapulse.service.TitleGenerator;
@@ -111,8 +113,7 @@ public class ServiceOrderResource {
         so.vmrsCode = c;
         so.site = site;
 
-        // inherit client from site if not provided
-        Client resolvedClient = null;
+        Client resolvedClient;
         if (in.clientId() != null) {
             resolvedClient = clientRepo.findById(in.clientId());
             if (resolvedClient == null) throw new IllegalArgumentException("clientId not found");
@@ -121,7 +122,6 @@ public class ServiceOrderResource {
         }
         so.client = resolvedClient;
 
-        // use site coords if available, else fall back to explicit siteLocation
         if (site.lat != null && site.lng != null) {
             so.siteLocation = geo.point(site.lng, site.lat);
         } else if (in.siteLocation() != null) {
@@ -130,19 +130,50 @@ public class ServiceOrderResource {
             throw new IllegalArgumentException("siteLocation required when site has no coordinates");
         }
         so.notes = in.notes();
-        // Title: caller-supplied wins; blank/missing -> auto-generated mnemonic.
+
         if (in.title() == null || in.title().isBlank()) {
             so.title = titleGenerator.generate(v, c);
         } else {
             String t = in.title().trim();
-            if (t.length() > 120) {
-                throw new IllegalArgumentException("title must be <= 120 chars");
-            }
+            if (t.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
             so.title = t;
         }
-        // Estimation runs at creation so a default is available before QUOTED transition.
-        so.estimatedMinutes = estimation.estimateMinutes(c);
-        so.state = ServiceOrderState.REQUESTED;
+
+        if (in.estimation() != null && !in.estimation().isBlank()) {
+            try {
+                so.estimatedMinutes = EstimationParser.parse(in.estimation());
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("estimation: " + ex.getMessage());
+            }
+            if (so.estimatedMinutes <= 0) {
+                throw new IllegalArgumentException("estimation must be > 0 minutes");
+            }
+        } else {
+            so.estimatedMinutes = estimation.estimateMinutes(c);
+        }
+
+        boolean wantsSchedule = in.mechanicId() != null
+                && in.scheduledStartAt() != null
+                && in.scheduledEndAt() != null;
+        boolean partialSchedule = !wantsSchedule
+                && (in.mechanicId() != null || in.scheduledStartAt() != null || in.scheduledEndAt() != null);
+        if (partialSchedule) {
+            throw new IllegalArgumentException("mechanicId, scheduledStartAt and scheduledEndAt must all be set together");
+        }
+
+        if (wantsSchedule) {
+            Mechanic m = mechanicRepo.findById(in.mechanicId());
+            if (m == null) throw new IllegalArgumentException("mechanicId not found");
+            so.mechanic = m;
+            so.scheduledStartAt = in.scheduledStartAt();
+            so.scheduledEndAt = in.scheduledEndAt();
+            // Set state to APPROVED first so the state-machine guard for SCHEDULED transition fires (enforces start<end etc.)
+            so.state = ServiceOrderState.APPROVED;
+            ServiceOrderStateMachine.transitionTo(so, ServiceOrderState.SCHEDULED);
+        } else {
+            so.state = ServiceOrderState.REQUESTED;
+        }
+
         repo.persist(so);
         ServiceOrderDto dto = ServiceOrderDto.of(so);
         bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_CREATED, dto));
@@ -184,43 +215,59 @@ public class ServiceOrderResource {
     }
 
     @POST
-    @Path("/{id}/dispatch")
+    @Path("/{id}/schedule")
     @Transactional
-    public ServiceOrderDto dispatch(@PathParam("id") UUID id, DispatchRequest in) {
-        if (in == null || in.mechanicId() == null) {
-            throw new IllegalArgumentException("mechanicId required");
+    public ServiceOrderDto schedule(@PathParam("id") UUID id, ScheduleRequest in) {
+        if (in == null || in.mechanicId() == null
+                || in.scheduledStartAt() == null || in.scheduledEndAt() == null) {
+            throw new IllegalArgumentException("mechanicId, scheduledStartAt, scheduledEndAt all required");
         }
         Mechanic m = mechanicRepo.findById(in.mechanicId());
         if (m == null) throw new IllegalArgumentException("mechanicId not found");
+
         ServiceOrder so = load(id);
         so.mechanic = m;
-        return applyTransition(so, ServiceOrderState.DISPATCHED);
+        so.scheduledStartAt = in.scheduledStartAt();
+        so.scheduledEndAt = in.scheduledEndAt();
+        return applyTransition(so, ServiceOrderState.SCHEDULED);
     }
 
-    @POST
-    @Path("/{id}/reassign")
+    @PATCH
+    @Path("/{id}/schedule")
     @Transactional
-    public ServiceOrderDto reassign(@PathParam("id") UUID id, DispatchRequest in) {
-        if (in == null || in.mechanicId() == null) {
-            throw new IllegalArgumentException("mechanicId required");
+    public ServiceOrderDto patchSchedule(@PathParam("id") UUID id, PatchScheduleRequest in) {
+        if (in == null
+                || (in.mechanicId() == null && in.scheduledStartAt() == null && in.scheduledEndAt() == null)) {
+            throw new IllegalArgumentException("at least one of mechanicId, scheduledStartAt, scheduledEndAt required");
         }
-        Mechanic m = mechanicRepo.findById(in.mechanicId());
-        if (m == null) throw new IllegalArgumentException("mechanicId not found");
         ServiceOrder so = load(id);
-        if (so.state != ServiceOrderState.DISPATCHED && so.state != ServiceOrderState.IN_PROGRESS) {
-            throw new IllegalArgumentException("reassign only allowed in DISPATCHED or IN_PROGRESS (got " + so.state + ")");
+        if (so.state != ServiceOrderState.SCHEDULED) {
+            throw new com.terrapulse.domain.service.IllegalStateTransitionException(
+                    "PATCH /schedule only allowed in SCHEDULED state (got " + so.state + ")");
         }
-        UUID previous = so.mechanic != null ? so.mechanic.id : null;
-        so.mechanic = m;
+        UUID previousMechanicId = so.mechanic != null ? so.mechanic.id : null;
+
+        if (in.mechanicId() != null) {
+            Mechanic m = mechanicRepo.findById(in.mechanicId());
+            if (m == null) throw new IllegalArgumentException("mechanicId not found");
+            so.mechanic = m;
+        }
+        java.time.Instant newStart = in.scheduledStartAt() != null ? in.scheduledStartAt() : so.scheduledStartAt;
+        java.time.Instant newEnd   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledEndAt;
+        if (newEnd == null || newStart == null || !newEnd.isAfter(newStart)) {
+            throw new IllegalArgumentException("scheduledEndAt must be after scheduledStartAt");
+        }
+        so.scheduledStartAt = newStart;
+        so.scheduledEndAt = newEnd;
+
         ServiceOrderDto dto = ServiceOrderDto.of(so);
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", so.id);
-        payload.put("fromState", so.state);
-        payload.put("toState", so.state);
         payload.put("mechanicId", so.mechanic.id);
-        payload.put("previousMechanicId", previous);
-        payload.put("reassigned", true);
-        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
+        payload.put("fromMechanicId", previousMechanicId);
+        payload.put("scheduledStartAt", so.scheduledStartAt);
+        payload.put("scheduledEndAt", so.scheduledEndAt);
+        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_SCHEDULE_CHANGED, payload));
         return dto;
     }
 
@@ -258,24 +305,77 @@ public class ServiceOrderResource {
             throw new IllegalArgumentException("state required");
         }
         ServiceOrderState target = in.state();
-        if (target != ServiceOrderState.CANCELLED && target != ServiceOrderState.REQUESTED) {
-            throw new IllegalArgumentException(
-                    "override only allowed to CANCELLED or REQUESTED (got " + target + ")");
-        }
         ServiceOrder so = load(id);
         ServiceOrderState from = so.state;
+        java.time.Instant now = java.time.Instant.now();
 
         String reason = (in.reason() == null || in.reason().isBlank()) ? "no reason given" : in.reason();
-        String entry = "[override " + java.time.Instant.now() + "] " + from + " -> " + target + ": " + reason;
+        String entry = "[override " + now + "] " + from + " -> " + target + ": " + reason;
         so.notes = (so.notes == null || so.notes.isBlank()) ? entry : so.notes + "\n" + entry;
-
-        if (target == ServiceOrderState.REQUESTED) {
-            // Reopen: detach mechanic + clear lifecycle timestamps so the workflow restarts cleanly.
-            so.mechanic = null;
-            so.dispatchedAt = null;
-            so.startedAt = null;
-            so.completedAt = null;
-            so.actualMinutes = null;
+        switch (target) {
+            case REQUESTED, QUOTED, APPROVED -> {
+                so.mechanic = null;
+                so.scheduledStartAt = null;
+                so.scheduledEndAt = null;
+                so.dispatchedAt = null;
+                so.startedAt = null;
+                so.completedAt = null;
+                so.actualMinutes = null;
+            }
+            case SCHEDULED -> {
+                if (so.mechanic == null) {
+                    if (in.mechanicId() == null) {
+                        throw new IllegalArgumentException("mechanicId required to override to SCHEDULED");
+                    }
+                    Mechanic m = mechanicRepo.findById(in.mechanicId());
+                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    so.mechanic = m;
+                }
+                java.time.Instant newStart = in.scheduledStartAt() != null ? in.scheduledStartAt() : so.scheduledStartAt;
+                java.time.Instant newEnd   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledEndAt;
+                if (newStart == null || newEnd == null || !newEnd.isAfter(newStart)) {
+                    throw new IllegalArgumentException("scheduledStartAt + scheduledEndAt required (end after start) to override to SCHEDULED");
+                }
+                so.scheduledStartAt = newStart;
+                so.scheduledEndAt = newEnd;
+                so.startedAt = null;
+                so.completedAt = null;
+                so.actualMinutes = null;
+            }
+            case IN_PROGRESS -> {
+                if (so.mechanic == null) {
+                    if (in.mechanicId() == null) throw new IllegalArgumentException("mechanicId required to override to IN_PROGRESS");
+                    Mechanic m = mechanicRepo.findById(in.mechanicId());
+                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    so.mechanic = m;
+                }
+                if (so.scheduledStartAt == null) so.scheduledStartAt = in.scheduledStartAt() != null ? in.scheduledStartAt() : now;
+                if (so.scheduledEndAt == null)   so.scheduledEndAt   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledStartAt.plusSeconds(60L * Math.max(1, so.estimatedMinutes));
+                if (so.startedAt == null) so.startedAt = now;
+                so.completedAt = null;
+                so.actualMinutes = null;
+            }
+            case COMPLETED -> {
+                if (so.mechanic == null) {
+                    if (in.mechanicId() == null) throw new IllegalArgumentException("mechanicId required to override to COMPLETED");
+                    Mechanic m = mechanicRepo.findById(in.mechanicId());
+                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    so.mechanic = m;
+                }
+                if (so.scheduledStartAt == null) so.scheduledStartAt = in.scheduledStartAt() != null ? in.scheduledStartAt() : now;
+                if (so.scheduledEndAt == null)   so.scheduledEndAt   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledStartAt.plusSeconds(60L * Math.max(1, so.estimatedMinutes));
+                if (so.startedAt == null) so.startedAt = now;
+                if (so.actualMinutes == null) {
+                    if (in.actualMinutes() == null || in.actualMinutes() < 1) {
+                        throw new IllegalArgumentException("actualMinutes required to override to COMPLETED");
+                    }
+                    so.actualMinutes = in.actualMinutes();
+                }
+                if (so.completedAt == null) so.completedAt = now;
+            }
+            case CANCELLED -> {
+                // keep lifecycle fields for audit trail
+            }
         }
         so.state = target;
 
@@ -287,6 +387,7 @@ public class ServiceOrderResource {
         payload.put("reason", reason);
         bus.publish(com.terrapulse.ws.DispatchEvent.of(
                 com.terrapulse.ws.DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
+
         return ServiceOrderDto.of(so);
     }
 

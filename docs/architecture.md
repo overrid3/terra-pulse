@@ -46,15 +46,15 @@
 
 ## Request flows
 
-### Dispatch a service order
+### Schedule a service order
 
 ```
-React → POST /api/service-orders/{id}/dispatch {mechanicId}
-       ↳ ServiceOrderResource.dispatch
+React → POST /api/service-orders/{id}/schedule {mechanicId, scheduledStartAt, scheduledEndAt}
+       ↳ ServiceOrderResource.schedule
          ↳ loads SO + Mechanic
-         ↳ ServiceOrderStateMachine.transitionTo(so, DISPATCHED)
-           ↳ guards: mechanic non-null, prev state APPROVED
-           ↳ sets dispatchedAt
+         ↳ ServiceOrderStateMachine.transitionTo(so, SCHEDULED)
+           ↳ guards: mechanic non-null, scheduledStartAt + scheduledEndAt set, no overlap, prev state APPROVED
+           ↳ sets scheduledAt
          ↳ DispatchEventBus.publish(SERVICE_ORDER_STATE_CHANGED)
            ↳ ObjectMapper.writeValueAsString(event)
            ↳ for c in OpenConnections.listAll(): c.sendText(json)

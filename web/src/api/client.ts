@@ -61,6 +61,7 @@ export const queryKeys = {
   clients:      ["clients"] as const,
   skills:       ["skills"] as const,
   absences:     ["absences"] as const,
+  vmrs:         ["vmrs"] as const,
   sites:        (clientId: UUID) => ["sites", clientId] as const,
   sitesAll:     ["sites", "all"] as const
 };

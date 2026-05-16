@@ -29,7 +29,15 @@ export function DispatchModal({ order, onClose }: Props) {
   });
 
   const dispatchMut = useMutation({
-    mutationFn: (mechanicId: string) => serviceOrdersApi.dispatch(order.id, mechanicId),
+    mutationFn: (mechanicId: string) => {
+      const start = new Date();
+      const end = new Date(start.getTime() + order.estimatedMinutes * 60_000);
+      return serviceOrdersApi.schedule(order.id, {
+        mechanicId,
+        scheduledStartAt: start.toISOString(),
+        scheduledEndAt: end.toISOString(),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.serviceOrders });
       qc.invalidateQueries({ queryKey: queryKeys.mechanics });

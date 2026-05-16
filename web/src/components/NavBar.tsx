@@ -18,13 +18,7 @@ export function NavBar() {
   return (
     <aside className="w-64 min-w-[256px] h-full border-r border-[var(--color-hairline)] bg-[var(--color-surface-panel)] flex flex-col overflow-y-auto z-10 shrink-0">
       <div className="flex items-center gap-2.5 p-4 border-b border-[var(--color-hairline)]">
-        <svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="shrink-0">
-          <rect x="15" y="10" width="70" height="13" rx="2" fill="#c4622a"/>
-          <rect x="43" y="10" width="14" height="40" rx="1.5" fill="#1e2438"/>
-          <path d="M 38,50 A 12,12 0 0,1 62,50" fill="none" stroke="#1e2438" strokeWidth="5.5" strokeLinecap="round"/>
-          <path d="M 27,50 A 23,23 0 0,1 73,50" fill="none" stroke="#1e2438" strokeWidth="5.5" strokeLinecap="round"/>
-          <path d="M 16,50 A 34,34 0 0,1 84,50" fill="none" stroke="#1e2438" strokeWidth="5.5" strokeLinecap="round"/>
-        </svg>
+        <img src="/terra-pulse-logo.svg" alt="" aria-hidden="true" className="shrink-0 h-9 w-auto" />
         <div className="flex flex-col overflow-hidden">
           <span className="text-[0.8rem] font-bold tracking-[0.08em] uppercase text-[var(--color-brand-strong)] leading-tight whitespace-nowrap">
             TerraPulse
@@ -56,7 +50,7 @@ export function NavBar() {
       </nav>
 
       <div className="border-t border-[var(--color-hairline)] px-4 py-3 flex items-center justify-between gap-2">
-        <span className="text-[var(--text-xs)] text-[var(--color-text-subtle)]">{t("app.tagline")}</span>
+        <span className="text-[0.55rem] text-[var(--color-text-subtle)] uppercase">{t("app.tagline")}</span>
         <LanguageSwitcher />
       </div>
     </aside>

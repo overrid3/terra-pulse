@@ -8,7 +8,7 @@ public enum ServiceOrderState {
     REQUESTED,
     QUOTED,
     APPROVED,
-    DISPATCHED,
+    SCHEDULED,
     IN_PROGRESS,
     COMPLETED,
     CANCELLED;
@@ -16,8 +16,8 @@ public enum ServiceOrderState {
     private static final Map<ServiceOrderState, Set<ServiceOrderState>> ALLOWED = Map.of(
             REQUESTED,   EnumSet.of(QUOTED, CANCELLED),
             QUOTED,      EnumSet.of(APPROVED, CANCELLED),
-            APPROVED,    EnumSet.of(DISPATCHED, CANCELLED),
-            DISPATCHED,  EnumSet.of(IN_PROGRESS, CANCELLED),
+            APPROVED,    EnumSet.of(SCHEDULED, CANCELLED),
+            SCHEDULED,   EnumSet.of(IN_PROGRESS, CANCELLED),
             IN_PROGRESS, EnumSet.of(COMPLETED),
             COMPLETED,   EnumSet.noneOf(ServiceOrderState.class),
             CANCELLED,   EnumSet.noneOf(ServiceOrderState.class)

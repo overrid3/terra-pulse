@@ -17,11 +17,11 @@ export type Mechanic = {
 };
 
 export type ServiceOrderState =
-  | "REQUESTED" | "QUOTED" | "APPROVED" | "DISPATCHED"
+  | "REQUESTED" | "QUOTED" | "APPROVED" | "SCHEDULED"
   | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 
 export const SERVICE_ORDER_STATES: ServiceOrderState[] = [
-  "REQUESTED", "QUOTED", "APPROVED", "DISPATCHED", "IN_PROGRESS", "COMPLETED", "CANCELLED"
+  "REQUESTED", "QUOTED", "APPROVED", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"
 ];
 
 export type ServiceOrder = {
@@ -31,6 +31,7 @@ export type ServiceOrder = {
   mechanicId: UUID | null;
   clientId: UUID | null;
   siteId: UUID;
+  siteName?: string | null;
   clientName: string | null;
   vmrsCode: string;
   vmrsDescription?: string;
@@ -40,6 +41,8 @@ export type ServiceOrder = {
   siteLocation: LatLng;
   requestedAt: string;
   dispatchedAt: string | null;
+  scheduledStartAt: string | null;
+  scheduledEndAt: string | null;
   startedAt: string | null;
   completedAt: string | null;
   notes: string | null;

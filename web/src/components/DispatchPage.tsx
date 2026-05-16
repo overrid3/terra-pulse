@@ -2,16 +2,18 @@ import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Filter, RefreshCw, Inbox, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
-import { View } from "react-big-calendar";
-import { addDays, addMonths, addWeeks, startOfDay } from "date-fns";
+import { Filter, RefreshCw, Inbox, MapPin, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { addDays, addMonths, addWeeks, startOfDay, format } from "date-fns";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core";
 import { mechanicsApi } from "../api/mechanics";
-import { serviceOrdersApi } from "../api/serviceOrders";
+import { serviceOrdersApi, CreateOrderBody } from "../api/serviceOrders";
 import { absencesApi } from "../api/absences";
 import { queryKeys } from "../api/client";
-import { ResourceTimeline, CalEvent } from "./ResourceTimeline";
+import { DispatchGantt, GanttView, dayBoundary, weekBoundary, monthBoundary } from "./DispatchGantt";
 import { ServiceOrderDrawer } from "./ServiceOrderDrawer";
+import { AbsencesPanel } from "./AbsencesPanel";
 import { SearchInput } from "./SearchInput";
+import { CreateOrderForm } from "./CreateOrderForm";
 import { ServiceOrder, UUID } from "../types";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -19,9 +21,14 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem
 } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
+} from "@/components/ui/dialog";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-
-type DayChoice = "TODAY" | "TOMORROW";
+import { pxToTime } from "../lib/gantt-time";
 
 const PENDING_STATES = new Set(["REQUESTED", "QUOTED", "APPROVED"]);
 
@@ -36,13 +43,29 @@ export function DispatchPage() {
   const qc = useQueryClient();
   const [selectedMechanicId, setSelectedMechanicId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [day, setDay] = useState<DayChoice>("TODAY");
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<View>("day");
+  const [view, setView] = useState<GanttView>("day");
   const [date, setDate] = useState<Date>(startOfDay(new Date()));
+  const [createOpen, setCreateOpen] = useState(false);
+  const [absenceMechanicId, setAbsenceMechanicId] = useState<string | null>(null);
 
-  // Order id being dragged from the pool (null = no external drag in progress).
-  const draggingFromPool = useRef<ServiceOrder | null>(null);
+  const [activeDrag, setActiveDrag] = useState<{ kind: string; orderId?: string } | null>(null);
+
+  const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const registerRow = (mechanicId: string, el: HTMLDivElement | null) => {
+    if (el) {
+      rowRefs.current.set(mechanicId, el);
+    } else {
+      rowRefs.current.delete(mechanicId);
+    }
+  };
+
+  const [winStart, winEnd] = useMemo(() => {
+    if (view === "day")  return dayBoundary(date);
+    if (view === "week") return weekBoundary(date);
+    return monthBoundary(date);
+  }, [view, date]);
 
   const mechanicsQ = useQuery({ queryKey: queryKeys.mechanics,     queryFn: mechanicsApi.list });
   const ordersQ    = useQuery({ queryKey: queryKeys.serviceOrders, queryFn: serviceOrdersApi.list });
@@ -60,15 +83,32 @@ export function DispatchPage() {
 
   const invalidateOrders = () => qc.invalidateQueries({ queryKey: queryKeys.serviceOrders });
 
-  const dispatchMut = useMutation({
-    mutationFn: (args: { id: UUID; mechanicId: UUID }) => serviceOrdersApi.dispatch(args.id, args.mechanicId),
-    onSuccess: () => { invalidateOrders(); toast.success("Order dispatched"); },
-    onError: (e: Error) => toast.error(e.message)
+  const createMut = useMutation({
+    mutationFn: (body: CreateOrderBody) => serviceOrdersApi.create(body),
+    onSuccess: () => {
+      invalidateOrders();
+      setCreateOpen(false);
+      toast.success("Order created");
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
-  const reassignMut = useMutation({
-    mutationFn: (args: { id: UUID; mechanicId: UUID }) => serviceOrdersApi.reassign(args.id, args.mechanicId),
-    onSuccess: () => { invalidateOrders(); toast.success("Order reassigned"); },
-    onError: (e: Error) => toast.error(e.message)
+
+  const scheduleMut = useMutation({
+    mutationFn: (args: { id: UUID; mechanicId: UUID; start: string; end: string }) =>
+      serviceOrdersApi.schedule(args.id, { mechanicId: args.mechanicId, scheduledStartAt: args.start, scheduledEndAt: args.end }),
+    onSuccess: () => { invalidateOrders(); toast.success("Order scheduled"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const rescheduleMut = useMutation({
+    mutationFn: (args: { id: UUID; mechanicId?: UUID; start?: string; end?: string }) =>
+      serviceOrdersApi.reschedule(args.id, {
+        mechanicId: args.mechanicId,
+        scheduledStartAt: args.start,
+        scheduledEndAt: args.end,
+      }),
+    onSuccess: () => { invalidateOrders(); toast.success("Schedule updated"); },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const selectedOrder = useMemo(
@@ -94,82 +134,112 @@ export function DispatchPage() {
 
   const filteredOrders = allOrders.filter(matchSearch);
 
-  function handleDayChoice(choice: DayChoice) {
-    setDay(choice);
-    const base = startOfDay(new Date());
-    setDate(choice === "TODAY" ? base : addDays(base, 1));
-    if (view !== "day") setView("day");
-  }
-
   function navigate(delta: -1 | 1) {
     if (view === "day")        setDate((d) => addDays(d, delta));
     else if (view === "week")  setDate((d) => addWeeks(d, delta));
     else                       setDate((d) => addMonths(d, delta));
   }
 
-  // External pool → calendar drop. RBC passes resource = mechanic id only in day view.
-  function onDropFromOutside({ resource }: { resource?: string | number }) {
-    const order = draggingFromPool.current;
-    draggingFromPool.current = null;
-    if (!order) return;
-    if (!resource) {
-      toast.error("Drop on a mechanic row (day view) to dispatch");
-      return;
-    }
-    const mechanicId = String(resource);
-    if (order.state !== "APPROVED") {
-      toast.error(`Order must be APPROVED to dispatch (current: ${order.state})`);
-      return;
-    }
-    dispatchMut.mutate({ id: order.id as UUID, mechanicId: mechanicId as UUID });
+  function jumpToday() {
+    setDate(startOfDay(new Date()));
   }
 
-  function dragFromOutsideItem(): CalEvent {
-    const o = draggingFromPool.current;
-    const now = new Date();
-    return {
-      title: o?.title ?? o?.vmrsCode ?? "",
-      start: now,
-      end: now,
-      resourceId: "",
-      kind: "order",
-      soId: o?.id,
-      orderState: o?.state
-    };
+  function rangeLabel(): string {
+    if (view === "day")   return format(date, "EEE dd MMM yyyy");
+    if (view === "week")  return `${format(date, "MMM dd")} – ${format(addDays(date, 6), "MMM dd, yyyy")}`;
+    return format(date, "MMMM yyyy");
   }
 
-  // Existing calendar event moved. Time changes are not persisted (POC). Mechanic changes call reassign.
-  function onEventMoved({ event, resourceId }: { event: CalEvent; resourceId?: string | number }) {
-    if (!event.soId) return;
-    const newMechanicId = resourceId ? String(resourceId) : event.resourceId;
-    if (newMechanicId === event.resourceId) {
-      toast.info("Time slots are visual only in this POC — backend stores no scheduled time");
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
+
+  function handleDragStart(e: DragStartEvent) {
+    const d = e.active.data.current as { kind?: string; orderId?: string } | undefined;
+    setActiveDrag({ kind: d?.kind ?? "unknown", orderId: d?.orderId });
+  }
+
+  function handleDragEnd(e: DragEndEvent) {
+    setActiveDrag(null);
+    const a = e.active.data.current as
+      | { kind?: string; orderId?: string; orderState?: string; currentMechanicId?: string;
+          scheduledStartAt?: string; scheduledEndAt?: string; edge?: "start" | "end" }
+      | undefined;
+    const o = e.over?.data.current as { kind?: string; mechanicId?: string } | undefined;
+    if (!a || !a.orderId) return;
+
+    // Resize handler
+    if (a.kind === "resize" && o?.kind === "row" && o.mechanicId) {
+      const rect = rowRefs.current.get(o.mechanicId)?.getBoundingClientRect();
+      if (!rect) return;
+      const cursorX = ((e.activatorEvent as MouseEvent | null)?.clientX ?? 0) + (e.delta?.x ?? 0);
+      const t = pxToTime(rect, cursorX, view, winStart, winEnd);
+      if (a.edge === "start") {
+        const end = new Date(a.scheduledEndAt!);
+        if (t >= end) { toast.error("Start must be before end"); return; }
+        rescheduleMut.mutate({ id: a.orderId as UUID, start: t.toISOString() });
+      } else {
+        const start = new Date(a.scheduledStartAt!);
+        if (t <= start) { toast.error("End must be after start"); return; }
+        rescheduleMut.mutate({ id: a.orderId as UUID, end: t.toISOString() });
+      }
       return;
     }
-    reassignMut.mutate({ id: event.soId as UUID, mechanicId: newMechanicId as UUID });
+
+    if (!o || o.kind !== "row" || !o.mechanicId) return;
+    const mechanicId = o.mechanicId as UUID;
+    const orderId = a.orderId as UUID;
+
+    const rect = rowRefs.current.get(mechanicId)?.getBoundingClientRect();
+    if (!rect) return;
+
+    const cursorX = ((e.activatorEvent as MouseEvent | null)?.clientX ?? 0) + (e.delta?.x ?? 0);
+    const t = pxToTime(rect, cursorX, view, winStart, winEnd);
+
+    if (a.kind === "pool") {
+      if (a.orderState !== "APPROVED") {
+        toast.error(`Order must be APPROVED to schedule (current: ${a.orderState})`);
+        return;
+      }
+      const order = ordersQ.data?.find((x) => x.id === orderId);
+      if (!order) return;
+      const end = new Date(t.getTime() + order.estimatedMinutes * 60_000);
+      scheduleMut.mutate({ id: orderId, mechanicId, start: t.toISOString(), end: end.toISOString() });
+      return;
+    }
+
+    if (a.kind === "event") {
+      if (!a.scheduledStartAt || !a.scheduledEndAt) return;
+      const oldStart = new Date(a.scheduledStartAt);
+      const oldEnd   = new Date(a.scheduledEndAt);
+      const duration = oldEnd.getTime() - oldStart.getTime();
+      const newStart = t;
+      const newEnd = new Date(newStart.getTime() + duration);
+      const sameRow = a.currentMechanicId === mechanicId;
+      const sameTime = newStart.getTime() === oldStart.getTime();
+      if (sameRow && sameTime) return;
+      rescheduleMut.mutate({
+        id: orderId,
+        mechanicId: sameRow ? undefined : mechanicId,
+        start: newStart.toISOString(),
+        end: newEnd.toISOString(),
+      });
+    }
   }
 
   return (
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex-1 min-h-0 flex flex-col">
-      <header className="bg-[var(--color-surface-panel)] border-b border-[var(--color-hairline)] flex flex-wrap items-center justify-between gap-3 px-4 h-auto sm:h-14 py-2 shrink-0">
+      <header className="bg-[var(--color-surface-panel)] border-b border-[var(--color-hairline)] flex flex-wrap items-center justify-between gap-3 px-4 py-2 shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="m-0 text-xl font-semibold tracking-tight text-[var(--color-text)]">
             {t("dispatch.pageTitle")}
           </h1>
           <ToggleGroup
             type="single"
-            value={day}
-            onValueChange={(v) => v && handleDayChoice(v as DayChoice)}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="TODAY">{t("dispatch.today")}</ToggleGroupItem>
-            <ToggleGroupItem value="TOMORROW">{t("dispatch.tomorrow")}</ToggleGroupItem>
-          </ToggleGroup>
-          <ToggleGroup
-            type="single"
             value={view}
-            onValueChange={(v) => v && setView(v as View)}
+            onValueChange={(v) => v && setView(v as GanttView)}
             variant="outline"
             size="sm"
           >
@@ -181,12 +251,31 @@ export function DispatchPage() {
             <Button variant="outline" size="sm" onClick={() => navigate(-1)} aria-label="previous">
               <ChevronLeft className="h-4 w-4" />
             </Button>
+            <Button variant="outline" size="sm" onClick={jumpToday}>
+              {t("dispatch.today")}
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigate(1)} aria-label="next">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+          <span className="text-sm font-mono text-[var(--color-text-muted)] hidden md:inline">
+            {rangeLabel()}
+          </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Plus className="h-4 w-4 mr-1" />New Order</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>New Order</DialogTitle></DialogHeader>
+              <CreateOrderForm
+                submitting={createMut.isPending}
+                onCancel={() => setCreateOpen(false)}
+                onSubmit={(body) => createMut.mutate(body)}
+              />
+            </DialogContent>
+          </Dialog>
           <SearchInput
             value={search}
             onChange={setSearch}
@@ -216,27 +305,20 @@ export function DispatchPage() {
         </div>
       </header>
 
-      {view !== "day" && (
-        <div className="px-4 py-1.5 bg-[var(--color-warn-bg)] border-b border-[var(--color-hairline)] text-xs text-[var(--color-warn-fg)]">
-          {t("dispatch.resourceOnlyDayHint")}
-        </div>
-      )}
-
       <main className="flex-1 min-h-0 min-w-0 p-3 grid gap-3 grid-cols-[minmax(0,1fr)_320px]">
-        <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 min-w-0 overflow-hidden">
-          <ResourceTimeline
+        <section className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 min-w-0 overflow-hidden">
+          <DispatchGantt
             mechanics={mechanicsQ.data ?? []}
             orders={filteredOrders}
             absences={absencesQ.data ?? []}
             selectedMechanicId={selectedMechanicId}
             view={view}
-            onView={setView}
             date={date}
-            onNavigate={setDate}
+            winStart={winStart}
+            winEnd={winEnd}
             onSelectOrder={setSelectedOrderId}
-            onEventMoved={onEventMoved}
-            onDropFromOutside={onDropFromOutside}
-            dragFromOutsideItem={dragFromOutsideItem}
+            onAddAbsence={setAbsenceMechanicId}
+            registerRow={registerRow}
           />
         </section>
 
@@ -252,7 +334,11 @@ export function DispatchPage() {
               {unassigned.length}
             </span>
           </div>
-          <ul className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 list-none m-0">
+          <ul
+            role="list"
+            aria-label={t("dispatch.unassignedPool")}
+            className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 list-none m-0"
+          >
             {unassigned.length === 0 && (
               <li className="text-center text-[var(--color-text-muted)] text-sm py-6">
                 {t("dispatch.pendingNone")}
@@ -261,43 +347,17 @@ export function DispatchPage() {
             {unassigned.map((o) => {
               const badge = priorityBadge(o);
               const isCritical = o.state === "REQUESTED";
+              const label = `${o.vmrsCode}, ${o.title ?? o.vmrsDescription ?? ""}, ${badge.label}, ${o.clientName ?? ""}`;
               return (
-                <li
+                <PoolCard
                   key={o.id}
-                  draggable
-                  onDragStart={(e) => {
-                    draggingFromPool.current = o;
-                    // payload required for some browsers
-                    e.dataTransfer.setData("text/plain", o.id);
-                    e.dataTransfer.effectAllowed = "move";
-                  }}
-                  onDragEnd={() => { draggingFromPool.current = null; }}
-                  className={cn(
-                    "bg-[var(--color-surface-container)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-2.5 cursor-grab active:cursor-grabbing transition-colors hover:bg-[var(--color-surface-container-high)]",
-                    "border-l-4",
-                    isCritical
-                      ? "border-l-[var(--color-danger-fg)]"
-                      : "border-l-[var(--color-warn-fg)]",
-                    o.id === selectedOrderId && "ring-1 ring-[var(--color-brand)]"
-                  )}
-                  onClick={() => setSelectedOrderId(o.id)}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="font-mono text-xs font-bold text-[var(--color-text)] tracking-wider">
-                      {o.vmrsCode}
-                    </span>
-                    <Badge className={badge.cls} variant="secondary">{badge.label}</Badge>
-                  </div>
-                  <div className="text-sm font-medium text-[var(--color-text)] mb-1 truncate">
-                    {o.title ?? o.vmrsDescription ?? o.vmrsCode}
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
-                    <MapPin className="h-3 w-3 shrink-0" />
-                    <span className="truncate">
-                      {o.clientName ?? `${o.siteLocation.lat.toFixed(3)}, ${o.siteLocation.lng.toFixed(3)}`}
-                    </span>
-                  </div>
-                </li>
+                  order={o}
+                  isSelected={o.id === selectedOrderId}
+                  isCritical={isCritical}
+                  badge={badge}
+                  onSelect={setSelectedOrderId}
+                  label={label}
+                />
               );
             })}
           </ul>
@@ -307,6 +367,111 @@ export function DispatchPage() {
       {selectedOrder && (
         <ServiceOrderDrawer order={selectedOrder} onClose={() => setSelectedOrderId(null)} />
       )}
+
+      <Sheet open={!!absenceMechanicId} onOpenChange={(open) => !open && setAbsenceMechanicId(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto p-0">
+          {absenceMechanicId && (() => {
+            const mech = (mechanicsQ.data ?? []).find((m) => m.id === absenceMechanicId);
+            return (
+              <>
+                <SheetHeader className="border-b border-[var(--color-hairline)] px-4 py-3">
+                  <SheetTitle>{mech ? `Absences — ${mech.fullName}` : "Absences"}</SheetTitle>
+                  <SheetDescription>Manage time-off and unavailability windows for this mechanic.</SheetDescription>
+                </SheetHeader>
+                <div className="p-0">
+                  <AbsencesPanel mechanicId={absenceMechanicId} mechanicName={mech?.fullName ?? ""} />
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </div>
+    <DragOverlay>
+      {activeDrag?.kind === "pool" && (() => {
+        const o = ordersQ.data?.find((x) => x.id === activeDrag.orderId);
+        if (!o) return null;
+        return (
+          <div className="bg-[var(--color-surface-container)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-2 shadow-md text-sm">
+            {o.title ?? o.vmrsCode}
+          </div>
+        );
+      })()}
+      {activeDrag?.kind === "event" && (() => {
+        const o = ordersQ.data?.find((x) => x.id === activeDrag.orderId);
+        if (!o) return null;
+        return (
+          <div className={cn("rounded-[var(--radius-sm)] border px-2 py-1 shadow-md text-xs", `state-${o.state}`)}>
+            {o.title ?? o.vmrsCode}
+          </div>
+        );
+      })()}
+      {activeDrag?.kind === "resize" && (
+        <div className="w-1.5 h-7 bg-[var(--color-brand-strong)] rounded" />
+      )}
+    </DragOverlay>
+    </DndContext>
+  );
+}
+
+function PoolCard({
+  order, isSelected, isCritical, badge, onSelect, label
+}: {
+  order: ServiceOrder;
+  isSelected: boolean;
+  isCritical: boolean;
+  badge: { label: string; cls: string };
+  onSelect: (id: string) => void;
+  label: string;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `pool:${order.id}`,
+    data: {
+      kind: "pool",
+      orderId: order.id,
+      orderState: order.state,
+    },
+  });
+  return (
+    <li
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      aria-pressed={isSelected}
+      onClick={() => onSelect(order.id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(order.id);
+        }
+      }}
+      className={cn(
+        "bg-[var(--color-surface-container)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-2.5 cursor-grab active:cursor-grabbing transition-colors hover:bg-[var(--color-surface-container-high)]",
+        "border-l-4",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-1",
+        isCritical ? "border-l-[var(--color-danger-fg)]" : "border-l-[var(--color-warn-fg)]",
+        isSelected && "ring-1 ring-[var(--color-brand)]",
+        isDragging && "opacity-40"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <span className="font-mono text-xs font-bold text-[var(--color-text)] tracking-wider">
+          {order.vmrsCode}
+        </span>
+        <Badge className={badge.cls} variant="secondary">{badge.label}</Badge>
+      </div>
+      <div className="text-sm font-medium text-[var(--color-text)] mb-1 truncate">
+        {order.title ?? order.vmrsDescription ?? order.vmrsCode}
+      </div>
+      <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+        <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+        <span className="truncate">
+          {order.clientName ?? `${order.siteLocation.lat.toFixed(3)}, ${order.siteLocation.lng.toFixed(3)}`}
+        </span>
+      </div>
+    </li>
   );
 }

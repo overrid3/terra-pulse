@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Seed a small demo scenario via the REST API.
-# Idempotent-ish: every run inserts new rows; use `just db-reset` first for a clean slate.
+# Idempotent for masters (client/vehicle/mechanic): re-runs reuse existing rows by
+# email/serial/fullName. Service orders are always created fresh.
 set -euo pipefail
 
 API="${API:-http://localhost:8080/api}"
@@ -11,76 +12,172 @@ need jq
 
 echo "==> seeding via $API"
 
+# upsert <collection> <match-jq-filter> <payload-json>
+#   GET /$collection, find first row matching $filter, else POST $payload. Echo id.
+upsert() {
+  local collection="$1" filter="$2" payload="$3" existing
+  existing=$(curl -sf "$API/$collection" | jq -r "map(select($filter)) | .[0].id // empty")
+  if [[ -n "$existing" ]]; then
+    echo "$existing"
+  else
+    curl -sf -X POST "$API/$collection" -H 'content-type: application/json' -d "$payload" | jq -r .id
+  fi
+}
+
 # --- Clients ------------------------------------------------------------
-C1=$(curl -sf -X POST "$API/clients" -H 'content-type: application/json' -d '{
+C1=$(upsert clients '.email=="info@edilombarda.it"' '{
   "name":"Edilizia Lombarda SpA","email":"info@edilombarda.it",
   "phone":"+39 02 1234567","vatNumber":"IT12345678901",
   "addressLine1":"Via Roma 1","city":"Milano","postalCode":"20121","country":"Italy"
-}' | jq -r .id)
+}')
 echo "client: Edilizia Lombarda → $C1"
 
-C2=$(curl -sf -X POST "$API/clients" -H 'content-type: application/json' -d '{
+C2=$(upsert clients '.email=="contact@costruzioniverdi.it"' '{
   "name":"Costruzioni Verdi Srl","email":"contact@costruzioniverdi.it",
   "vatNumber":"IT98765432109","city":"Bergamo","country":"Italy"
-}' | jq -r .id)
+}')
 echo "client: Costruzioni Verdi → $C2"
 
 # --- Vehicles -----------------------------------------------------------
-V1=$(curl -sf -X POST "$API/vehicles" -H 'content-type: application/json' -d '{
+V1=$(upsert vehicles '.serialNumber=="CAT-320-SEED1"' '{
   "make":"Caterpillar","model":"320","serialNumber":"CAT-320-SEED1",
   "vehicleClass":"EXCAVATOR","status":"AVAILABLE","engineHours":1850.5
-}' | jq -r .id)
-V2=$(curl -sf -X POST "$API/vehicles" -H 'content-type: application/json' -d '{
+}')
+V2=$(upsert vehicles '.serialNumber=="KOM-D85-SEED1"' '{
   "make":"Komatsu","model":"D85","serialNumber":"KOM-D85-SEED1",
   "vehicleClass":"DOZER","status":"AVAILABLE","engineHours":2100.0
-}' | jq -r .id)
+}')
 echo "vehicles: $V1, $V2"
 
 # --- Mechanics ----------------------------------------------------------
-M1=$(curl -sf -X POST "$API/mechanics" -H 'content-type: application/json' -d '{
+M1=$(upsert mechanics '.fullName=="Marco Rossi"' '{
   "fullName":"Marco Rossi","phone":"+39 333 1234567",
   "skills":["HYDRAULICS","ENGINE"],"status":"IDLE",
   "location":{"lat":45.4642,"lng":9.1900}
-}' | jq -r .id)
-M2=$(curl -sf -X POST "$API/mechanics" -H 'content-type: application/json' -d '{
+}')
+M2=$(upsert mechanics '.fullName=="Luca Bianchi"' '{
   "fullName":"Luca Bianchi","skills":["ENGINE","ELECTRICAL"],"status":"IDLE",
   "location":{"lat":45.5000,"lng":9.2500}
-}' | jq -r .id)
-M3=$(curl -sf -X POST "$API/mechanics" -H 'content-type: application/json' -d '{
+}')
+M3=$(upsert mechanics '.fullName=="Giulia Neri"' '{
   "fullName":"Giulia Neri","skills":["HYDRAULICS"],"status":"OFF_DUTY",
   "location":{"lat":45.4500,"lng":9.1800}
-}' | jq -r .id)
+}')
 echo "mechanics: $M1, $M2, $M3"
 
+# --- Sites (nested under client) ----------------------------------------
+# upsert_site <clientId> <siteName> <payload>
+upsert_site() {
+  local cid="$1" name="$2" payload="$3" existing
+  existing=$(curl -sf "$API/clients/$cid/sites" | jq -r "map(select(.name==\"$name\")) | .[0].id // empty")
+  if [[ -n "$existing" ]]; then
+    echo "$existing"
+  else
+    curl -sf -X POST "$API/clients/$cid/sites" -H 'content-type: application/json' -d "$payload" | jq -r .id
+  fi
+}
+
+S1=$(upsert_site "$C1" "Cantiere Milano Centro" '{
+  "name":"Cantiere Milano Centro","lat":45.47,"lng":9.20,
+  "locationLabel":"Via Roma 1, Milano"
+}')
+S2=$(upsert_site "$C2" "Cantiere Bergamo Ovest" '{
+  "name":"Cantiere Bergamo Ovest","lat":45.48,"lng":9.22,
+  "locationLabel":"Bergamo"
+}')
+echo "sites: $S1, $S2"
+
+# Portable date helper: macOS (date -v) falls back to GNU (date -d)
+future_iso() {
+  # $1 = day offset (e.g. +1d), $2 = time string (e.g. 08:00:00)
+  local offset="$1" time="$2"
+  date -u -v"$offset" "+%Y-%m-%dT${time}Z" 2>/dev/null \
+    || date -u -d "$offset" "+%Y-%m-%dT${time}Z"
+}
+
 # --- Service orders -----------------------------------------------------
-# 1. Completed hydraulic job assigned to Marco
+# 1. Completed hydraulic job (Marco Rossi → SCHEDULED → IN_PROGRESS → COMPLETED)
 SO1=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
-  \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"vmrsCode\":\"042001010\",
-  \"siteLocation\":{\"lat\":45.47,\"lng\":9.20},\"notes\":\"Demo hydraulic\"
+  \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"siteId\":\"$S1\",\"vmrsCode\":\"042001010\",
+  \"notes\":\"Demo hydraulic\"
 }" | jq -r .id)
-curl -sf -X POST "$API/service-orders/$SO1/quote"    > /dev/null
-curl -sf -X POST "$API/service-orders/$SO1/approve"  > /dev/null
-curl -sf -X POST "$API/service-orders/$SO1/dispatch" -H 'content-type: application/json' -d "{\"mechanicId\":\"$M1\"}" > /dev/null
-curl -sf -X POST "$API/service-orders/$SO1/start"    > /dev/null
-curl -sf -X POST "$API/service-orders/$SO1/complete" -H 'content-type: application/json' -d '{"actualMinutes":135}' > /dev/null
+curl -sf -X POST "$API/service-orders/$SO1/quote"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO1/approve" > /dev/null
+S1_START=$(future_iso "+1d" "07:00:00")
+S1_END=$(future_iso   "+1d" "09:15:00")
+curl -sf -X POST "$API/service-orders/$SO1/schedule" \
+  -H 'content-type: application/json' \
+  -d "{\"mechanicId\":\"$M1\",\"scheduledStartAt\":\"$S1_START\",\"scheduledEndAt\":\"$S1_END\"}" > /dev/null
+curl -sf -X POST "$API/service-orders/$SO1/start"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO1/complete" \
+  -H 'content-type: application/json' -d '{"actualMinutes":135}' > /dev/null
 echo "service-order (COMPLETED): $SO1"
 
 # 2. Pending alternator job (left at QUOTED so the UI shows action buttons)
 SO2=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
-  \"vehicleId\":\"$V2\",\"clientId\":\"$C2\",\"vmrsCode\":\"060001003\",
-  \"siteLocation\":{\"lat\":45.48,\"lng\":9.22},\"notes\":\"Demo alternator\"
+  \"vehicleId\":\"$V2\",\"clientId\":\"$C2\",\"siteId\":\"$S2\",\"vmrsCode\":\"060001003\",
+  \"notes\":\"Demo alternator\"
 }" | jq -r .id)
 curl -sf -X POST "$API/service-orders/$SO2/quote" > /dev/null
 echo "service-order (QUOTED):    $SO2"
 
-# 3. Approved track job, ready to dispatch
+# 3. Approved track job, ready to schedule
 SO3=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
-  \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"vmrsCode\":\"033004001\",
-  \"siteLocation\":{\"lat\":45.46,\"lng\":9.19},\"notes\":\"Demo track tension\"
+  \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"siteId\":\"$S1\",\"vmrsCode\":\"033004001\",
+  \"notes\":\"Demo track tension\"
 }" | jq -r .id)
 curl -sf -X POST "$API/service-orders/$SO3/quote"   > /dev/null
 curl -sf -X POST "$API/service-orders/$SO3/approve" > /dev/null
 echo "service-order (APPROVED):  $SO3"
+
+# 4. Scheduled engine check — Marco, tomorrow morning
+SO4=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
+  \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"siteId\":\"$S1\",\"vmrsCode\":\"013001001\",
+  \"notes\":\"Scheduled engine check\"
+}" | jq -r .id)
+curl -sf -X POST "$API/service-orders/$SO4/quote"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO4/approve" > /dev/null
+S4_START=$(future_iso "+1d" "08:00:00")
+S4_END=$(future_iso   "+1d" "10:00:00")
+curl -sf -X POST "$API/service-orders/$SO4/schedule" \
+  -H 'content-type: application/json' \
+  -d "{\"mechanicId\":\"$M1\",\"scheduledStartAt\":\"$S4_START\",\"scheduledEndAt\":\"$S4_END\"}" > /dev/null
+echo "service-order (SCHEDULED): $SO4"
+
+# 5. Scheduled electrical fault — Luca, tomorrow midday
+SO5=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
+  \"vehicleId\":\"$V2\",\"clientId\":\"$C2\",\"siteId\":\"$S2\",\"vmrsCode\":\"060001003\",
+  \"notes\":\"Electrical fault inspection\"
+}" | jq -r .id)
+curl -sf -X POST "$API/service-orders/$SO5/quote"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO5/approve" > /dev/null
+S5_START=$(future_iso "+1d" "11:00:00")
+S5_END=$(future_iso   "+1d" "13:00:00")
+curl -sf -X POST "$API/service-orders/$SO5/schedule" \
+  -H 'content-type: application/json' \
+  -d "{\"mechanicId\":\"$M2\",\"scheduledStartAt\":\"$S5_START\",\"scheduledEndAt\":\"$S5_END\"}" > /dev/null
+echo "service-order (SCHEDULED): $SO5"
+
+# 6. Scheduled undercarriage — Luca, day after tomorrow
+SO6=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
+  \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"siteId\":\"$S1\",\"vmrsCode\":\"033004001\",
+  \"notes\":\"Undercarriage overhaul\"
+}" | jq -r .id)
+curl -sf -X POST "$API/service-orders/$SO6/quote"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO6/approve" > /dev/null
+S6_START=$(future_iso "+2d" "08:00:00")
+S6_END=$(future_iso   "+2d" "12:00:00")
+curl -sf -X POST "$API/service-orders/$SO6/schedule" \
+  -H 'content-type: application/json' \
+  -d "{\"mechanicId\":\"$M2\",\"scheduledStartAt\":\"$S6_START\",\"scheduledEndAt\":\"$S6_END\"}" > /dev/null
+echo "service-order (SCHEDULED): $SO6"
+
+# 7. Requested-only braking system report (no quote yet — appears as REQUESTED)
+SO7=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
+  \"vehicleId\":\"$V2\",\"clientId\":\"$C2\",\"siteId\":\"$S2\",\"vmrsCode\":\"013001001\",
+  \"notes\":\"Braking system noise complaint\"
+}" | jq -r .id)
+echo "service-order (REQUESTED): $SO7"
 
 echo ""
 echo "==> seed complete. Open http://localhost:5173/"
