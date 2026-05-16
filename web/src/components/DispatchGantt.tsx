@@ -1,6 +1,7 @@
 import { useMemo, useRef, KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { findConflicts, ScheduledItem } from "../lib/findConflicts";
 import {
   addDays, startOfDay, startOfMonth, endOfMonth, startOfWeek,
   format, getHours, getMinutes, getDaysInMonth, getDate
@@ -29,6 +30,7 @@ type Props = {
   winStart: Date;
   winEnd: Date;
   onSelectOrder: (id: string) => void;
+  onAddAbsence: (mechanicId: string) => void;
   registerRow: (mechanicId: string, el: HTMLDivElement | null) => void;
 };
 
@@ -38,7 +40,7 @@ const HOURS = HOUR_END - HOUR_START;
 
 function clampPct(n: number) { return Math.max(0, Math.min(100, n)); }
 
-export function DispatchGantt({ mechanics, orders, absences, selectedMechanicId, view, date, winStart, winEnd, onSelectOrder, registerRow }: Props) {
+export function DispatchGantt({ mechanics, orders, absences, selectedMechanicId, view, date, winStart, winEnd, onSelectOrder, onAddAbsence, registerRow }: Props) {
   const { t } = useTranslation();
   const visibleMechanics = selectedMechanicId ? mechanics.filter((m) => m.id === selectedMechanicId) : mechanics;
 
@@ -141,7 +143,7 @@ export function DispatchGantt({ mechanics, orders, absences, selectedMechanicId,
             <MechanicRow key={m.id} mechanic={m} initials={initials} minHeight={rowMinHeight} gridTemplate={gridTemplate} minTimelineWidth={minTimelineWidth}
                          absences={rowAbsences} orders={rowOrders} laneByOrder={laneByOrder}
                          eventPosition={eventPosition} chipLabel={chipLabel} chipTitle={chipTitle}
-                         onSelectOrder={onSelectOrder} t={t} cols={cols} registerRow={registerRow} />
+                         onSelectOrder={onSelectOrder} onAddAbsence={onAddAbsence} t={t} cols={cols} registerRow={registerRow} />
           );
         })}
       </div>
@@ -162,6 +164,7 @@ type RowProps = {
   chipLabel: (o: ServiceOrder) => string;
   chipTitle: (o: ServiceOrder) => string;
   onSelectOrder: (id: string) => void;
+  onAddAbsence: (mechanicId: string) => void;
   t: (k: string, opts?: Record<string, unknown>) => string;
   cols: (number | Date)[];
   registerRow: (mechanicId: string, el: HTMLDivElement | null) => void;
@@ -170,9 +173,27 @@ type RowProps = {
 function MechanicRow({
   mechanic, initials, minHeight, gridTemplate, minTimelineWidth,
   absences, orders, laneByOrder, eventPosition, chipLabel, chipTitle,
-  onSelectOrder, t, cols, registerRow
+  onSelectOrder, onAddAbsence, t, cols, registerRow
 }: RowProps) {
   const rowRef = useRef<HTMLDivElement | null>(null);
+
+  const conflictIds = useMemo(() => {
+    const items: ScheduledItem[] = [
+      ...orders
+        .filter((o) => o.scheduledStartAt && o.scheduledEndAt)
+        .map((o) => ({
+          id: o.id,
+          startAt: new Date(o.scheduledStartAt!),
+          endAt: new Date(o.scheduledEndAt!),
+        })),
+      ...absences.map((a) => ({
+        id: `abs:${a.id}`,
+        startAt: new Date(a.startAt),
+        endAt: new Date(a.endAt),
+      })),
+    ];
+    return findConflicts(items);
+  }, [orders, absences]);
   const { isOver, setNodeRef, active } = useDroppable({
     id: `row:${mechanic.id}`,
     data: { kind: "row", mechanicId: mechanic.id },
@@ -194,13 +215,21 @@ function MechanicRow({
     <div role="row" className="flex border-b border-[var(--color-hairline)] group hover:bg-[var(--color-surface-sunken)] transition-colors" style={{ minHeight }}>
       <div role="rowheader" className="w-48 shrink-0 border-r border-[var(--color-hairline)] sticky left-0 bg-[var(--color-surface-panel)] group-hover:bg-[var(--color-surface-sunken)] z-10 flex items-center gap-2 px-3 py-2">
         <div className="w-8 h-8 rounded bg-[var(--color-surface-container-highest)] border border-[var(--color-hairline)] flex items-center justify-center font-mono text-xs shrink-0">{initials || "??"}</div>
-        <div className="flex flex-col min-w-0">
+        <div className="flex flex-col min-w-0 flex-1">
           <span className="font-medium text-sm text-[var(--color-text)] truncate">{mechanic.fullName}</span>
           <span className="text-xs font-mono text-[var(--color-text-muted)] truncate flex items-center gap-1">
             <span className={cn("status-dot", `dot-${mechanic.status}`)} aria-hidden="true" />
             {mechanic.status}
           </span>
         </div>
+        <button
+          type="button"
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] px-1 shrink-0"
+          onClick={(e) => { e.stopPropagation(); onAddAbsence(mechanic.id); }}
+          aria-label={`Add absence for ${mechanic.fullName}`}
+        >
+          + Absence
+        </button>
       </div>
       <div
         ref={composedRef}
@@ -240,6 +269,7 @@ function MechanicRow({
           return (
             <EventChip key={o.id} order={o} mechanicName={mechanic.fullName}
                        pos={pos} top={top} label={chipLabel(o)} tooltip={chipTitle(o)}
+                       conflictIds={conflictIds}
                        onSelect={onSelectOrder} />
           );
         })}
@@ -248,14 +278,43 @@ function MechanicRow({
   );
 }
 
+function ResizeHandle({ orderId, edge, scheduledStartAt, scheduledEndAt }: {
+  orderId: string; edge: "start" | "end";
+  scheduledStartAt: string; scheduledEndAt: string;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `resize:${orderId}:${edge}`,
+    data: { kind: "resize", orderId, edge, scheduledStartAt, scheduledEndAt },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      role="separator"
+      aria-label={`Resize ${edge}`}
+      className={cn(
+        "absolute top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-[var(--color-brand-strong)] z-10",
+        edge === "start" ? "left-0" : "right-0",
+        isDragging && "bg-[var(--color-brand-strong)]"
+      )}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
 function EventChip({
-  order, mechanicName, pos, top, label, tooltip, onSelect
+  order, mechanicName, pos, top, label, tooltip, conflictIds, onSelect
 }: {
   order: ServiceOrder; mechanicName: string;
   pos: { leftPct: number; rightPct: number }; top: number;
   label: string; tooltip: string;
+  conflictIds: Set<string>;
   onSelect: (id: string) => void;
 }) {
+  const isScheduled = order.state === "SCHEDULED";
+  const hasConflict = conflictIds.has(order.id);
+
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `event:${order.id}`,
     data: {
@@ -266,6 +325,7 @@ function EventChip({
       scheduledStartAt: order.scheduledStartAt,
       scheduledEndAt: order.scheduledEndAt,
     },
+    disabled: !isScheduled,
   });
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -278,18 +338,30 @@ function EventChip({
       aria-label={`${label}, ${mechanicName}, ${order.state}`}
       onClick={(e) => { e.stopPropagation(); onSelect(order.id); }}
       onKeyDown={onKeyDown}
-      title={tooltip}
+      title={hasConflict ? "Conflicts with another order or absence on this mechanic" : tooltip}
       {...listeners}
       {...attributes}
       className={cn(
-        "absolute rounded-[var(--radius-sm)] border px-2 py-1 cursor-grab active:cursor-grabbing flex items-center justify-between gap-1 overflow-hidden shadow-sm hover:brightness-95 active:brightness-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-1",
+        "absolute rounded-[var(--radius-sm)] border px-2 py-1 flex items-center justify-between gap-1 overflow-hidden shadow-sm hover:brightness-95 active:brightness-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)] focus-visible:ring-offset-1",
+        isScheduled ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
         `state-${order.state}`,
-        isDragging && "opacity-40"
+        isDragging && "opacity-40",
+        hasConflict && "ring-2 ring-[var(--color-danger)]"
       )}
       style={{ left: `${pos.leftPct}%`, right: `${pos.rightPct}%`, top, height: LANE_HEIGHT_PX, minWidth: "2rem" }}
     >
+      {isScheduled && order.scheduledStartAt && order.scheduledEndAt && (
+        <ResizeHandle orderId={order.id} edge="start"
+                      scheduledStartAt={order.scheduledStartAt}
+                      scheduledEndAt={order.scheduledEndAt} />
+      )}
       <span className="text-[11px] font-semibold truncate min-w-0">{label}</span>
       <span className="font-mono text-[9px] tracking-wider opacity-70 shrink-0">{order.vmrsCode}</span>
+      {isScheduled && order.scheduledStartAt && order.scheduledEndAt && (
+        <ResizeHandle orderId={order.id} edge="end"
+                      scheduledStartAt={order.scheduledStartAt}
+                      scheduledEndAt={order.scheduledEndAt} />
+      )}
     </div>
   );
 }
