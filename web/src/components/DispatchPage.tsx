@@ -11,6 +11,7 @@ import { absencesApi } from "../api/absences";
 import { queryKeys } from "../api/client";
 import { DispatchGantt, GanttView, dayBoundary, weekBoundary, monthBoundary } from "./DispatchGantt";
 import { ServiceOrderDrawer } from "./ServiceOrderDrawer";
+import { AbsencesPanel } from "./AbsencesPanel";
 import { SearchInput } from "./SearchInput";
 import { CreateOrderForm } from "./CreateOrderForm";
 import { ServiceOrder, UUID } from "../types";
@@ -23,6 +24,9 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { pxToTime } from "../lib/gantt-time";
 
@@ -43,6 +47,7 @@ export function DispatchPage() {
   const [view, setView] = useState<GanttView>("day");
   const [date, setDate] = useState<Date>(startOfDay(new Date()));
   const [createOpen, setCreateOpen] = useState(false);
+  const [absenceMechanicId, setAbsenceMechanicId] = useState<string | null>(null);
 
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -304,6 +309,7 @@ export function DispatchPage() {
             winStart={winStart}
             winEnd={winEnd}
             onSelectOrder={setSelectedOrderId}
+            onAddAbsence={setAbsenceMechanicId}
             registerRow={registerRow}
           />
         </section>
@@ -353,6 +359,25 @@ export function DispatchPage() {
       {selectedOrder && (
         <ServiceOrderDrawer order={selectedOrder} onClose={() => setSelectedOrderId(null)} />
       )}
+
+      <Sheet open={!!absenceMechanicId} onOpenChange={(open) => !open && setAbsenceMechanicId(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto p-0">
+          {absenceMechanicId && (() => {
+            const mech = (mechanicsQ.data ?? []).find((m) => m.id === absenceMechanicId);
+            return (
+              <>
+                <SheetHeader className="border-b border-[var(--color-hairline)] px-4 py-3">
+                  <SheetTitle>{mech ? `Absences — ${mech.fullName}` : "Absences"}</SheetTitle>
+                  <SheetDescription>Manage time-off and unavailability windows for this mechanic.</SheetDescription>
+                </SheetHeader>
+                <div className="p-0">
+                  <AbsencesPanel mechanicId={absenceMechanicId} mechanicName={mech?.fullName ?? ""} />
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </div>
     <DragOverlay>{null}</DragOverlay>
     </DndContext>
