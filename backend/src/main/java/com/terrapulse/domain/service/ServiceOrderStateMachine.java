@@ -18,11 +18,16 @@ public final class ServiceOrderStateMachine {
                     throw new IllegalStateTransitionException("estimatedMinutes must be set before QUOTED");
                 }
             }
-            case DISPATCHED -> {
+            case SCHEDULED -> {
                 if (order.mechanic == null) {
-                    throw new IllegalStateTransitionException("mechanic must be assigned before DISPATCHED");
+                    throw new IllegalStateTransitionException("mechanic must be assigned before SCHEDULED");
                 }
-                order.dispatchedAt = Instant.now();
+                if (order.scheduledStartAt == null || order.scheduledEndAt == null) {
+                    throw new IllegalStateTransitionException("scheduledStartAt and scheduledEndAt must be set before SCHEDULED");
+                }
+                if (!order.scheduledEndAt.isAfter(order.scheduledStartAt)) {
+                    throw new IllegalStateTransitionException("scheduledEndAt must be after scheduledStartAt");
+                }
             }
             case IN_PROGRESS -> order.startedAt = Instant.now();
             case COMPLETED -> {
