@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { ServiceOrder } from "../types";
 import { serviceOrdersApi } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
@@ -26,7 +27,11 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
 
   const quote    = useMutation({ mutationFn: () => serviceOrdersApi.quote(order.id),    onSuccess: invalidate });
   const approve  = useMutation({ mutationFn: () => serviceOrdersApi.approve(order.id),  onSuccess: invalidate });
-  const start    = useMutation({ mutationFn: () => serviceOrdersApi.start(order.id),    onSuccess: invalidate });
+  const start    = useMutation({
+    mutationFn: () => serviceOrdersApi.start(order.id),
+    onSuccess: () => { invalidate(); toast.success("Order started"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const complete = useMutation({
     mutationFn: (mins: number) => serviceOrdersApi.complete(order.id, mins),
     onSuccess: invalidate

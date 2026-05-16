@@ -1,8 +1,10 @@
 import { ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { format } from "date-fns";
 import { Pencil } from "lucide-react";
 import { ServiceOrder } from "../types";
 import { fmtDateTime } from "../i18n/format";
+import { formatDuration } from "../lib/duration";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,7 +126,16 @@ export function OrderDetailsCard({
         </dd>
 
         <dt className="text-[var(--color-text-muted)]">{t("orders.fieldEstimated")}</dt>
-        <dd className="m-0">{t("common.minutes", { count: order.estimatedMinutes })}</dd>
+        <dd className="m-0">{formatDuration(order.estimatedMinutes)} ({order.estimatedMinutes} min)</dd>
+
+        {order.scheduledStartAt && order.scheduledEndAt && (
+          <>
+            <dt className="text-[var(--color-text-muted)]">Scheduled</dt>
+            <dd className="m-0">
+              {format(new Date(order.scheduledStartAt), "PP HH:mm")} → {format(new Date(order.scheduledEndAt), "PP HH:mm")}
+            </dd>
+          </>
+        )}
 
         {order.actualMinutes != null && (
           <>
