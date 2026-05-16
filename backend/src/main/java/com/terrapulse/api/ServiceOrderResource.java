@@ -3,6 +3,8 @@ package com.terrapulse.api;
 import com.terrapulse.api.dto.ServiceOrderDtos.CompleteRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.DispatchRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.OverrideStateRequest;
+import com.terrapulse.api.dto.ServiceOrderDtos.PatchScheduleRequest;
+import com.terrapulse.api.dto.ServiceOrderDtos.ScheduleRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderCreateDto;
 import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderDto;
 import com.terrapulse.api.dto.ServiceOrderDtos.TitleUpdateDto;
@@ -211,6 +213,63 @@ public class ServiceOrderResource {
     @Transactional
     public ServiceOrderDto approve(@PathParam("id") UUID id) {
         return applyTransition(load(id), ServiceOrderState.APPROVED);
+    }
+
+    @POST
+    @Path("/{id}/schedule")
+    @Transactional
+    public ServiceOrderDto schedule(@PathParam("id") UUID id, ScheduleRequest in) {
+        if (in == null || in.mechanicId() == null
+                || in.scheduledStartAt() == null || in.scheduledEndAt() == null) {
+            throw new IllegalArgumentException("mechanicId, scheduledStartAt, scheduledEndAt all required");
+        }
+        Mechanic m = mechanicRepo.findById(in.mechanicId());
+        if (m == null) throw new IllegalArgumentException("mechanicId not found");
+
+        ServiceOrder so = load(id);
+        so.mechanic = m;
+        so.scheduledStartAt = in.scheduledStartAt();
+        so.scheduledEndAt = in.scheduledEndAt();
+        return applyTransition(so, ServiceOrderState.SCHEDULED);
+    }
+
+    @PATCH
+    @Path("/{id}/schedule")
+    @Transactional
+    public ServiceOrderDto patchSchedule(@PathParam("id") UUID id, PatchScheduleRequest in) {
+        if (in == null
+                || (in.mechanicId() == null && in.scheduledStartAt() == null && in.scheduledEndAt() == null)) {
+            throw new IllegalArgumentException("at least one of mechanicId, scheduledStartAt, scheduledEndAt required");
+        }
+        ServiceOrder so = load(id);
+        if (so.state != ServiceOrderState.SCHEDULED) {
+            throw new com.terrapulse.domain.service.IllegalStateTransitionException(
+                    "PATCH /schedule only allowed in SCHEDULED state (got " + so.state + ")");
+        }
+        UUID previousMechanicId = so.mechanic != null ? so.mechanic.id : null;
+
+        if (in.mechanicId() != null) {
+            Mechanic m = mechanicRepo.findById(in.mechanicId());
+            if (m == null) throw new IllegalArgumentException("mechanicId not found");
+            so.mechanic = m;
+        }
+        java.time.Instant newStart = in.scheduledStartAt() != null ? in.scheduledStartAt() : so.scheduledStartAt;
+        java.time.Instant newEnd   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledEndAt;
+        if (newEnd == null || newStart == null || !newEnd.isAfter(newStart)) {
+            throw new IllegalArgumentException("scheduledEndAt must be after scheduledStartAt");
+        }
+        so.scheduledStartAt = newStart;
+        so.scheduledEndAt = newEnd;
+
+        ServiceOrderDto dto = ServiceOrderDto.of(so);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", so.id);
+        payload.put("mechanicId", so.mechanic.id);
+        payload.put("fromMechanicId", previousMechanicId);
+        payload.put("scheduledStartAt", so.scheduledStartAt);
+        payload.put("scheduledEndAt", so.scheduledEndAt);
+        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_SCHEDULE_CHANGED, payload));
+        return dto;
     }
 
     @POST
