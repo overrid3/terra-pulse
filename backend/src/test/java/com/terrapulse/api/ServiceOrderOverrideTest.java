@@ -326,7 +326,50 @@ class ServiceOrderOverrideTest {
     }
 
     // ---------------------------------------------------------------------------
-    // Test 6: override appends audit note containing "override" and the reason
+    // Test 6: override to REQUESTED from SCHEDULED clears schedule fields
+    // ---------------------------------------------------------------------------
+
+    @Test
+    void override_toRequested_clearsSchedule() {
+        Client client = seedClient();
+        Site site = seedSite(client.id);
+        Vehicle vehicle = seedVehicle(site.id);
+        VmrsCode vmrsCode = seedVmrsCode();
+        Mechanic mechanic = seedMechanic();
+
+        UUID orderId = seedOrder(
+                ServiceOrderState.SCHEDULED, vehicle.id, vmrsCode.code,
+                client.id, site.id, mechanic.id, null, null, null, null
+        );
+        // Step 1: ensure SCHEDULED has schedule fields set via override
+        given()
+            .contentType(ContentType.JSON)
+            .body("{\"state\":\"SCHEDULED\",\"reason\":\"schedule set\","
+                    + "\"mechanicId\":\"" + mechanic.id + "\","
+                    + "\"scheduledStartAt\":\"2026-06-10T08:00:00Z\","
+                    + "\"scheduledEndAt\":\"2026-06-10T10:00:00Z\"}")
+        .when()
+            .post("/api/service-orders/{id}/override-state", orderId)
+        .then()
+            .statusCode(200)
+            .body("scheduledStartAt", notNullValue());
+
+        // Step 2: override back to REQUESTED — should clear schedule fields
+        given()
+            .contentType(ContentType.JSON)
+            .body("{\"state\":\"REQUESTED\",\"reason\":\"reopen\"}")
+        .when()
+            .post("/api/service-orders/{id}/override-state", orderId)
+        .then()
+            .statusCode(200)
+            .body("state", equalTo("REQUESTED"))
+            .body("scheduledStartAt", nullValue())
+            .body("scheduledEndAt", nullValue())
+            .body("mechanicId", nullValue());
+    }
+
+    // ---------------------------------------------------------------------------
+    // Test 7: override appends audit note containing "override" and the reason
     // ---------------------------------------------------------------------------
 
     @Test

@@ -315,41 +315,55 @@ public class ServiceOrderResource {
         switch (target) {
             case REQUESTED, QUOTED, APPROVED -> {
                 so.mechanic = null;
+                so.scheduledStartAt = null;
+                so.scheduledEndAt = null;
                 so.dispatchedAt = null;
                 so.startedAt = null;
                 so.completedAt = null;
                 so.actualMinutes = null;
             }
             case SCHEDULED -> {
-                // placeholder — T14 will fill this in
-                throw new IllegalArgumentException("SCHEDULED override not yet implemented");
+                if (so.mechanic == null) {
+                    if (in.mechanicId() == null) {
+                        throw new IllegalArgumentException("mechanicId required to override to SCHEDULED");
+                    }
+                    Mechanic m = mechanicRepo.findById(in.mechanicId());
+                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    so.mechanic = m;
+                }
+                java.time.Instant newStart = in.scheduledStartAt() != null ? in.scheduledStartAt() : so.scheduledStartAt;
+                java.time.Instant newEnd   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledEndAt;
+                if (newStart == null || newEnd == null || !newEnd.isAfter(newStart)) {
+                    throw new IllegalArgumentException("scheduledStartAt + scheduledEndAt required (end after start) to override to SCHEDULED");
+                }
+                so.scheduledStartAt = newStart;
+                so.scheduledEndAt = newEnd;
+                so.startedAt = null;
+                so.completedAt = null;
+                so.actualMinutes = null;
             }
             case IN_PROGRESS -> {
                 if (so.mechanic == null) {
-                    if (in.mechanicId() == null) {
-                        throw new IllegalArgumentException("mechanicId required to override to IN_PROGRESS");
-                    }
-                    so.mechanic = mechanicRepo.findById(in.mechanicId());
-                    if (so.mechanic == null) {
-                        throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
-                    }
+                    if (in.mechanicId() == null) throw new IllegalArgumentException("mechanicId required to override to IN_PROGRESS");
+                    Mechanic m = mechanicRepo.findById(in.mechanicId());
+                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    so.mechanic = m;
                 }
-                if (so.dispatchedAt == null) so.dispatchedAt = now;
+                if (so.scheduledStartAt == null) so.scheduledStartAt = in.scheduledStartAt() != null ? in.scheduledStartAt() : now;
+                if (so.scheduledEndAt == null)   so.scheduledEndAt   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledStartAt.plusSeconds(60L * Math.max(1, so.estimatedMinutes));
                 if (so.startedAt == null) so.startedAt = now;
                 so.completedAt = null;
                 so.actualMinutes = null;
             }
             case COMPLETED -> {
                 if (so.mechanic == null) {
-                    if (in.mechanicId() == null) {
-                        throw new IllegalArgumentException("mechanicId required to override to COMPLETED");
-                    }
-                    so.mechanic = mechanicRepo.findById(in.mechanicId());
-                    if (so.mechanic == null) {
-                        throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
-                    }
+                    if (in.mechanicId() == null) throw new IllegalArgumentException("mechanicId required to override to COMPLETED");
+                    Mechanic m = mechanicRepo.findById(in.mechanicId());
+                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                    so.mechanic = m;
                 }
-                if (so.dispatchedAt == null) so.dispatchedAt = now;
+                if (so.scheduledStartAt == null) so.scheduledStartAt = in.scheduledStartAt() != null ? in.scheduledStartAt() : now;
+                if (so.scheduledEndAt == null)   so.scheduledEndAt   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledStartAt.plusSeconds(60L * Math.max(1, so.estimatedMinutes));
                 if (so.startedAt == null) so.startedAt = now;
                 if (so.actualMinutes == null) {
                     if (in.actualMinutes() == null || in.actualMinutes() < 1) {
