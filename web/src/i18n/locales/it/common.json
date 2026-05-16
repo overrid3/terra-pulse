@@ -74,7 +74,12 @@
     "actionApprove": "Approva",
     "actionStart": "Avvia",
     "actionComplete": "Completa",
-    "selectMechanic": "Seleziona meccanico"
+    "selectMechanic": "Seleziona meccanico",
+    "newOrder": "Nuovo ordine",
+    "scheduleSuccess": "Ordine pianificato",
+    "rescheduleSuccess": "Pianificazione aggiornata",
+    "conflictWarning": "Sovrapposizione con {{title}} alle {{time}}",
+    "addAbsence": "+ Assenza"
   },
   "orders": {
     "pageTitle": "Ordini di servizio",
@@ -128,7 +133,12 @@
     "filterRequested": "Richiesti",
     "filterDispatched": "Assegnati",
     "filterInProgress": "In corso",
-    "filterCompleted": "Completati"
+    "filterCompleted": "Completati",
+    "form": {
+      "estimation": "Stima",
+      "estimationHint": "es. 1d, 2h30m, 90m",
+      "assignNow": "Opzionale: assegna ora"
+    }
   },
   "mechanics": {
     "pageTitle": "Meccanici ({{count}})",
@@ -301,7 +311,7 @@
     "REQUESTED": "Richiesto",
     "QUOTED": "Preventivato",
     "APPROVED": "Approvato",
-    "DISPATCHED": "Assegnato",
+    "SCHEDULED": "Pianificato",
     "IN_PROGRESS": "In corso",
     "COMPLETED": "Completato",
     "CANCELLED": "Annullato"
