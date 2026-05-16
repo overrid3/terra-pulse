@@ -73,6 +73,12 @@ public class ServiceOrder {
     @Column(name = "dispatched_at")
     public Instant dispatchedAt;
 
+    @Column(name = "scheduled_start_at")
+    public Instant scheduledStartAt;
+
+    @Column(name = "scheduled_end_at")
+    public Instant scheduledEndAt;
+
     @Column(name = "started_at")
     public Instant startedAt;
 
