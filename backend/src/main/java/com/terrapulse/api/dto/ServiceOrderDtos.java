@@ -80,8 +80,6 @@ public final class ServiceOrderDtos {
 
     public record TitleUpdateDto(String title) {}
 
-    public record DispatchRequest(UUID mechanicId) {}
-
     public record ScheduleRequest(
             UUID mechanicId,
             Instant scheduledStartAt,

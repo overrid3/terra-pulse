@@ -1,7 +1,6 @@
 package com.terrapulse.api;
 
 import com.terrapulse.api.dto.ServiceOrderDtos.CompleteRequest;
-import com.terrapulse.api.dto.ServiceOrderDtos.DispatchRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.OverrideStateRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.PatchScheduleRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.ScheduleRequest;
@@ -273,47 +272,6 @@ public class ServiceOrderResource {
     }
 
     @POST
-    @Path("/{id}/dispatch")
-    @Transactional
-    public ServiceOrderDto dispatch(@PathParam("id") UUID id, DispatchRequest in) {
-        if (in == null || in.mechanicId() == null) {
-            throw new IllegalArgumentException("mechanicId required");
-        }
-        Mechanic m = mechanicRepo.findById(in.mechanicId());
-        if (m == null) throw new IllegalArgumentException("mechanicId not found");
-        ServiceOrder so = load(id);
-        so.mechanic = m;
-        return applyTransition(so, ServiceOrderState.DISPATCHED);
-    }
-
-    @POST
-    @Path("/{id}/reassign")
-    @Transactional
-    public ServiceOrderDto reassign(@PathParam("id") UUID id, DispatchRequest in) {
-        if (in == null || in.mechanicId() == null) {
-            throw new IllegalArgumentException("mechanicId required");
-        }
-        Mechanic m = mechanicRepo.findById(in.mechanicId());
-        if (m == null) throw new IllegalArgumentException("mechanicId not found");
-        ServiceOrder so = load(id);
-        if (so.state != ServiceOrderState.DISPATCHED && so.state != ServiceOrderState.IN_PROGRESS) {
-            throw new IllegalArgumentException("reassign only allowed in DISPATCHED or IN_PROGRESS (got " + so.state + ")");
-        }
-        UUID previous = so.mechanic != null ? so.mechanic.id : null;
-        so.mechanic = m;
-        ServiceOrderDto dto = ServiceOrderDto.of(so);
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("id", so.id);
-        payload.put("fromState", so.state);
-        payload.put("toState", so.state);
-        payload.put("mechanicId", so.mechanic.id);
-        payload.put("previousMechanicId", previous);
-        payload.put("reassigned", true);
-        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
-        return dto;
-    }
-
-    @POST
     @Path("/{id}/start")
     @Transactional
     public ServiceOrderDto start(@PathParam("id") UUID id) {
@@ -362,20 +320,9 @@ public class ServiceOrderResource {
                 so.completedAt = null;
                 so.actualMinutes = null;
             }
-            case DISPATCHED -> {
-                if (so.mechanic == null) {
-                    if (in.mechanicId() == null) {
-                        throw new IllegalArgumentException("mechanicId required to override to DISPATCHED");
-                    }
-                    so.mechanic = mechanicRepo.findById(in.mechanicId());
-                    if (so.mechanic == null) {
-                        throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
-                    }
-                }
-                if (so.dispatchedAt == null) so.dispatchedAt = now;
-                so.startedAt = null;
-                so.completedAt = null;
-                so.actualMinutes = null;
+            case SCHEDULED -> {
+                // placeholder — T14 will fill this in
+                throw new IllegalArgumentException("SCHEDULED override not yet implemented");
             }
             case IN_PROGRESS -> {
                 if (so.mechanic == null) {

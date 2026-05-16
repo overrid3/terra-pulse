@@ -213,11 +213,11 @@ class ServiceOrderOverrideTest {
     }
 
     // ---------------------------------------------------------------------------
-    // Test 2: override to DISPATCHED without mechanic returns 400
+    // Test 2: override to SCHEDULED without schedule fields returns 400
     // ---------------------------------------------------------------------------
 
     @Test
-    void overrideToDispatchedRequiresMechanic() {
+    void override_toScheduled_requiresAllScheduleFields() {
         Client client = seedClient();
         Site site = seedSite(client.id);
         Vehicle vehicle = seedVehicle(site.id);
@@ -230,7 +230,7 @@ class ServiceOrderOverrideTest {
 
         given()
             .contentType(ContentType.JSON)
-            .body("{\"state\":\"DISPATCHED\",\"reason\":\"force\"}")
+            .body("{\"state\":\"SCHEDULED\",\"reason\":\"force\"}")
         .when()
             .post("/api/service-orders/{id}/override-state", orderId)
         .then()
@@ -238,11 +238,11 @@ class ServiceOrderOverrideTest {
     }
 
     // ---------------------------------------------------------------------------
-    // Test 3: override to DISPATCHED with mechanic sets timestamp
+    // Test 3: override to SCHEDULED with mechanic + schedule fields succeeds
     // ---------------------------------------------------------------------------
 
     @Test
-    void overrideToDispatchedWithMechanicSetsTimestamp() {
+    void override_toScheduled_happyPath() {
         Client client = seedClient();
         Site site = seedSite(client.id);
         Vehicle vehicle = seedVehicle(site.id);
@@ -256,14 +256,17 @@ class ServiceOrderOverrideTest {
 
         given()
             .contentType(ContentType.JSON)
-            .body("{\"state\":\"DISPATCHED\",\"reason\":\"force\",\"mechanicId\":\"" + mechanic.id + "\"}")
+            .body("{\"state\":\"SCHEDULED\",\"reason\":\"force\","
+                    + "\"mechanicId\":\"" + mechanic.id + "\","
+                    + "\"scheduledStartAt\":\"2026-06-01T08:00:00Z\","
+                    + "\"scheduledEndAt\":\"2026-06-01T10:00:00Z\"}")
         .when()
             .post("/api/service-orders/{id}/override-state", orderId)
         .then()
             .statusCode(200)
-            .body("state", equalTo("DISPATCHED"))
+            .body("state", equalTo("SCHEDULED"))
             .body("mechanicId", equalTo(mechanic.id.toString()))
-            .body("dispatchedAt", notNullValue());
+            .body("scheduledStartAt", notNullValue());
     }
 
     // ---------------------------------------------------------------------------

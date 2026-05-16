@@ -111,9 +111,9 @@ public class SiteResource {
         long personnel = (Long) repo.getEntityManager()
                 .createQuery("select count(distinct so.mechanic.id) from ServiceOrder so " +
                              "where so.site.id = :siteId and so.mechanic is not null " +
-                             "and (so.state = :dispatched or so.state = :inProgress)")
+                             "and (so.state = :scheduled or so.state = :inProgress)")
                 .setParameter("siteId", s.id)
-                .setParameter("dispatched", ServiceOrderState.DISPATCHED)
+                .setParameter("scheduled", ServiceOrderState.SCHEDULED)
                 .setParameter("inProgress", ServiceOrderState.IN_PROGRESS)
                 .getSingleResult();
         return new SiteDto(s.id, s.client.id, s.name, s.lat, s.lng, s.locationLabel,
