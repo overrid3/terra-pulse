@@ -20,6 +20,7 @@ import com.terrapulse.repository.ServiceOrderRepository;
 import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
 import com.terrapulse.repository.VmrsCodeRepository;
+import com.terrapulse.service.EstimationParser;
 import com.terrapulse.service.EstimationService;
 import com.terrapulse.service.GeometrySupport;
 import com.terrapulse.service.TitleGenerator;
@@ -111,8 +112,7 @@ public class ServiceOrderResource {
         so.vmrsCode = c;
         so.site = site;
 
-        // inherit client from site if not provided
-        Client resolvedClient = null;
+        Client resolvedClient;
         if (in.clientId() != null) {
             resolvedClient = clientRepo.findById(in.clientId());
             if (resolvedClient == null) throw new IllegalArgumentException("clientId not found");
@@ -121,7 +121,6 @@ public class ServiceOrderResource {
         }
         so.client = resolvedClient;
 
-        // use site coords if available, else fall back to explicit siteLocation
         if (site.lat != null && site.lng != null) {
             so.siteLocation = geo.point(site.lng, site.lat);
         } else if (in.siteLocation() != null) {
@@ -130,19 +129,50 @@ public class ServiceOrderResource {
             throw new IllegalArgumentException("siteLocation required when site has no coordinates");
         }
         so.notes = in.notes();
-        // Title: caller-supplied wins; blank/missing -> auto-generated mnemonic.
+
         if (in.title() == null || in.title().isBlank()) {
             so.title = titleGenerator.generate(v, c);
         } else {
             String t = in.title().trim();
-            if (t.length() > 120) {
-                throw new IllegalArgumentException("title must be <= 120 chars");
-            }
+            if (t.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
             so.title = t;
         }
-        // Estimation runs at creation so a default is available before QUOTED transition.
-        so.estimatedMinutes = estimation.estimateMinutes(c);
-        so.state = ServiceOrderState.REQUESTED;
+
+        if (in.estimation() != null && !in.estimation().isBlank()) {
+            try {
+                so.estimatedMinutes = EstimationParser.parse(in.estimation());
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("estimation: " + ex.getMessage());
+            }
+            if (so.estimatedMinutes <= 0) {
+                throw new IllegalArgumentException("estimation must be > 0 minutes");
+            }
+        } else {
+            so.estimatedMinutes = estimation.estimateMinutes(c);
+        }
+
+        boolean wantsSchedule = in.mechanicId() != null
+                && in.scheduledStartAt() != null
+                && in.scheduledEndAt() != null;
+        boolean partialSchedule = !wantsSchedule
+                && (in.mechanicId() != null || in.scheduledStartAt() != null || in.scheduledEndAt() != null);
+        if (partialSchedule) {
+            throw new IllegalArgumentException("mechanicId, scheduledStartAt and scheduledEndAt must all be set together");
+        }
+
+        if (wantsSchedule) {
+            Mechanic m = mechanicRepo.findById(in.mechanicId());
+            if (m == null) throw new IllegalArgumentException("mechanicId not found");
+            so.mechanic = m;
+            so.scheduledStartAt = in.scheduledStartAt();
+            so.scheduledEndAt = in.scheduledEndAt();
+            // Set state to APPROVED first so the state-machine guard for SCHEDULED transition fires (enforces start<end etc.)
+            so.state = ServiceOrderState.APPROVED;
+            ServiceOrderStateMachine.transitionTo(so, ServiceOrderState.SCHEDULED);
+        } else {
+            so.state = ServiceOrderState.REQUESTED;
+        }
+
         repo.persist(so);
         ServiceOrderDto dto = ServiceOrderDto.of(so);
         bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_CREATED, dto));
