@@ -2,6 +2,7 @@ export type DispatchEvent = {
   type:
     | "SERVICE_ORDER_CREATED"
     | "SERVICE_ORDER_STATE_CHANGED"
+    | "SERVICE_ORDER_SCHEDULE_CHANGED"
     | "MECHANIC_LOCATION_UPDATED"
     | "MECHANIC_STATUS_CHANGED";
   occurredAt: string;
