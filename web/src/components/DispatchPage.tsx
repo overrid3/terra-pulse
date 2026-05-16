@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Filter, RefreshCw, Inbox, MapPin, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { addDays, addMonths, addWeeks, startOfDay, format } from "date-fns";
-import { DndContext, DragEndEvent, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core";
 import { mechanicsApi } from "../api/mechanics";
 import { serviceOrdersApi, CreateOrderBody } from "../api/serviceOrders";
 import { absencesApi } from "../api/absences";
@@ -48,6 +48,8 @@ export function DispatchPage() {
   const [date, setDate] = useState<Date>(startOfDay(new Date()));
   const [createOpen, setCreateOpen] = useState(false);
   const [absenceMechanicId, setAbsenceMechanicId] = useState<string | null>(null);
+
+  const [activeDrag, setActiveDrag] = useState<{ kind: string; orderId?: string } | null>(null);
 
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -153,7 +155,13 @@ export function DispatchPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
   );
 
+  function handleDragStart(e: DragStartEvent) {
+    const d = e.active.data.current as { kind?: string; orderId?: string } | undefined;
+    setActiveDrag({ kind: d?.kind ?? "unknown", orderId: d?.orderId });
+  }
+
   function handleDragEnd(e: DragEndEvent) {
+    setActiveDrag(null);
     const a = e.active.data.current as
       | { kind?: string; orderId?: string; orderState?: string; currentMechanicId?: string;
           scheduledStartAt?: string; scheduledEndAt?: string; edge?: "start" | "end" }
@@ -221,7 +229,7 @@ export function DispatchPage() {
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex-1 min-h-0 flex flex-col">
       <header className="bg-[var(--color-surface-panel)] border-b border-[var(--color-hairline)] flex flex-wrap items-center justify-between gap-3 px-4 py-2 shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
@@ -379,7 +387,29 @@ export function DispatchPage() {
         </SheetContent>
       </Sheet>
     </div>
-    <DragOverlay>{null}</DragOverlay>
+    <DragOverlay>
+      {activeDrag?.kind === "pool" && (() => {
+        const o = ordersQ.data?.find((x) => x.id === activeDrag.orderId);
+        if (!o) return null;
+        return (
+          <div className="bg-[var(--color-surface-container)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-2 shadow-md text-sm">
+            {o.title ?? o.vmrsCode}
+          </div>
+        );
+      })()}
+      {activeDrag?.kind === "event" && (() => {
+        const o = ordersQ.data?.find((x) => x.id === activeDrag.orderId);
+        if (!o) return null;
+        return (
+          <div className={cn("rounded-[var(--radius-sm)] border px-2 py-1 shadow-md text-xs", `state-${o.state}`)}>
+            {o.title ?? o.vmrsCode}
+          </div>
+        );
+      })()}
+      {activeDrag?.kind === "resize" && (
+        <div className="w-1.5 h-7 bg-[var(--color-brand-strong)] rounded" />
+      )}
+    </DragOverlay>
     </DndContext>
   );
 }
