@@ -127,7 +127,13 @@
     "filterRequested": "Richiesti",
     "filterDispatched": "Assegnati",
     "filterInProgress": "In corso",
-    "filterCompleted": "Completati"
+    "filterCompleted": "Completati",
+    "selectOrCreate": "Scegli o crea un nuovo ordine",
+    "form": {
+      "estimation": "Stima",
+      "estimationHint": "es. 1d, 2h30m, 90m",
+      "assignNow": "Opzionale: assegna ora"
+    }
   },
   "mechanics": {
     "pageTitle": "Meccanici ({{count}})",
