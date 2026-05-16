@@ -87,17 +87,30 @@ S2=$(upsert_site "$C2" "Cantiere Bergamo Ovest" '{
 }')
 echo "sites: $S1, $S2"
 
+# Portable date helper: macOS (date -v) falls back to GNU (date -d)
+future_iso() {
+  # $1 = day offset (e.g. +1d), $2 = time string (e.g. 08:00:00)
+  local offset="$1" time="$2"
+  date -u -v"$offset" "+%Y-%m-%dT${time}Z" 2>/dev/null \
+    || date -u -d "$offset" "+%Y-%m-%dT${time}Z"
+}
+
 # --- Service orders -----------------------------------------------------
-# 1. Completed hydraulic job assigned to Marco
+# 1. Completed hydraulic job (Marco Rossi → SCHEDULED → IN_PROGRESS → COMPLETED)
 SO1=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
   \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"siteId\":\"$S1\",\"vmrsCode\":\"042001010\",
   \"notes\":\"Demo hydraulic\"
 }" | jq -r .id)
-curl -sf -X POST "$API/service-orders/$SO1/quote"    > /dev/null
-curl -sf -X POST "$API/service-orders/$SO1/approve"  > /dev/null
-curl -sf -X POST "$API/service-orders/$SO1/dispatch" -H 'content-type: application/json' -d "{\"mechanicId\":\"$M1\"}" > /dev/null
-curl -sf -X POST "$API/service-orders/$SO1/start"    > /dev/null
-curl -sf -X POST "$API/service-orders/$SO1/complete" -H 'content-type: application/json' -d '{"actualMinutes":135}' > /dev/null
+curl -sf -X POST "$API/service-orders/$SO1/quote"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO1/approve" > /dev/null
+S1_START=$(future_iso "+1d" "07:00:00")
+S1_END=$(future_iso   "+1d" "09:15:00")
+curl -sf -X POST "$API/service-orders/$SO1/schedule" \
+  -H 'content-type: application/json' \
+  -d "{\"mechanicId\":\"$M1\",\"scheduledStartAt\":\"$S1_START\",\"scheduledEndAt\":\"$S1_END\"}" > /dev/null
+curl -sf -X POST "$API/service-orders/$SO1/start"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO1/complete" \
+  -H 'content-type: application/json' -d '{"actualMinutes":135}' > /dev/null
 echo "service-order (COMPLETED): $SO1"
 
 # 2. Pending alternator job (left at QUOTED so the UI shows action buttons)
@@ -108,7 +121,7 @@ SO2=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json'
 curl -sf -X POST "$API/service-orders/$SO2/quote" > /dev/null
 echo "service-order (QUOTED):    $SO2"
 
-# 3. Approved track job, ready to dispatch
+# 3. Approved track job, ready to schedule
 SO3=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
   \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"siteId\":\"$S1\",\"vmrsCode\":\"033004001\",
   \"notes\":\"Demo track tension\"
@@ -116,6 +129,55 @@ SO3=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json'
 curl -sf -X POST "$API/service-orders/$SO3/quote"   > /dev/null
 curl -sf -X POST "$API/service-orders/$SO3/approve" > /dev/null
 echo "service-order (APPROVED):  $SO3"
+
+# 4. Scheduled engine check — Marco, tomorrow morning
+SO4=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
+  \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"siteId\":\"$S1\",\"vmrsCode\":\"013001001\",
+  \"notes\":\"Scheduled engine check\"
+}" | jq -r .id)
+curl -sf -X POST "$API/service-orders/$SO4/quote"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO4/approve" > /dev/null
+S4_START=$(future_iso "+1d" "08:00:00")
+S4_END=$(future_iso   "+1d" "10:00:00")
+curl -sf -X POST "$API/service-orders/$SO4/schedule" \
+  -H 'content-type: application/json' \
+  -d "{\"mechanicId\":\"$M1\",\"scheduledStartAt\":\"$S4_START\",\"scheduledEndAt\":\"$S4_END\"}" > /dev/null
+echo "service-order (SCHEDULED): $SO4"
+
+# 5. Scheduled electrical fault — Luca, tomorrow midday
+SO5=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
+  \"vehicleId\":\"$V2\",\"clientId\":\"$C2\",\"siteId\":\"$S2\",\"vmrsCode\":\"060001003\",
+  \"notes\":\"Electrical fault inspection\"
+}" | jq -r .id)
+curl -sf -X POST "$API/service-orders/$SO5/quote"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO5/approve" > /dev/null
+S5_START=$(future_iso "+1d" "11:00:00")
+S5_END=$(future_iso   "+1d" "13:00:00")
+curl -sf -X POST "$API/service-orders/$SO5/schedule" \
+  -H 'content-type: application/json' \
+  -d "{\"mechanicId\":\"$M2\",\"scheduledStartAt\":\"$S5_START\",\"scheduledEndAt\":\"$S5_END\"}" > /dev/null
+echo "service-order (SCHEDULED): $SO5"
+
+# 6. Scheduled undercarriage — Luca, day after tomorrow
+SO6=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
+  \"vehicleId\":\"$V1\",\"clientId\":\"$C1\",\"siteId\":\"$S1\",\"vmrsCode\":\"033004001\",
+  \"notes\":\"Undercarriage overhaul\"
+}" | jq -r .id)
+curl -sf -X POST "$API/service-orders/$SO6/quote"   > /dev/null
+curl -sf -X POST "$API/service-orders/$SO6/approve" > /dev/null
+S6_START=$(future_iso "+2d" "08:00:00")
+S6_END=$(future_iso   "+2d" "12:00:00")
+curl -sf -X POST "$API/service-orders/$SO6/schedule" \
+  -H 'content-type: application/json' \
+  -d "{\"mechanicId\":\"$M2\",\"scheduledStartAt\":\"$S6_START\",\"scheduledEndAt\":\"$S6_END\"}" > /dev/null
+echo "service-order (SCHEDULED): $SO6"
+
+# 7. Requested-only braking system report (no quote yet — appears as REQUESTED)
+SO7=$(curl -sf -X POST "$API/service-orders" -H 'content-type: application/json' -d "{
+  \"vehicleId\":\"$V2\",\"clientId\":\"$C2\",\"siteId\":\"$S2\",\"vmrsCode\":\"013001001\",
+  \"notes\":\"Braking system noise complaint\"
+}" | jq -r .id)
+echo "service-order (REQUESTED): $SO7"
 
 echo ""
 echo "==> seed complete. Open http://localhost:5173/"
