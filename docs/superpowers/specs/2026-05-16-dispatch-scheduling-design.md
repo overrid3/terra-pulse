@@ -52,6 +52,10 @@ REQUESTED ──► QUOTED ──► APPROVED ──► SCHEDULED ──► IN_P
 Schema (`backend/src/main/resources/db/migration/V<n>__service_order_scheduling.sql`):
 
 ```sql
+-- state is VARCHAR(16) with app-level validation (per V2 convention), so no enum surgery.
+-- Migrate any in-flight DISPATCHED rows to SCHEDULED before the app's enum drops the value.
+UPDATE service_order SET state = 'SCHEDULED' WHERE state = 'DISPATCHED';
+
 ALTER TABLE service_order
   ADD COLUMN scheduled_start_at TIMESTAMPTZ,
   ADD COLUMN scheduled_end_at   TIMESTAMPTZ,
@@ -59,16 +63,6 @@ ALTER TABLE service_order
     scheduled_end_at IS NULL OR scheduled_start_at IS NULL
     OR scheduled_end_at > scheduled_start_at
   );
-
--- enum surgery: drop DISPATCHED, add SCHEDULED. Seed-only DB, recreate enum is fine.
-ALTER TYPE service_order_state RENAME TO service_order_state_old;
-CREATE TYPE service_order_state AS ENUM (
-  'REQUESTED','QUOTED','APPROVED','SCHEDULED','IN_PROGRESS','COMPLETED','CANCELLED'
-);
-ALTER TABLE service_order
-  ALTER COLUMN state TYPE service_order_state
-  USING state::text::service_order_state;
-DROP TYPE service_order_state_old;
 ```
 
 `estimated_minutes` column is unchanged. **Resize edits `scheduled_end_at` only**, never `estimated_minutes`. `estimated_minutes` stays as the planning reference (initial value from VMRS, optionally overridden at create).
@@ -379,7 +373,7 @@ Optimistic UI: drag-end mutates the local query cache via `setQueryData`, then r
 
 ## Risks
 
-- **Postgres enum surgery** in Flyway (drop `DISPATCHED`, add `SCHEDULED`): the migration uses `RENAME TYPE` + recreate + `USING` cast. Seed-only DB makes this acceptable; flagged in the migration header.
+- **State stored as VARCHAR(16)**: no Postgres enum surgery needed. App-level enum (`ServiceOrderState`) is the only source of truth; the migration just backfills any `DISPATCHED` rows to `SCHEDULED` before the enum value is removed in Java.
 - **Resize-handle click vs chip-drag activation:** dnd-kit `activationConstraint.distance` tuned per drag kind (2 px for resize, 4 px for chip-move). Smoke-test required on macOS/Safari.
 - **`findConflicts` cost** is O(n²) per row per render. n is small (orders per mechanic per visible window); memoize per row.
 
