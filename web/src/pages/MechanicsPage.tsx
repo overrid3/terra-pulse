@@ -156,7 +156,7 @@ export function MechanicsPage() {
   const assignmentById = useMemo(() => {
     const map = new Map<string, { code: string }>();
     (ordersQ.data ?? [])
-      .filter((o) => o.mechanicId && (o.state === "DISPATCHED" || o.state === "IN_PROGRESS"))
+      .filter((o) => o.mechanicId && (o.state === "SCHEDULED" || o.state === "IN_PROGRESS"))
       .forEach((o) => map.set(o.mechanicId!, { code: o.vmrsCode }));
     return map;
   }, [ordersQ.data]);

@@ -38,7 +38,7 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
   const canQuote    = order.state === "REQUESTED";
   const canApprove  = order.state === "QUOTED";
   const canDispatch = order.state === "APPROVED";
-  const canStart    = order.state === "DISPATCHED";
+  const canStart    = order.state === "SCHEDULED";
   const canComplete = order.state === "IN_PROGRESS";
   const canCancel   = !["COMPLETED", "CANCELLED"].includes(order.state);
 

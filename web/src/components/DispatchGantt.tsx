@@ -1,4 +1,4 @@
-import { useMemo, KeyboardEvent } from "react";
+import { useMemo, useRef, KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
@@ -15,6 +15,10 @@ const BASE_ROW_MIN_HEIGHT_PX = 72;
 
 export type GanttView = "day" | "week" | "month";
 
+export function dayBoundary(d: Date): [Date, Date]   { const s = startOfDay(d); return [s, addDays(s, 1)]; }
+export function weekBoundary(d: Date): [Date, Date]  { const s = startOfWeek(d, { weekStartsOn: 1 }); return [s, addDays(s, 7)]; }
+export function monthBoundary(d: Date): [Date, Date] { const s = startOfDay(startOfMonth(d)); return [s, startOfDay(addDays(endOfMonth(d), 1))]; }
+
 type Props = {
   mechanics: Mechanic[];
   orders: ServiceOrder[];
@@ -22,7 +26,10 @@ type Props = {
   selectedMechanicId: string | null;
   view: GanttView;
   date: Date;
+  winStart: Date;
+  winEnd: Date;
   onSelectOrder: (id: string) => void;
+  registerRow: (mechanicId: string, el: HTMLDivElement | null) => void;
 };
 
 const HOUR_START = 7;
@@ -30,19 +37,10 @@ const HOUR_END = 19;
 const HOURS = HOUR_END - HOUR_START;
 
 function clampPct(n: number) { return Math.max(0, Math.min(100, n)); }
-function dayBoundary(d: Date): [Date, Date]   { const s = startOfDay(d); return [s, addDays(s, 1)]; }
-function weekBoundary(d: Date): [Date, Date]  { const s = startOfWeek(d, { weekStartsOn: 1 }); return [s, addDays(s, 7)]; }
-function monthBoundary(d: Date): [Date, Date] { const s = startOfDay(startOfMonth(d)); return [s, startOfDay(addDays(endOfMonth(d), 1))]; }
 
-export function DispatchGantt({ mechanics, orders, absences, selectedMechanicId, view, date, onSelectOrder }: Props) {
+export function DispatchGantt({ mechanics, orders, absences, selectedMechanicId, view, date, winStart, winEnd, onSelectOrder, registerRow }: Props) {
   const { t } = useTranslation();
   const visibleMechanics = selectedMechanicId ? mechanics.filter((m) => m.id === selectedMechanicId) : mechanics;
-
-  const [winStart, winEnd] = useMemo(() => {
-    if (view === "day")  return dayBoundary(date);
-    if (view === "week") return weekBoundary(date);
-    return monthBoundary(date);
-  }, [view, date]);
 
   const cols = useMemo(() => {
     if (view === "day")  return Array.from({ length: HOURS }, (_, i) => HOUR_START + i);
@@ -67,12 +65,12 @@ export function DispatchGantt({ mechanics, orders, absences, selectedMechanicId,
   }
 
   function ordersForRow(id: string) {
-    return orders.filter((o) => o.mechanicId === id && (o.state === "DISPATCHED" || o.state === "IN_PROGRESS" || o.state === "COMPLETED"));
+    return orders.filter((o) => o.mechanicId === id && (o.state === "SCHEDULED" || o.state === "IN_PROGRESS" || o.state === "COMPLETED"));
   }
   function absencesForRow(id: string) { return absences.filter((a) => a.mechanicId === id); }
 
   function eventBounds(o: ServiceOrder) {
-    const start = new Date(o.startedAt ?? o.dispatchedAt ?? o.requestedAt);
+    const start = new Date(o.startedAt ?? o.scheduledStartAt ?? o.requestedAt);
     const minutes = o.actualMinutes ?? o.estimatedMinutes;
     return { start, end: new Date(start.getTime() + minutes * 60_000) };
   }
@@ -143,7 +141,7 @@ export function DispatchGantt({ mechanics, orders, absences, selectedMechanicId,
             <MechanicRow key={m.id} mechanic={m} initials={initials} minHeight={rowMinHeight} gridTemplate={gridTemplate} minTimelineWidth={minTimelineWidth}
                          absences={rowAbsences} orders={rowOrders} laneByOrder={laneByOrder}
                          eventPosition={eventPosition} chipLabel={chipLabel} chipTitle={chipTitle}
-                         onSelectOrder={onSelectOrder} t={t} cols={cols} />
+                         onSelectOrder={onSelectOrder} t={t} cols={cols} registerRow={registerRow} />
           );
         })}
       </div>
@@ -166,17 +164,25 @@ type RowProps = {
   onSelectOrder: (id: string) => void;
   t: (k: string, opts?: Record<string, unknown>) => string;
   cols: (number | Date)[];
+  registerRow: (mechanicId: string, el: HTMLDivElement | null) => void;
 };
 
 function MechanicRow({
   mechanic, initials, minHeight, gridTemplate, minTimelineWidth,
   absences, orders, laneByOrder, eventPosition, chipLabel, chipTitle,
-  onSelectOrder, t, cols
+  onSelectOrder, t, cols, registerRow
 }: RowProps) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
   const { isOver, setNodeRef, active } = useDroppable({
     id: `row:${mechanic.id}`,
     data: { kind: "row", mechanicId: mechanic.id },
   });
+
+  const composedRef = (el: HTMLDivElement | null) => {
+    setNodeRef(el);
+    rowRef.current = el;
+    registerRow(mechanic.id, el);
+  };
 
   const activeData = active?.data?.current as { kind?: string; orderId?: string; orderState?: string; currentMechanicId?: string } | undefined;
   const validDrop: boolean | null = !active ? null
@@ -197,7 +203,7 @@ function MechanicRow({
         </div>
       </div>
       <div
-        ref={setNodeRef}
+        ref={composedRef}
         role="gridcell"
         aria-label={`${mechanic.fullName} timeline`}
         className={cn(
@@ -224,7 +230,7 @@ function MechanicRow({
           );
         })}
         {orders.map((o) => {
-          const startD = new Date(o.startedAt ?? o.dispatchedAt ?? o.requestedAt);
+          const startD = new Date(o.startedAt ?? o.scheduledStartAt ?? o.requestedAt);
           const mins = o.actualMinutes ?? o.estimatedMinutes;
           const end = new Date(startD.getTime() + mins * 60_000);
           const pos = eventPosition(startD, end);
@@ -257,6 +263,8 @@ function EventChip({
       orderId: order.id,
       orderState: order.state,
       currentMechanicId: order.mechanicId,
+      scheduledStartAt: order.scheduledStartAt,
+      scheduledEndAt: order.scheduledEndAt,
     },
   });
 
