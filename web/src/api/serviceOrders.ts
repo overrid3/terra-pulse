@@ -20,6 +20,18 @@ export type SchedulePatchBody = {
   scheduledEndAt?: string;
 };
 
+export type ServiceOrderPatchBody = {
+  title?: string;
+  vehicleId?: UUID;
+  clientId?: UUID;
+  siteId?: UUID;
+  vmrsCode?: string;
+  notes?: string;
+  scheduledStartAt?: string | null;
+  scheduledEndAt?: string | null;
+  estimatedMinutes?: number;
+};
+
 export const serviceOrdersApi = {
   list:          ()                             => api.get<ServiceOrder[]>("/service-orders"),
   listByVehicle: (vehicleId: UUID)              => api.get<ServiceOrder[]>(`/service-orders?vehicleId=${vehicleId}`),
@@ -44,5 +56,6 @@ export const serviceOrdersApi = {
                    scheduledEndAt?: string;
                  }) => api.post<ServiceOrder>(`/service-orders/${id}/override-state`, body),
   renameTitle:   (id: UUID, title: string)      => api.patch<ServiceOrder>(`/service-orders/${id}/title`, { title }),
+  patch:         (id: UUID, body: ServiceOrderPatchBody) => api.patch<ServiceOrder>(`/service-orders/${id}`, body),
   parseEstimation: (input: string)              => api.post<{ minutes: number }>("/estimation/parse", { input }),
 };

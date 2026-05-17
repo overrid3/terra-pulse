@@ -1,6 +1,6 @@
 import { ReactNode, useCallback, useMemo } from "react";
 import { toast as sonnerToast } from "sonner";
-import { ApiError } from "../api/client";
+import { ApiError } from "@/api/client";
 import { Toaster } from "./ui/sonner";
 
 export type ToastKind = "info" | "success" | "warning" | "error";
@@ -22,7 +22,7 @@ type ToastCtx = {
 
 function pushImpl(t: ToastInput): string | number {
   const kind = t.kind ?? "info";
-  const duration = t.durationMs === undefined ? (kind === "error" ? 8000 : 5000) : t.durationMs ?? Infinity;
+  const duration = resolveDuration(t.durationMs, kind);
   const opts = {
     description: t.title ? t.message : undefined,
     duration,
@@ -55,6 +55,13 @@ function errorImpl(e: unknown, opts?: { title?: string; action?: ToastAction }):
   pushImpl({ kind: "error", title, message, action: opts?.action });
 }
 
+function resolveDuration(durationMs: ToastInput["durationMs"], kind: ToastKind): number {
+  if (durationMs === undefined) {
+    return kind === "error" ? 8000 : 5000;
+  }
+  return durationMs ?? Infinity;
+}
+
 export function useToast(): ToastCtx {
   const push = useCallback(pushImpl, []);
   const error = useCallback(errorImpl, []);
@@ -67,11 +74,11 @@ export function useToast(): ToastCtx {
   return useMemo(() => ({ push, error, success, dismiss }), [push, error, success, dismiss]);
 }
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <>
       {children}
-      <Toaster richColors closeButton position="top-right" />
+      <Toaster richColors closeButton position="bottom-right" />
     </>
   );
 }

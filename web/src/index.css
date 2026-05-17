@@ -324,5 +324,7 @@
 /* ============================================================
    Body class used by JS during column resize
    ============================================================ */
+body.split-resizing,
 body.clients-resizing { cursor: col-resize !important; user-select: none; }
+body.split-resizing *,
 body.clients-resizing * { cursor: col-resize !important; }

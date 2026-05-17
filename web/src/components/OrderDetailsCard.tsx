@@ -5,6 +5,8 @@ import { Pencil } from "lucide-react";
 import { ServiceOrder } from "../types";
 import { fmtDateTime } from "../i18n/format";
 import { formatDuration } from "../lib/duration";
+import { ServiceOrderPatchBody } from "../api/serviceOrders";
+import { OrderEditForm } from "./OrderEditForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +18,8 @@ type Props = {
   showNotes?: boolean;
   actions?: ReactNode;
   overrideSlot?: ReactNode;
+  onPatch?: (body: ServiceOrderPatchBody) => void;
+  patching?: boolean;
 };
 
 export function OrderDetailsCard({
@@ -25,10 +29,13 @@ export function OrderDetailsCard({
   showNotes = false,
   actions,
   overrideSlot,
+  onPatch,
+  patching,
 }: Props) {
   const { t } = useTranslation();
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const [titleErr, setTitleErr] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const editingTitle = titleDraft !== null;
 
   function commitTitle() {
@@ -119,10 +126,14 @@ export function OrderDetailsCard({
 
         <dt className="text-[var(--color-text-muted)]">{t("orders.fieldSite")}</dt>
         <dd className="m-0">
-          {order.siteName ? <span>{order.siteName} · </span> : null}
-          <span className="font-mono text-[var(--color-text-muted)]">
-            {order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}
-          </span>
+          {order.siteName ? <span>{order.siteName}</span> : null}
+          {order.siteLocation && (
+            <span className="font-mono text-[var(--color-text-muted)]">
+              {order.siteName ? " · " : null}
+              {order.siteLocation.lat.toFixed(4)}, {order.siteLocation.lng.toFixed(4)}
+            </span>
+          )}
+          {!order.siteName && !order.siteLocation && <span>{t("common.dash")}</span>}
         </dd>
 
         <dt className="text-[var(--color-text-muted)]">{t("orders.fieldEstimated")}</dt>
@@ -192,6 +203,26 @@ export function OrderDetailsCard({
           </>
         )}
       </dl>
+
+      {onPatch && !editing && (
+        <div>
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <Pencil className="h-4 w-4 mr-1" />
+            {t("orders.actionEdit", { defaultValue: "Edit details" })}
+          </Button>
+        </div>
+      )}
+      {onPatch && editing && (
+        <OrderEditForm
+          order={order}
+          submitting={patching}
+          onCancel={() => setEditing(false)}
+          onSubmit={(body) => {
+            onPatch(body);
+            setEditing(false);
+          }}
+        />
+      )}
 
       {actions && <div className="flex flex-col gap-1.5">{actions}</div>}
       {overrideSlot}

@@ -9,7 +9,8 @@ import { mechanicsApi } from "../api/mechanics";
 import { serviceOrdersApi, CreateOrderBody } from "../api/serviceOrders";
 import { absencesApi } from "../api/absences";
 import { queryKeys } from "../api/client";
-import { DispatchGantt, GanttView, dayBoundary, weekBoundary, monthBoundary } from "./DispatchGantt";
+import { Gantt, dayBoundary, weekBoundary, monthBoundary } from "@/components/ui/gantt";
+import type { GanttView } from "@/components/ui/gantt";
 import { ServiceOrderDrawer } from "./ServiceOrderDrawer";
 import { AbsencesPanel } from "./AbsencesPanel";
 import { SearchInput } from "./SearchInput";
@@ -307,7 +308,7 @@ export function DispatchPage() {
 
       <main className="flex-1 min-h-0 min-w-0 p-3 grid gap-3 grid-cols-[minmax(0,1fr)_320px]">
         <section className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 min-w-0 overflow-hidden">
-          <DispatchGantt
+          <Gantt
             mechanics={mechanicsQ.data ?? []}
             orders={filteredOrders}
             absences={absencesQ.data ?? []}
@@ -469,7 +470,7 @@ function PoolCard({
       <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
         <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
         <span className="truncate">
-          {order.clientName ?? `${order.siteLocation.lat.toFixed(3)}, ${order.siteLocation.lng.toFixed(3)}`}
+          {order.clientName ?? (order.siteLocation ? `${order.siteLocation.lat.toFixed(3)}, ${order.siteLocation.lng.toFixed(3)}` : (order.siteName ?? "—"))}
         </span>
       </div>
     </li>

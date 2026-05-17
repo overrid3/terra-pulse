@@ -1,11 +1,11 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { skillsApi } from "../api/skills";
-import { queryKeys } from "../api/client";
-import { Skill } from "../types";
-import { fmtDateTime } from "../i18n/format";
-import { SearchInput } from "../components/SearchInput";
+import { skillsApi } from "@/api/skills";
+import { queryKeys } from "@/api/client";
+import { Skill } from "@/types";
+import { fmtDateTime } from "@/i18n/format";
+import { SearchInput } from "@/components/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +18,18 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { useIsMobile, useResizableSplit } from "@/hooks/useResizableSplit";
+import { ResizableSplitHandle } from "@/components/ResizableSplitHandle";
 
 export function SkillsPage() {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableSplit({
+    storageKey: "tp.skills.listWidth",
+    defaultWidth: 480,
+    minWidth: 720,
+    maxWidth: 1024,
+  });
   const qc = useQuery({ queryKey: queryKeys.skills, queryFn: skillsApi.list });
   const [editing, setEditing] = useState<Skill | null>(null);
   const [name, setName] = useState("");
@@ -66,8 +75,12 @@ export function SkillsPage() {
   }
 
   return (
-    <main className="flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]">
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
+    <main className="flex-1 min-h-0 p-3.5 flex flex-row gap-0">
+      <section
+        ref={listPanelRef}
+        style={{ width: isMobile ? undefined : listInitialWidth }}
+        className="md:shrink-0 md:min-w-180 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0"
+      >
         <div className="flex items-center justify-between gap-3 mb-2.5 flex-wrap">
           <h2 className="m-0">{t("skills.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
           <SearchInput
@@ -77,7 +90,7 @@ export function SkillsPage() {
             className="w-full sm:w-64"
           />
         </div>
-        <p className="text-[var(--color-text-muted)]">{t("skills.help")}</p>
+        <p className="text-(--color-text-muted)">{t("skills.help")}</p>
         <Table>
           <TableHeader>
             <TableRow>
@@ -92,10 +105,10 @@ export function SkillsPage() {
               return (
                 <TableRow
                   key={s.id}
-                  className={cn(isSelected && "bg-[var(--color-brand-soft)]")}
+                  className={cn(isSelected && "bg-brand-soft")}
                 >
                   <TableCell>{s.name}</TableCell>
-                  <TableCell className="text-[var(--color-text-muted)]">
+                  <TableCell className="text-(--color-text-muted)">
                     {s.createdAt ? fmtDateTime(s.createdAt) : t("common.dash")}
                   </TableCell>
                   <TableCell>
@@ -117,7 +130,7 @@ export function SkillsPage() {
             })}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="text-[var(--color-text-muted)]">
+                <TableCell colSpan={3} className="text-(--color-text-muted)">
                   {t("skills.noSkills")}
                 </TableCell>
               </TableRow>
@@ -126,7 +139,9 @@ export function SkillsPage() {
         </Table>
       </section>
 
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
+      {!isMobile && <ResizableSplitHandle onStart={startDrag} />}
+
+      <section className="flex-1 min-w-0 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0">
         <h2>{editing ? t("skills.renameSkill", { name: editing.name }) : t("skills.newSkill")}</h2>
         <form onSubmit={submit} className="flex flex-col gap-2.5">
           <div className="flex flex-col gap-1">
@@ -140,7 +155,7 @@ export function SkillsPage() {
               placeholder={t("skills.namePlaceholder")}
             />
           </div>
-          {error && <p className="text-[var(--color-danger)]">{error}</p>}
+          {error && <p className="text-(--color-danger)">{error}</p>}
           <div className="flex gap-2 mt-1.5">
             <Button type="submit" variant="default" disabled={createMut.isPending || renameMut.isPending}>
               {editing ? t("common.save") : t("common.create")}

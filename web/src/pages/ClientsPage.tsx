@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {FormEvent, useMemo, useState} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
@@ -10,22 +10,24 @@ import {
   ToggleLeft,
   ToggleRight,
 } from "lucide-react";
-import { clientsApi } from "../api/clients";
-import { sitesApi } from "../api/sites";
-import { queryKeys } from "../api/client";
+import {clientsApi} from "@/api/clients";
+import {sitesApi} from "@/api/sites";
+import {queryKeys} from "@/api/client";
 import {
   ClientState, ClientSummary, ClientUpsert,
   Site, SiteUpsert, UUID
-} from "../types";
-import { useToast } from "../components/Toast";
-import { AddressLookup } from "../components/AddressLookup";
-import { SiteMap } from "../components/SiteMap";
+} from "@/types";
+import {useToast} from "@/components/Toast";
+import {AddressLookup} from "@/components/AddressLookup";
+import {SiteMap} from "@/components/SiteMap";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {useIsMobile, useResizableSplit} from "@/hooks/useResizableSplit";
+import {ResizableSplitHandle} from "@/components/ResizableSplitHandle";
 
 type Filter = "ALL" | "ACTIVE" | "INACTIVE";
 
@@ -43,11 +45,6 @@ const EMPTY_CLIENT: ClientUpsert = {
 
 const EMPTY_SITE: SiteUpsert = { name: "", lat: null, lng: null, locationLabel: null };
 
-const LIST_WIDTH_KEY = "tp.clients.listWidth";
-const DEFAULT_LIST_WIDTH = 320;
-const MIN_LIST_WIDTH = 240;
-const MAX_LIST_WIDTH = 560;
-
 function clientDot(c: ClientSummary): string {
   if (c.state === "INACTIVE")  return "dot-inactive";
   if (c.openOrderCount > 0)    return "dot-has-orders";
@@ -61,66 +58,17 @@ function siteDot(s: Site): string {
   return "dot-inactive";
 }
 
-function useIsMobile(breakpoint = 768) {
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia(`(max-width: ${breakpoint}px)`).matches
-  );
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
-    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, [breakpoint]);
-  return isMobile;
-}
-
-function useResizableListWidth() {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const initialWidth = useRef<number | null>(null);
-  if (initialWidth.current === null) {
-    const raw = localStorage.getItem(LIST_WIDTH_KEY);
-    const n = raw ? Number(raw) : NaN;
-    initialWidth.current = Number.isFinite(n) && n >= MIN_LIST_WIDTH && n <= MAX_LIST_WIDTH ? n : DEFAULT_LIST_WIDTH;
-  }
-
-  const startDrag = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    document.body.classList.add("clients-resizing");
-
-    const startX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const startWidth = panelRef.current?.offsetWidth ?? initialWidth.current!;
-
-    const onMove = (ev: MouseEvent | TouchEvent) => {
-      const clientX = "touches" in ev ? ev.touches[0]?.clientX : (ev as MouseEvent).clientX;
-      if (clientX == null) return;
-      const next = Math.max(MIN_LIST_WIDTH, Math.min(MAX_LIST_WIDTH, startWidth + (clientX - startX)));
-      if (panelRef.current) panelRef.current.style.width = `${next}px`;
-    };
-    const onUp = () => {
-      document.body.classList.remove("clients-resizing");
-      const raw = panelRef.current?.style.width;
-      const parsed = raw ? parseFloat(raw) : NaN;
-      if (Number.isFinite(parsed)) localStorage.setItem(LIST_WIDTH_KEY, String(parsed));
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    window.addEventListener("touchmove", onMove, { passive: false });
-    window.addEventListener("touchend", onUp);
-  }, []);
-
-  return { panelRef, initialWidth: initialWidth.current!, startDrag };
-}
-
 export function ClientsPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const toast = useToast();
   const isMobile = useIsMobile();
-  const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableListWidth();
+  const {panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag} = useResizableSplit({
+    storageKey: "tp.clients.listWidth",
+    defaultWidth: 400,
+    minWidth: 400,
+    maxWidth: 560,
+  });
 
   const clientsQ = useQuery({ queryKey: queryKeys.clients, queryFn: clientsApi.list });
 
@@ -129,10 +77,9 @@ export function ClientsPage() {
   const [filter, setFilter] = useState<Filter>("ALL");
 
   const detailClientId =
-    panelMode.type === "detail" ? panelMode.clientId
-    : panelMode.type === "siteForm" ? panelMode.clientId
-    : panelMode.type === "siteDetail" ? panelMode.clientId
-    : null;
+      panelMode.type === "detail" || panelMode.type === "siteForm" || panelMode.type === "siteDetail"
+          ? panelMode.clientId
+          : null;
 
   const sitesQ = useQuery({
     queryKey: queryKeys.sites(detailClientId ?? ""),
@@ -244,8 +191,8 @@ export function ClientsPage() {
       {/* Left: client list */}
       <div
         className={cn(
-          "flex flex-col gap-2 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-hidden",
-          "md:min-w-[240px] md:max-w-[560px] md:shrink-0",
+          "flex flex-col gap-2 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-hidden",
+          "md:min-w-60 md:max-w-140 md:shrink-0",
           "w-full",
           mobileDetail && "hidden md:flex"
         )}
@@ -268,7 +215,7 @@ export function ClientsPage() {
           placeholder={t("common.find") + "…"}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-[var(--color-surface-sunken)]"
+          className="w-full bg-(--color-surface-sunken)"
         />
         <ToggleGroup
           type="single"
@@ -298,23 +245,23 @@ export function ClientsPage() {
                 onClick={() => setPanelMode({ type: "detail", clientId: c.id })}
               >
                 <div className="flex justify-between items-center mb-1.5">
-                  <span className="font-semibold text-[var(--text-base)] text-[var(--color-text)]">{c.name}</span>
+                  <span className="font-semibold text-(--text-base)">{c.name}</span>
                   <span className={`status-dot ${clientDot(c)}`} />
                 </div>
                 <div className="grid grid-cols-2 gap-1">
                   <div>
-                    <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+                    <div className="text-[10px] font-medium text-(--color-text-subtle) uppercase tracking-[0.04em]">
                       {t("sites.activeSites")}
                     </div>
-                    <div className="font-mono text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                    <div className="font-mono text-(--text-sm) font-medium">
                       {c.siteCount}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+                    <div className="text-[10px] font-medium text-(--color-text-subtle) uppercase tracking-[0.04em]">
                       {t("sites.openOrders")}
                     </div>
-                    <div className="font-mono text-[var(--text-sm)] font-medium text-[var(--color-text)]">
+                    <div className="font-mono font-medium text-(--color-text)">
                       {c.openOrderCount}
                     </div>
                   </div>
@@ -323,7 +270,7 @@ export function ClientsPage() {
             );
           })}
           {clients.length === 0 && (
-            <p className="text-[var(--text-sm)] text-[var(--color-text-muted)] py-2">
+            <p className="text-(--color-text-muted) py-2">
               {clientsQ.data?.length === 0 ? t("clients.noClients") : t("errors.noMatches")}
             </p>
           )}
@@ -331,28 +278,17 @@ export function ClientsPage() {
       </div>
 
       {/* Drag handle (desktop only) */}
-      {!isMobile && (
-        <div
-          className="clients-split-handle group hidden md:flex shrink-0 w-3 cursor-col-resize items-center justify-center relative touch-none select-none"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize"
-          onMouseDown={startDrag}
-          onTouchStart={startDrag}
-        >
-          <div className="w-0.5 h-9 bg-[var(--color-hairline)] rounded-sm transition-colors group-hover:bg-[var(--color-brand)]" />
-        </div>
-      )}
+      {!isMobile && <ResizableSplitHandle onStart={startDrag}/>}
 
       {/* Right: detail / form panel */}
       <div
         className={cn(
-          "flex-1 min-w-0 flex flex-col bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] overflow-hidden",
+          "flex-1 min-w-0 flex flex-col bg-(--color-surface-panel) border border-(--color-hairline) rounded-md overflow-hidden",
           !mobileDetail && isMobile && "hidden md:flex"
         )}
       >
         {panelMode.type === "empty" && (
-          <div className="flex-1 flex flex-col items-center justify-center text-[var(--color-text-muted)] gap-2">
+          <div className="flex-1 flex flex-col items-center justify-center text-(--color-text-muted) gap-2">
             <Users className="w-12 h-12 opacity-40" />
             <span>{t("clients.selectClient")}</span>
           </div>
@@ -447,7 +383,7 @@ export function ClientsPage() {
   );
 }
 
-function MobileBack({ onClick, label }: { onClick: () => void; label: string }) {
+function MobileBack({ onClick, label }: Readonly<{ onClick: () => void; label: string }>) {
   return (
     <Button
       variant="ghost"
@@ -455,7 +391,7 @@ function MobileBack({ onClick, label }: { onClick: () => void; label: string }) 
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="md:hidden inline-flex items-center gap-1 text-[var(--color-text-muted)]"
+      className="md:hidden inline-flex items-center gap-1 text-(--color-text-muted)"
     >
       <ArrowLeft className="w-5 h-5" />
       <span>{label}</span>
@@ -467,7 +403,7 @@ function ClientDetailView({
   client, sites, sitesLoading, isMobile,
   onBack, onEdit, onDelete, onToggleState, togglingState,
   onAddSite, onViewSite, onEditSite, onDeleteSite
-}: {
+}: Readonly<{
   client: ClientSummary;
   sites: Site[] | undefined;
   sitesLoading: boolean;
@@ -481,33 +417,33 @@ function ClientDetailView({
   onViewSite: (siteId: UUID) => void;
   onEditSite: (site: Site) => void;
   onDeleteSite: (site: Site) => void;
-}) {
+}>) {
   const { t } = useTranslation();
   const isActive = client.state === "ACTIVE";
   return (
     <>
-      <div className="p-3.5 px-4 bg-[var(--color-surface-sunken)] border-b border-[var(--color-hairline)] flex justify-between items-start shrink-0">
+      <div className="p-3.5 px-4 bg-(--color-surface-sunken) border-b border-(--color-hairline) flex justify-between items-start shrink-0">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             {isMobile && <MobileBack onClick={onBack} label={t("clients.backToList")} />}
-            <h2 className="text-[var(--text-lg)] font-semibold m-0">{client.name}</h2>
+            <h2 className="text-(--text-lg) font-semibold m-0">{client.name}</h2>
             {isActive ? (
               <Badge
                 variant="outline"
-                className="border-[var(--color-brand)] text-[var(--color-brand)] bg-[var(--color-brand-soft)]"
+                className="border-(--color-brand) text-(--color-brand) bg-brand-soft"
               >
                 {t(`clientState.${client.state}`)}
               </Badge>
             ) : (
               <Badge
                 variant="outline"
-                className="border-[var(--color-hairline-strong)] text-[var(--color-text-muted)] bg-[var(--color-surface-sunken)]"
+                className="border-(--color-hairline-strong) text-(--color-text-muted) bg-(--color-surface-sunken)"
               >
                 {t(`clientState.${client.state}`)}
               </Badge>
             )}
           </div>
-          <div className="text-[var(--text-sm)] text-[var(--color-text-muted)]">
+          <div className="text-(--text-sm)">
             {t("clients.columnEmail")}: <span className="font-mono">{client.email}</span>
             {client.phone && <span className="ml-3">{client.phone}</span>}
           </div>
@@ -528,29 +464,29 @@ function ClientDetailView({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="flex justify-between items-center border-b border-[var(--color-hairline)] pb-1.5 mb-3">
-          <h3 className="m-0 text-[var(--text-base)] font-semibold">{t("sites.activeSites")}</h3>
+        <div className="flex justify-between items-center border-b border-(--color-hairline) pb-1.5 mb-3">
+          <h3 className="m-0 text-(--text-base) font-semibold">{t("sites.activeSites")}</h3>
           <Button variant="outline" size="sm" onClick={onAddSite}>
             <Plus className="w-4 h-4" />
             {t("sites.addSite")}
           </Button>
         </div>
         {sitesLoading && (
-          <p className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("common.loading")}</p>
+          <p className="text-(--color-text-muted)">{t("common.loading")}</p>
         )}
-        {sites && sites.length === 0 && (
-          <p className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("sites.noSites")}</p>
+        {sites?.length === 0 && (
+          <p className="text-(--color-text-muted)">{t("sites.noSites")}</p>
         )}
         {sites && sites.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {sites.map((site) => (
               <div
                 key={site.id}
-                className="border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-3 bg-[var(--color-surface-panel)] cursor-pointer"
+                className="border border-(--color-hairline) rounded-(--radius-sm) p-3 bg-(--color-surface-panel) cursor-pointer"
                 onClick={() => onViewSite(site.id)}
               >
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold text-[var(--text-base)]">{site.name}</span>
+                  <span className="font-semibold text-(--text-base)">{site.name}</span>
                   <div
                     className="flex items-center gap-1.5"
                     onClick={(e) => e.stopPropagation()}
@@ -578,24 +514,24 @@ function ClientDetailView({
                 </div>
                 <div className="grid grid-cols-2 gap-1 mb-1.5">
                   <div>
-                    <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+                    <div className="text-[10px] font-medium text-(--color-text-subtle) uppercase tracking-[0.04em]">
                       {t("sites.equipment")}
                     </div>
-                    <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+                    <div className="font-mono text-(--text-sm)">
                       {site.equipmentCount}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+                    <div className="text-[10px] font-medium text-(--color-text-subtle) uppercase tracking-[0.04em]">
                       {t("sites.personnel")}
                     </div>
-                    <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+                    <div className="font-mono text-(--text-sm)">
                       {site.personnelCount}
                     </div>
                   </div>
                 </div>
                 {site.locationLabel && (
-                  <div className="text-[var(--text-xs)] text-[var(--color-text-muted)] mt-1">
+                  <div className="text-(--text-xs) mt-1">
                     {site.locationLabel}
                   </div>
                 )}
@@ -611,7 +547,7 @@ function ClientDetailView({
 function SiteDetailView({
   client, site, loading, isMobile,
   onBackToList, onBackToClient, onEdit, onDelete
-}: {
+}: Readonly<{
   client: ClientSummary;
   site: Site | null;
   loading: boolean;
@@ -620,12 +556,12 @@ function SiteDetailView({
   onBackToClient: () => void;
   onEdit: () => void;
   onDelete: () => void;
-}) {
+}>) {
   const { t } = useTranslation();
   if (loading) {
     return (
       <div className="flex-1 overflow-y-auto p-4">
-        <p className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("common.loading")}</p>
+        <p className="text-(--text-sm)">{t("common.loading")}</p>
       </div>
     );
   }
@@ -636,7 +572,7 @@ function SiteDetailView({
           <ArrowLeft className="w-4 h-4" />
           {client.name}
         </Button>
-        <p className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{t("sites.noSites")}</p>
+        <p className="text-(--text-sm)">{t("sites.noSites")}</p>
       </div>
     );
   }
@@ -644,16 +580,16 @@ function SiteDetailView({
   const hasCoords = site.lat != null && site.lng != null;
   return (
     <>
-      <div className="p-3.5 px-4 bg-[var(--color-surface-sunken)] border-b border-[var(--color-hairline)] flex justify-between items-start shrink-0">
+      <div className="p-3.5 px-4 bg-(--color-surface-sunken) border-b border-(--color-hairline) flex justify-between items-start shrink-0">
         <div className="flex-1 min-w-0">
           {isMobile && <MobileBack onClick={onBackToList} label={t("clients.backToList")} />}
           <Button variant="ghost" size="sm" onClick={onBackToClient} className="mb-1">
             <ArrowLeft className="w-4 h-4" />
             {client.name}
           </Button>
-          <h2 className="text-[var(--text-lg)] font-semibold m-0">{site.name}</h2>
+          <h2 className="text-(--text-lg) font-semibold m-0">{site.name}</h2>
           {site.locationLabel && (
-            <div className="text-[var(--text-sm)] text-[var(--color-text-muted)]">{site.locationLabel}</div>
+            <div className="text-(--color-text-muted)">{site.locationLabel}</div>
           )}
         </div>
         <div className="flex gap-1.5 items-center">
@@ -670,38 +606,38 @@ function SiteDetailView({
       <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-3 gap-1 mb-4">
           <div>
-            <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+            <div className="text-[10px] font-medium text-(--color-text-subtle) uppercase tracking-[0.04em]">
               {t("sites.equipment")}
             </div>
-            <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+            <div className="font-mono text-(--color-text)">
               {site.equipmentCount}
             </div>
           </div>
           <div>
-            <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+            <div className="text-[10px] font-medium text-(--color-text-subtle) uppercase tracking-[0.04em]">
               {t("sites.personnel")}
             </div>
-            <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+            <div className="font-mono text-(--color-text)">
               {site.personnelCount}
             </div>
           </div>
           <div>
-            <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em]">
+            <div className="text-[10px] font-medium text-(--color-text-subtle) uppercase tracking-[0.04em]">
               {t("sites.openOrders")}
             </div>
-            <div className="font-mono text-[var(--text-sm)] text-[var(--color-text)]">
+            <div className="font-mono text-(--color-text)">
               {site.openOrderCount}
             </div>
           </div>
         </div>
 
-        <h3 className="m-0 mb-2 text-[var(--text-base)] font-semibold">{t("sites.mapPreview")}</h3>
+        <h3 className="m-0 mb-2 text-(--text-base) font-semibold">{t("sites.mapPreview")}</h3>
         {hasCoords ? (
-          <div className="mt-3 border border-[var(--color-hairline)] rounded-[var(--radius-sm)] overflow-hidden">
+          <div className="mt-3 border border-(--color-hairline) rounded-(--radius-sm) overflow-hidden">
             <SiteMap lat={site.lat!} lng={site.lng!} label={site.locationLabel ?? site.name} />
           </div>
         ) : (
-          <div className="mt-3 p-6 bg-[var(--color-surface-sunken)] border border-dashed border-[var(--color-hairline)] rounded-[var(--radius-sm)] text-center text-[var(--color-text-muted)] text-[var(--text-sm)]">
+          <div className="mt-3 p-6 bg-(--color-surface-sunken) border border-dashed border-(--color-hairline) rounded-(--radius-sm) text-center text-(--color-text-muted)">
             {t("sites.noLocation")}
           </div>
         )}
@@ -712,13 +648,13 @@ function SiteDetailView({
 
 function ClientFormPanel({
   editing, isMobile, submitting, onCancel, onSubmit
-}: {
+}: Readonly<{
   editing: ClientSummary | null;
   isMobile: boolean;
   submitting: boolean;
   onCancel: () => void;
   onSubmit: (body: ClientUpsert) => void;
-}) {
+}>) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<ClientUpsert>(() => editing ? {
     name: editing.name, email: editing.email, phone: editing.phone ?? "",
@@ -737,10 +673,10 @@ function ClientFormPanel({
 
   return (
     <>
-      <div className="p-3.5 px-4 bg-[var(--color-surface-sunken)] border-b border-[var(--color-hairline)] flex justify-between items-center shrink-0">
+      <div className="p-3.5 px-4 bg-(--color-surface-sunken) border-b border-(--color-hairline) flex justify-between items-center shrink-0">
         <div className="flex items-center gap-1">
           {isMobile && <MobileBack onClick={onCancel} label={t("common.cancel")} />}
-          <h2 className="m-0 text-[var(--text-lg)] font-semibold">
+          <h2 className="m-0 text-(--text-lg) font-semibold">
             {editing ? t("clients.editClient", { name: editing.name }) : t("clients.newClient")}
           </h2>
         </div>
@@ -845,14 +781,14 @@ function ClientFormPanel({
 
 function SiteFormPanel({
   clientId: _clientId, editing, isMobile, submitting, onCancel, onSubmit
-}: {
+}: Readonly<{
   clientId: UUID;
   editing: Site | null;
   isMobile: boolean;
   submitting: boolean;
   onCancel: () => void;
   onSubmit: (body: SiteUpsert) => void;
-}) {
+}>) {
   const { t } = useTranslation();
   const [name, setName] = useState(editing?.name ?? "");
   const [lat, setLat] = useState<number | null>(editing?.lat ?? null);
@@ -868,10 +804,10 @@ function SiteFormPanel({
 
   return (
     <>
-      <div className="p-3.5 px-4 bg-[var(--color-surface-sunken)] border-b border-[var(--color-hairline)] flex justify-between items-center shrink-0">
+      <div className="p-3.5 px-4 bg-(--color-surface-sunken) border-b border-(--color-hairline) flex justify-between items-center shrink-0">
         <div className="flex items-center gap-1">
           {isMobile && <MobileBack onClick={onCancel} label={t("common.cancel")} />}
-          <h2 className="m-0 text-[var(--text-lg)] font-semibold">
+          <h2 className="m-0 text-(--text-lg) font-semibold">
             {editing ? t("sites.editSite") : t("sites.addSite")}
           </h2>
         </div>
@@ -912,15 +848,15 @@ function SiteFormPanel({
           {hasCoords && (
             <div>
               {locationLabel && (
-                <div className="text-[var(--text-xs)] text-[var(--color-text-muted)] mb-1.5">
+                <div className="text-(--text-xs) mb-1.5">
                   {locationLabel}
                 </div>
               )}
-              <div className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-[0.04em] mb-1">
+              <div className="text-[10px] font-medium text-(--color-text-subtle) uppercase tracking-[0.04em] mb-1">
                 {t("sites.mapPreview")}
               </div>
-              <div className="mt-1 border border-[var(--color-hairline)] rounded-[var(--radius-sm)] overflow-hidden">
-                <SiteMap lat={lat!} lng={lng!} label={locationLabel || name} height={200} />
+              <div className="mt-1 border border-(--color-hairline) rounded-(--radius-sm) overflow-hidden">
+                <SiteMap lat={lat} lng={lng} label={locationLabel || name} height={200} />
               </div>
             </div>
           )}

@@ -35,6 +35,8 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { useIsMobile, useResizableSplit } from "@/hooks/useResizableSplit";
+import { ResizableSplitHandle } from "@/components/ResizableSplitHandle";
 
 const STATUSES: MechanicStatus[] = ["IDLE", "EN_ROUTE", "IN_PROGRESS", "OFF_DUTY"];
 
@@ -62,6 +64,13 @@ function matchStatusFilter(s: MechanicStatus, f: StatusFilter) {
 
 export function MechanicsPage() {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
+  const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableSplit({
+    storageKey: "tp.mechanics.listWidth",
+    defaultWidth: 480,
+    minWidth: 320,
+    maxWidth: 720,
+  });
   const qc = useQuery({ queryKey: queryKeys.mechanics, queryFn: mechanicsApi.list });
   const skillsQ = useQuery({ queryKey: queryKeys.skills, queryFn: skillsApi.list });
   const ordersQ = useQuery({ queryKey: queryKeys.serviceOrders, queryFn: serviceOrdersApi.list });
@@ -169,8 +178,12 @@ export function MechanicsPage() {
     "font-mono text-[1.4rem] font-medium leading-none text-[var(--color-text)]";
 
   return (
-    <main className="flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]">
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3">
+    <main className="flex-1 min-h-0 p-3.5 flex flex-row gap-0">
+      <section
+        ref={listPanelRef}
+        style={{ width: !isMobile ? listInitialWidth : undefined }}
+        className="md:shrink-0 md:min-w-[320px] md:max-w-[720px] bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3"
+      >
         <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)] m-0 mb-1">
@@ -348,7 +361,9 @@ export function MechanicsPage() {
         </div>
       </section>
 
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
+      {!isMobile && <ResizableSplitHandle onStart={startDrag} />}
+
+      <section className="flex-1 min-w-0 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
         <h2 className="m-0 mb-3 text-[var(--text-base)] font-semibold">
           {editing ? t("mechanics.editMechanic", { name: editing.fullName }) : t("mechanics.newMechanic")}
         </h2>

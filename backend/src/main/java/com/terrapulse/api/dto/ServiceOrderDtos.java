@@ -96,6 +96,18 @@ public final class ServiceOrderDtos {
 
     public record SimulateMoveRequest(UUID mechanicId, double lat, double lng) {}
 
+    public record ServiceOrderPatchDto(
+            String title,
+            UUID vehicleId,
+            UUID clientId,
+            UUID siteId,
+            String vmrsCode,
+            String notes,
+            Instant scheduledStartAt,
+            Instant scheduledEndAt,
+            Integer estimatedMinutes
+    ) {}
+
     public record OverrideStateRequest(
             ServiceOrderState state,
             String reason,

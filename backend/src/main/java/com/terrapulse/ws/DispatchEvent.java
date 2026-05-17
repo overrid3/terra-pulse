@@ -9,6 +9,7 @@ public record DispatchEvent(String type, Instant occurredAt, Object payload) {
     }
 
     public static final String SERVICE_ORDER_CREATED          = "SERVICE_ORDER_CREATED";
+    public static final String SERVICE_ORDER_UPDATED          = "SERVICE_ORDER_UPDATED";
     public static final String SERVICE_ORDER_STATE_CHANGED    = "SERVICE_ORDER_STATE_CHANGED";
     public static final String SERVICE_ORDER_SCHEDULE_CHANGED = "SERVICE_ORDER_SCHEDULE_CHANGED";
     public static final String MECHANIC_LOCATION_UPDATED      = "MECHANIC_LOCATION_UPDATED";

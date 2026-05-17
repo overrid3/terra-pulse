@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ServiceOrder } from "../types";
-import { serviceOrdersApi } from "../api/serviceOrders";
+import { serviceOrdersApi, ServiceOrderPatchBody } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
 import { DispatchModal } from "./DispatchModal";
 import { OrderDetailsCard } from "./OrderDetailsCard";
@@ -37,6 +37,15 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
     onSuccess: invalidate
   });
   const cancel   = useMutation({ mutationFn: () => serviceOrdersApi.cancel(order.id),   onSuccess: invalidate });
+  const patchMut = useMutation({
+    mutationFn: (body: ServiceOrderPatchBody) => serviceOrdersApi.patch(order.id, body),
+    onSuccess: () => { invalidate(); toast.success(t("orders.savedToast", { defaultValue: "Order updated" })); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const renameMut = useMutation({
+    mutationFn: (title: string) => serviceOrdersApi.renameTitle(order.id, title),
+    onSuccess: invalidate,
+  });
 
   const [actualMin, setActualMin] = useState<number>(order.estimatedMinutes);
 
@@ -77,7 +86,15 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
           <SheetTitle>{order.title ?? t("dispatch.orderHeading")}</SheetTitle>
         </SheetHeader>
         <div className="px-4 pb-4 overflow-auto">
-          <OrderDetailsCard order={order} actions={actions} />
+          <OrderDetailsCard
+            order={order}
+            actions={actions}
+            onPatch={(body) => patchMut.mutate(body)}
+            patching={patchMut.isPending}
+            onRename={(title) => renameMut.mutate(title)}
+            renaming={renameMut.isPending}
+            showNotes
+          />
         </div>
       </SheetContent>
       {showDispatch && (

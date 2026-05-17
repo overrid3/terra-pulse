@@ -22,10 +22,12 @@ type Props = {
 export function DispatchModal({ order, onClose }: Props) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const hasCoords = order.siteLocation != null;
   const { data: nearest, isLoading } = useQuery({
     queryKey: ["nearest", order.id],
     queryFn: () =>
-      mechanicsApi.nearest(order.siteLocation.lat, order.siteLocation.lng, 5)
+      mechanicsApi.nearest(order.siteLocation!.lat, order.siteLocation!.lng, 5),
+    enabled: hasCoords,
   });
 
   const dispatchMut = useMutation({
@@ -53,8 +55,9 @@ export function DispatchModal({ order, onClose }: Props) {
             {t("dispatch.dispatchHeading", { title: order.title ?? order.vmrsCode })}
           </DialogTitle>
           <DialogDescription>
-            {t("dispatch.siteLabel")}: {order.siteLocation.lat.toFixed(4)},{" "}
-            {order.siteLocation.lng.toFixed(4)}
+            {t("dispatch.siteLabel")}: {hasCoords
+              ? `${order.siteLocation!.lat.toFixed(4)}, ${order.siteLocation!.lng.toFixed(4)}`
+              : (order.siteName ?? t("common.dash"))}
           </DialogDescription>
         </DialogHeader>
         {isLoading && <p>{t("dispatch.loadingNearest")}</p>}

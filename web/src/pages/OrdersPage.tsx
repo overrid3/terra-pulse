@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { X, Plus } from "lucide-react";
-import { serviceOrdersApi, CreateOrderBody } from "../api/serviceOrders";
+import { serviceOrdersApi, CreateOrderBody, ServiceOrderPatchBody } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
 import { ServiceOrder, ServiceOrderState, UUID } from "../types";
 import { SearchInput } from "../components/SearchInput";
@@ -19,6 +19,8 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useIsMobile, useResizableSplit } from "@/hooks/useResizableSplit";
+import { ResizableSplitHandle } from "@/components/ResizableSplitHandle";
 
 const CLOSED = new Set<ServiceOrderState>(["COMPLETED", "CANCELLED"]);
 
@@ -41,6 +43,13 @@ export function OrdersPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const ordersQ   = useQuery({ queryKey: queryKeys.serviceOrders, queryFn: serviceOrdersApi.list });
+  const isMobile = useIsMobile();
+  const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableSplit({
+    storageKey: "tp.orders.listWidth",
+    defaultWidth: 480,
+    minWidth: 320,
+    maxWidth: 720,
+  });
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("OPEN");
   const [search, setSearch] = useState("");
@@ -95,10 +104,21 @@ export function OrdersPage() {
       setSelected(updated);
     }
   });
+  const patchMut = useMutation({
+    mutationFn: (args: { id: string; body: ServiceOrderPatchBody }) => serviceOrdersApi.patch(args.id, args.body),
+    onSuccess: (updated) => { invalidate(); setSelected(updated); }
+  });
 
   return (
-    <main className="flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]">
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3">
+    <main className="flex-1 min-h-0 p-3.5 flex flex-row gap-0">
+      <section
+        ref={listPanelRef}
+        style={{ width: !isMobile && selected ? listInitialWidth : undefined }}
+        className={cn(
+          "bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3",
+          selected ? "md:shrink-0 md:min-w-[320px] md:max-w-[720px]" : "flex-1"
+        )}
+      >
         <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)] m-0 mb-1">
@@ -211,8 +231,10 @@ export function OrdersPage() {
         </div>
       </section>
 
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
-        {selected ? (
+      {selected && (
+        <>
+          {!isMobile && <ResizableSplitHandle onStart={startDrag} />}
+          <section className="flex-1 min-w-0 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 md:ml-0">
           <OrderDetail
             order={selected}
             onClose={() => setSelected(null)}
@@ -221,23 +243,18 @@ export function OrdersPage() {
             overriding={overrideMut.isPending}
             onRename={(title) => renameMut.mutate({ id: selected.id, title })}
             renaming={renameMut.isPending}
+            onPatch={(body) => patchMut.mutate({ id: selected.id, body })}
+            patching={patchMut.isPending}
           />
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--color-text-muted)]">
-            <p className="text-sm">{t("orders.selectOrCreate")}</p>
-            <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />
-              {t("orders.newOrder")}
-            </Button>
-          </div>
-        )}
-      </section>
+          </section>
+        </>
+      )}
     </main>
   );
 }
 
 function OrderDetail({
-  order, onClose, onOverride, overriding, onRename, renaming
+  order, onClose, onOverride, overriding, onRename, renaming, onPatch, patching
 }: {
   order: ServiceOrder;
   onClose: () => void;
@@ -245,6 +262,8 @@ function OrderDetail({
   overriding: boolean;
   onRename: (title: string) => void;
   renaming: boolean;
+  onPatch: (body: ServiceOrderPatchBody) => void;
+  patching: boolean;
 }) {
   const { t } = useTranslation();
   const ALL_STATES: ServiceOrderState[] = ["REQUESTED", "QUOTED", "APPROVED", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
@@ -333,6 +352,8 @@ function OrderDetail({
         renaming={renaming}
         showNotes
         overrideSlot={overrideSlot}
+        onPatch={onPatch}
+        patching={patching}
       />
     </div>
   );

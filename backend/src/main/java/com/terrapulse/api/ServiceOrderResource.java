@@ -6,6 +6,7 @@ import com.terrapulse.api.dto.ServiceOrderDtos.PatchScheduleRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.ScheduleRequest;
 import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderCreateDto;
 import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderDto;
+import com.terrapulse.api.dto.ServiceOrderDtos.ServiceOrderPatchDto;
 import com.terrapulse.api.dto.ServiceOrderDtos.TitleUpdateDto;
 import com.terrapulse.domain.client.Client;
 import com.terrapulse.domain.mechanic.Mechanic;
@@ -127,7 +128,7 @@ public class ServiceOrderResource {
         } else if (in.siteLocation() != null) {
             so.siteLocation = geo.point(in.siteLocation().lng(), in.siteLocation().lat());
         } else {
-            throw new IllegalArgumentException("siteLocation required when site has no coordinates");
+            so.siteLocation = null;
         }
         so.notes = in.notes();
 
@@ -389,6 +390,58 @@ public class ServiceOrderResource {
                 com.terrapulse.ws.DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
 
         return ServiceOrderDto.of(so);
+    }
+
+    @PATCH
+    @Path("/{id}")
+    @Transactional
+    public ServiceOrderDto patch(@PathParam("id") UUID id, ServiceOrderPatchDto in) {
+        if (in == null) throw new IllegalArgumentException("body required");
+        ServiceOrder so = load(id);
+        if (in.title() != null) {
+            String t = in.title().trim();
+            if (t.isEmpty()) throw new IllegalArgumentException("title cannot be empty");
+            if (t.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
+            so.title = t;
+        }
+        if (in.vehicleId() != null) {
+            Vehicle v = vehicleRepo.findById(in.vehicleId());
+            if (v == null) throw new IllegalArgumentException("vehicleId not found");
+            so.vehicle = v;
+        }
+        if (in.clientId() != null) {
+            Client c = clientRepo.findById(in.clientId());
+            if (c == null) throw new IllegalArgumentException("clientId not found");
+            so.client = c;
+        }
+        if (in.siteId() != null) {
+            Site s = siteRepo.findById(in.siteId());
+            if (s == null) throw new IllegalArgumentException("siteId not found");
+            so.site = s;
+            so.siteLocation = (s.lat != null && s.lng != null) ? geo.point(s.lng, s.lat) : null;
+        }
+        if (in.vmrsCode() != null) {
+            VmrsCode vc = vmrsRepo.findById(in.vmrsCode());
+            if (vc == null) throw new IllegalArgumentException("vmrsCode not found");
+            so.vmrsCode = vc;
+        }
+        if (in.notes() != null) so.notes = in.notes();
+        if (in.estimatedMinutes() != null) {
+            if (in.estimatedMinutes() <= 0) throw new IllegalArgumentException("estimatedMinutes must be > 0");
+            so.estimatedMinutes = in.estimatedMinutes();
+        }
+        if (in.scheduledStartAt() != null) so.scheduledStartAt = in.scheduledStartAt();
+        if (in.scheduledEndAt() != null)   so.scheduledEndAt   = in.scheduledEndAt();
+        if (so.scheduledStartAt != null && so.scheduledEndAt != null
+                && !so.scheduledEndAt.isAfter(so.scheduledStartAt)) {
+            throw new IllegalArgumentException("scheduledEndAt must be after scheduledStartAt");
+        }
+        ServiceOrderDto dto = ServiceOrderDto.of(so);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", so.id);
+        payload.put("order", dto);
+        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_UPDATED, payload));
+        return dto;
     }
 
     @PATCH

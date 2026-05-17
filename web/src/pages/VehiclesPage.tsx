@@ -2,17 +2,17 @@ import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, Pencil, Trash2, X, Check, History as HistoryIcon, MapPin } from "lucide-react";
-import { vehiclesApi } from "../api/vehicles";
-import { sitesApi } from "../api/sites";
-import { serviceOrdersApi } from "../api/serviceOrders";
-import { queryKeys } from "../api/client";
+import { vehiclesApi } from "@/api/vehicles";
+import { sitesApi } from "@/api/sites";
+import { serviceOrdersApi } from "@/api/serviceOrders";
+import { queryKeys } from "@/api/client";
 import {
   Vehicle, VehicleUpsert,
   VEHICLE_CLASSES, VEHICLE_STATUSES,
   ServiceOrder, SiteRef, UUID
-} from "../types";
-import { fmtDateTime } from "../i18n/format";
-import { SearchInput } from "../components/SearchInput";
+} from "@/types";
+import { fmtDateTime } from "@/i18n/format";
+import { SearchInput } from "@/components/SearchInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useIsMobile, useResizableSplit } from "@/hooks/useResizableSplit";
+import { ResizableSplitHandle } from "@/components/ResizableSplitHandle";
 
 const EMPTY: VehicleUpsert = {
   make: "", model: "", serialNumber: "",
@@ -39,6 +41,13 @@ type PanelMode =
 export function VehiclesPage() {
   const { t } = useTranslation();
   const client = useQueryClient();
+  const isMobile = useIsMobile();
+  const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableSplit({
+    storageKey: "tp.vehicles.listWidth",
+    defaultWidth: 720,
+    minWidth: 500,
+    maxWidth: 1024,
+  });
 
   const vehiclesQ = useQuery({ queryKey: queryKeys.vehicles, queryFn: vehiclesApi.list });
   const sitesQ = useQuery({ queryKey: queryKeys.sitesAll, queryFn: sitesApi.listAll });
@@ -116,14 +125,18 @@ export function VehiclesPage() {
   );
 
   return (
-    <main className="flex-1 min-h-0 p-3.5 grid gap-3.5 grid-cols-[1.6fr_1fr]">
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3">
+    <main className="flex-1 min-h-0 p-3.5 flex flex-row gap-0">
+      <section
+        ref={listPanelRef}
+        style={{ width: isMobile ? undefined : listInitialWidth }}
+        className="md:shrink-0 md:min-w-3/6 md:max-w-5/6 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0 flex flex-col gap-3"
+      >
         <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-[var(--color-text)] m-0 mb-1">
+            <h2 className="text-xl font-semibold tracking-tight text-(--color-text) m-0 mb-1">
               {t("vehicles.pageTitle", { count: vehicles.length })}
             </h2>
-            <p className="text-sm text-[var(--color-text-muted)] m-0">
+            <p className="text-sm text-(--color-text-muted) m-0">
               {t("vehicles.pageSubtitle")}
             </p>
           </div>
@@ -133,7 +146,7 @@ export function VehiclesPage() {
           </Button>
         </header>
 
-        <div className="flex flex-wrap items-center gap-2 p-2 bg-[var(--color-surface-sunken)] border border-[var(--color-hairline)] rounded-[var(--radius-md)]">
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-(--color-surface-sunken) border border-(--color-hairline) rounded-md">
           <ToggleGroup
             type="single"
             value={statusFilter}
@@ -156,9 +169,9 @@ export function VehiclesPage() {
           />
 
           <div className="flex items-center gap-1.5">
-            <span className="text-sm text-[var(--color-text-muted)]">{t("vehicles.typeLabel")}</span>
+            <span className="text-sm text-(--color-text-muted)">{t("vehicles.typeLabel")}</span>
             <Select value={classFilter} onValueChange={setClassFilter}>
-              <SelectTrigger size="sm" className="min-w-[160px]">
+              <SelectTrigger size="sm" className="min-w-40">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -171,26 +184,26 @@ export function VehiclesPage() {
           </div>
         </div>
 
-        <div className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] overflow-x-auto">
+        <div className="border border-(--color-hairline) rounded-md overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-sunken)]">
-                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">
+              <TableRow className="bg-(--color-surface-sunken) hover:bg-(--color-surface-sunken)">
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-(--color-text-muted)">
                   {t("vehicles.columnSerial")}
                 </TableHead>
-                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-(--color-text-muted)">
                   {t("vehicles.columnMakeModel")}
                 </TableHead>
-                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-(--color-text-muted)">
                   {t("vehicles.columnStatus")}
                 </TableHead>
-                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-(--color-text-muted)">
                   {t("vehicles.columnLocation")}
                 </TableHead>
-                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)] text-right">
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-(--color-text-muted) text-right">
                   {t("vehicles.columnHours")}
                 </TableHead>
-                <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)] text-right">
+                <TableHead className="uppercase tracking-wider text-xs font-semibold text-(--color-text-muted) text-right">
                   {t("vehicles.columnNextService")}
                 </TableHead>
                 <TableHead></TableHead>
@@ -204,17 +217,17 @@ export function VehiclesPage() {
                     key={v.id}
                     className={cn(
                       "group",
-                      selectedId === v.id && "bg-[var(--color-brand-soft)] hover:bg-[var(--color-brand-soft)]"
+                      selectedId === v.id && "bg-brand-soft hover:bg-brand-soft"
                     )}
                   >
                     <TableCell>
-                      <span className="font-mono text-xs text-[var(--color-text)] bg-[var(--color-surface-container)] px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] whitespace-nowrap">
+                      <span className="font-mono text-xs text-(--color-text) bg-(--color-surface-container) px-1.5 py-0.5 rounded-(--radius-sm) border border-(--color-hairline) whitespace-nowrap">
                         {v.serialNumber}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium text-[var(--color-text)]">{v.make} {v.model}</div>
-                      <div className="text-xs text-[var(--color-text-muted)]">{t(`vehicleClass.${v.vehicleClass}`)}</div>
+                      <div className="font-medium text-(--color-text)">{v.make} {v.model}</div>
+                      <div className="text-xs text-(--color-text-muted)">{t(`vehicleClass.${v.vehicleClass}`)}</div>
                     </TableCell>
                     <TableCell>
                       <Badge className={"status-" + v.status} variant="secondary">
@@ -223,12 +236,12 @@ export function VehiclesPage() {
                     </TableCell>
                     <TableCell>
                       {site ? (
-                        <span className="inline-flex items-center gap-1 text-sm text-[var(--color-text)]">
-                          <MapPin className="h-3.5 w-3.5 text-[var(--color-text-muted)] shrink-0" />
+                        <span className="inline-flex items-center gap-1 text-sm text-(--color-text)">
+                          <MapPin className="h-3.5 w-3.5 text-(--color-text-muted) shrink-0" />
                           {site.name}
                         </span>
                       ) : (
-                        <span className="text-sm text-[var(--color-text-subtle)] italic">
+                        <span className="text-sm text-(--color-text-subtle) italic">
                           {t("vehicles.locationUnassigned")}
                         </span>
                       )}
@@ -236,7 +249,7 @@ export function VehiclesPage() {
                     <TableCell className="font-mono text-sm text-right">
                       {Number(v.engineHours).toFixed(1)}
                     </TableCell>
-                    <TableCell className="font-mono text-sm text-right text-[var(--color-text-subtle)] italic">
+                    <TableCell className="font-mono text-sm text-right text-(--color-text-subtle) italic">
                       {t("vehicles.nextServiceTbd")}
                     </TableCell>
                     <TableCell>
@@ -259,7 +272,7 @@ export function VehiclesPage() {
                           onClick={() => confirm(t("common.deleteConfirm", { label: `${v.make} ${v.model}` })) && deleteMut.mutate(v.id)}
                           aria-label={t("common.delete")}
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-[var(--color-danger-fg)]" />
+                          <Trash2 className="h-3.5 w-3.5 text-(--color-danger-fg)" />
                         </Button>
                       </div>
                     </TableCell>
@@ -268,7 +281,7 @@ export function VehiclesPage() {
               })}
               {vehicles.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-[var(--color-text-muted)] py-6">
+                  <TableCell colSpan={7} className="text-center text-(--color-text-muted) py-6">
                     {t("vehicles.noVehicles")}
                   </TableCell>
                 </TableRow>
@@ -278,7 +291,9 @@ export function VehiclesPage() {
         </div>
       </section>
 
-      <section className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
+      {!isMobile && <ResizableSplitHandle onStart={startDrag} />}
+
+      <section className="flex-1 min-w-1/6 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0">
         {mode.kind === "history" ? (
           <VehicleHistory vehicle={mode.vehicle} onClose={reset} />
         ) : (
@@ -340,7 +355,7 @@ export function VehiclesPage() {
                   </SelectContent>
                 </Select>
               </Label>
-              {error && <p className="text-[var(--color-danger)]">{error}</p>}
+              {error && <p className="text-(--color-danger)">{error}</p>}
               <div className="flex gap-2 mt-1.5">
                 <Button type="submit" variant="default" disabled={createMut.isPending || updateMut.isPending}>
                   <Check className="h-4 w-4" />
@@ -360,11 +375,11 @@ export function VehiclesPage() {
   );
 }
 
-function VehicleHistory({ vehicle, onClose }: { vehicle: Vehicle; onClose: () => void }) {
+function VehicleHistory({ vehicle, onClose }: Readonly<{ vehicle: Vehicle; onClose: () => void }>) {
   const { t } = useTranslation();
   const q = useQuery({
     queryKey: ["serviceOrders", "byVehicle", vehicle.id] as const,
-    queryFn: () => serviceOrdersApi.listByVehicle(vehicle.id as UUID)
+    queryFn: () => serviceOrdersApi.listByVehicle(vehicle.id)
   });
 
   const orders: ServiceOrder[] = (q.data ?? [])
@@ -382,11 +397,11 @@ function VehicleHistory({ vehicle, onClose }: { vehicle: Vehicle; onClose: () =>
           <X className="h-4 w-4" />
         </Button>
       </div>
-      <p className="text-[var(--color-text-muted)]">{t("vehicles.historyHelp")}</p>
+      <p className="text-(--color-text-muted)">{t("vehicles.historyHelp")}</p>
 
-      {q.isLoading && <p className="text-[var(--color-text-muted)]">{t("common.loading")}</p>}
-      {q.error && <p className="text-[var(--color-danger)]">{(q.error as Error).message}</p>}
-      {!q.isLoading && orders.length === 0 && <p className="text-[var(--color-text-muted)]">{t("vehicles.noIssues")}</p>}
+      {q.isLoading && <p className="text-(--color-text-muted)">{t("common.loading")}</p>}
+      {q.error && <p className="text-(--color-danger)">{(q.error).message}</p>}
+      {!q.isLoading && orders.length === 0 && <p className="text-(--color-text-muted)">{t("vehicles.noIssues")}</p>}
 
       {open.length > 0 && (
         <>
@@ -404,7 +419,7 @@ function VehicleHistory({ vehicle, onClose }: { vehicle: Vehicle; onClose: () =>
   );
 }
 
-function HistoryList({ orders }: { orders: ServiceOrder[] }) {
+function HistoryList({ orders }: Readonly<{ orders: ServiceOrder[] }>) {
   const { t } = useTranslation();
   return (
     <ul className="history-list">
@@ -415,16 +430,16 @@ function HistoryList({ orders }: { orders: ServiceOrder[] }) {
             <span className="font-mono">{o.vmrsCode}</span>
             <span className="history-desc">{o.title ?? o.vmrsDescription ?? ""}</span>
           </div>
-          <div className="history-meta text-[var(--color-text-muted)]">
+          <div className="history-meta text-(--color-text-muted)">
             {t("vehicles.historyMeta", {
               requested: fmtDateTime(o.requestedAt),
               estimated: o.estimatedMinutes,
-              actualLine: o.actualMinutes != null ? t("vehicles.historyActualSuffix", { actual: o.actualMinutes }) : "",
+              actualLine: o.actualMinutes == null ? "" : t("vehicles.historyActualSuffix", {actual: o.actualMinutes}),
               completedLine: o.completedAt ? t("vehicles.historyCompletedSuffix", { completed: fmtDateTime(o.completedAt) }) : ""
             })}
           </div>
           {o.notes && (
-            <pre className="font-mono text-[var(--text-xs)] bg-[var(--color-surface-sunken)] border border-[var(--color-hairline)] p-2 rounded-[var(--radius-sm)] whitespace-pre-wrap m-0 text-[var(--color-text)]">
+            <pre className="font-mono text-(--text-xs) bg-(--color-surface-sunken) border border-(--color-hairline) p-2 rounded-(--radius-sm) whitespace-pre-wrap m-0">
               {o.notes}
             </pre>
           )}

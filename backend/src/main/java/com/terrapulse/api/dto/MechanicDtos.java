@@ -18,18 +18,24 @@ public final class MechanicDtos {
             String phone,
             List<String> skills,
             MechanicStatus status,
+            boolean onAbsenceToday,
             LatLng location,
             Instant locationUpdatedAt,
             Instant createdAt,
             Instant updatedAt
     ) {
         public static MechanicDto of(Mechanic m) {
+            return of(m, false);
+        }
+
+        public static MechanicDto of(Mechanic m, boolean onAbsenceToday) {
             List<String> names = m.skills.stream()
                     .map(s -> s.name)
                     .sorted(Comparator.naturalOrder())
                     .toList();
-            return new MechanicDto(m.id, m.fullName, m.phone, names, m.status,
-                    LatLng.of(m.location), m.locationUpdatedAt, m.createdAt, m.updatedAt);
+            MechanicStatus effective = onAbsenceToday ? MechanicStatus.OFF_DUTY : m.status;
+            return new MechanicDto(m.id, m.fullName, m.phone, names, effective,
+                    onAbsenceToday, LatLng.of(m.location), m.locationUpdatedAt, m.createdAt, m.updatedAt);
         }
     }
 

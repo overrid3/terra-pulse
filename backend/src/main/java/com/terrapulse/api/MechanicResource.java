@@ -7,6 +7,7 @@ import com.terrapulse.api.dto.MechanicDtos.MechanicPatchDto;
 import com.terrapulse.domain.mechanic.Mechanic;
 import com.terrapulse.domain.mechanic.MechanicStatus;
 import com.terrapulse.domain.skill.Skill;
+import com.terrapulse.repository.MechanicAbsenceRepository;
 import com.terrapulse.repository.MechanicRepository;
 import com.terrapulse.repository.SkillRepository;
 import com.terrapulse.service.GeometrySupport;
@@ -33,12 +34,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Path("/api/mechanics")
 @Produces(MediaType.APPLICATION_JSON)
 public class MechanicResource {
 
     private final MechanicRepository repo;
+    private final MechanicAbsenceRepository absenceRepo;
     private final SkillRepository skills;
     private final GeometrySupport geo;
     private final NearestMechanicService nearest;
@@ -46,11 +49,13 @@ public class MechanicResource {
 
     @Inject
     public MechanicResource(MechanicRepository repo,
+                            MechanicAbsenceRepository absenceRepo,
                             SkillRepository skills,
                             GeometrySupport geo,
                             NearestMechanicService nearest,
                             DispatchEventBus bus) {
         this.repo = repo;
+        this.absenceRepo = absenceRepo;
         this.skills = skills;
         this.geo = geo;
         this.nearest = nearest;
@@ -59,7 +64,10 @@ public class MechanicResource {
 
     @GET
     public List<MechanicDto> list() {
-        return repo.listAll().stream().map(MechanicDto::of).toList();
+        Set<UUID> onAbsence = mechanicsOnAbsenceNow();
+        return repo.listAll().stream()
+                .map(m -> MechanicDto.of(m, onAbsence.contains(m.id)))
+                .toList();
     }
 
     @GET
@@ -69,13 +77,29 @@ public class MechanicResource {
                                      @QueryParam("limit") Integer limit,
                                      @QueryParam("skill") String skill) {
         int lim = limit != null ? limit : 5;
-        return nearest.findNearest(lat, lng, lim, skill).stream().map(MechanicDto::of).toList();
+        Set<UUID> onAbsence = mechanicsOnAbsenceNow();
+        return nearest.findNearest(lat, lng, lim, skill).stream()
+                .filter(m -> !onAbsence.contains(m.id))
+                .map(m -> MechanicDto.of(m, false))
+                .toList();
     }
 
     @GET
     @Path("/{id}")
     public MechanicDto get(@PathParam("id") UUID id) {
-        return MechanicDto.of(load(id));
+        Mechanic m = load(id);
+        return MechanicDto.of(m, isOnAbsenceNow(m.id));
+    }
+
+    private Set<UUID> mechanicsOnAbsenceNow() {
+        Instant now = Instant.now();
+        return absenceRepo.findOverlapping(now, now).stream()
+                .map(a -> a.mechanic.id)
+                .collect(Collectors.toSet());
+    }
+
+    private boolean isOnAbsenceNow(UUID mechanicId) {
+        return mechanicsOnAbsenceNow().contains(mechanicId);
     }
 
     @POST

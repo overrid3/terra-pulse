@@ -38,7 +38,7 @@ export type ServiceOrder = {
   state: ServiceOrderState;
   estimatedMinutes: number;
   actualMinutes: number | null;
-  siteLocation: LatLng;
+  siteLocation: LatLng | null;
   requestedAt: string;
   dispatchedAt: string | null;
   scheduledStartAt: string | null;
