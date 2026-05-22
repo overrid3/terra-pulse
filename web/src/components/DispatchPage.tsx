@@ -23,6 +23,7 @@ import { SearchInput } from "./SearchInput";
 import { CreateOrderForm } from "./CreateOrderForm";
 import { OrderEditForm, OrderSaveBody } from "./OrderEditForm";
 import { ResizableSplitHandle } from "./ResizableSplitHandle";
+import { DispatchOrderList } from "./DispatchOrderList";
 import { useResizableSplit, useIsMobile } from "@/hooks/useResizableSplit";
 import { ServiceOrder, MechanicAbsence, ServiceOrderState, UUID, Vehicle } from "../types";
 import { Button } from "@/components/ui/button";
@@ -374,28 +375,32 @@ export function DispatchPage() {
           <h1 className="m-0 text-xl font-semibold tracking-tight text-[var(--color-text)]">
             {t("dispatch.pageTitle")}
           </h1>
-          <ToggleGroup
-            type="single"
-            value={view}
-            onValueChange={(v) => v && handleViewChange(v as GanttView)}
-            variant="outline"
-            size="sm"
-          >
-            <ToggleGroupItem value="day">{t("dispatch.viewDay")}</ToggleGroupItem>
-            <ToggleGroupItem value="week">{t("dispatch.viewWeek")}</ToggleGroupItem>
-            <ToggleGroupItem value="month">{t("dispatch.viewMonth")}</ToggleGroupItem>
-          </ToggleGroup>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" onClick={() => navigate(-1)} aria-label={t("common.previous")}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={jumpToday}>
-              {t("dispatch.today")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate(1)} aria-label={t("common.next")}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          {!isMobile && (
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(v) => v && handleViewChange(v as GanttView)}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="day">{t("dispatch.viewDay")}</ToggleGroupItem>
+              <ToggleGroupItem value="week">{t("dispatch.viewWeek")}</ToggleGroupItem>
+              <ToggleGroupItem value="month">{t("dispatch.viewMonth")}</ToggleGroupItem>
+            </ToggleGroup>
+          )}
+          {!isMobile && (
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={() => navigate(-1)} aria-label={t("common.previous")}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={jumpToday}>
+                {t("dispatch.today")}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate(1)} aria-label={t("common.next")}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           <span className="text-sm font-mono text-[var(--color-text-muted)] hidden md:inline">
             {rangeLabel()}
           </span>
@@ -444,83 +449,94 @@ export function DispatchPage() {
       </header>
 
       <main className="flex-1 min-h-0 min-w-0 p-3 flex flex-row gap-0">
-        <section className="flex-1 min-w-0 border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 overflow-hidden">
-          <div
-            key={`${view}-${winStart.toISOString()}`}
-            className={cn(
-              "flex-1 min-h-0 flex flex-col",
-              navDir === "next" && "tp-gantt-anim-next",
-              navDir === "prev" && "tp-gantt-anim-prev",
-              navDir === "fade" && "tp-gantt-anim-fade",
-            )}
-          >
-            <Gantt
-              mechanics={mechanicsQ.data ?? []}
-              orders={filteredOrders}
-              absences={absencesQ.data ?? []}
-              vehicleById={vehicleById}
-              selectedMechanicId={selectedMechanicId}
-              view={view}
-              date={date}
-              winStart={winStart}
-              winEnd={winEnd}
-              onSelectOrder={setSelectedOrderId}
-              onEditOrder={setEditOrderId}
-              onUnassignOrder={(id) => unassignMut.mutate(id as UUID)}
-              onDeleteOrder={setDeleteOrderId}
-              onAddAbsence={setAbsenceMechanicId}
-              registerRow={registerRow}
-            />
-          </div>
-        </section>
-
-        {!isMobile && <ResizableSplitHandle onStart={startPoolDrag} ariaLabel={t("dispatch.unassignedPool")} />}
-
-        <aside
-          ref={poolPanelRef}
-          style={{ width: isMobile ? undefined : poolInitialWidth }}
-          className="md:shrink-0 md:min-w-[240px] md:max-w-[600px] bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 overflow-hidden"
-        >
-          <div className="px-3 py-2.5 border-b border-[var(--color-hairline)] bg-[var(--color-surface-sunken)] flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <Inbox className="h-4 w-4 text-[var(--color-text-muted)]" />
-              <h2 className="m-0 text-sm font-semibold text-[var(--color-text)]">
-                {t("dispatch.unassignedPool")}
-              </h2>
-            </div>
-            <span className="bg-[var(--color-surface-container-highest)] text-[var(--color-text)] px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-bold font-mono">
-              {unassigned.length}
-            </span>
-          </div>
-          <ul
-            role="list"
-            aria-label={t("dispatch.unassignedPool")}
-            className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 list-none m-0"
-          >
-            {unassigned.length === 0 && (
-              <li className="text-center text-[var(--color-text-muted)] text-sm py-6">
-                {t("dispatch.pendingNone")}
-              </li>
-            )}
-            {unassigned.map((o) => {
-              const badge = priorityBadge(o);
-              const badgeLabel = t(badge.key);
-              const isCritical = o.state === "REQUESTED";
-              const label = `${o.vmrsCode}, ${o.title ?? o.vmrsDescription ?? ""}, ${badgeLabel}, ${o.clientName ?? ""}`;
-              return (
-                <PoolCard
-                  key={o.id}
-                  order={o}
-                  isSelected={o.id === selectedOrderId}
-                  isCritical={isCritical}
-                  badge={{ label: badgeLabel, cls: badge.cls }}
-                  onSelect={setSelectedOrderId}
-                  label={label}
+        {isMobile ? (
+          <DispatchOrderList
+            mechanics={mechanicsQ.data ?? []}
+            orders={filteredOrders}
+            vehicles={vehicleById}
+            onSelectOrder={setSelectedOrderId}
+          />
+        ) : (
+          <>
+            <section className="flex-1 min-w-0 border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 overflow-hidden">
+              <div
+                key={`${view}-${winStart.toISOString()}`}
+                className={cn(
+                  "flex-1 min-h-0 flex flex-col",
+                  navDir === "next" && "tp-gantt-anim-next",
+                  navDir === "prev" && "tp-gantt-anim-prev",
+                  navDir === "fade" && "tp-gantt-anim-fade",
+                )}
+              >
+                <Gantt
+                  mechanics={mechanicsQ.data ?? []}
+                  orders={filteredOrders}
+                  absences={absencesQ.data ?? []}
+                  vehicleById={vehicleById}
+                  selectedMechanicId={selectedMechanicId}
+                  view={view}
+                  date={date}
+                  winStart={winStart}
+                  winEnd={winEnd}
+                  onSelectOrder={setSelectedOrderId}
+                  onEditOrder={setEditOrderId}
+                  onUnassignOrder={(id) => unassignMut.mutate(id as UUID)}
+                  onDeleteOrder={setDeleteOrderId}
+                  onAddAbsence={setAbsenceMechanicId}
+                  registerRow={registerRow}
                 />
-              );
-            })}
-          </ul>
-        </aside>
+              </div>
+            </section>
+
+            <ResizableSplitHandle onStart={startPoolDrag} ariaLabel={t("dispatch.unassignedPool")} />
+
+            <aside
+              ref={poolPanelRef}
+              style={{ width: poolInitialWidth }}
+              className="shrink-0 min-w-[240px] max-w-[600px] bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 overflow-hidden"
+            >
+              <div className="px-3 py-2.5 border-b border-[var(--color-hairline)] bg-[var(--color-surface-sunken)] flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <Inbox className="h-4 w-4 text-[var(--color-text-muted)]" />
+                  <h2 className="m-0 text-sm font-semibold text-[var(--color-text)]">
+                    {t("dispatch.unassignedPool")}
+                  </h2>
+                </div>
+                <span className="bg-[var(--color-surface-container-highest)] text-[var(--color-text)] px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-bold font-mono">
+                  {unassigned.length}
+                </span>
+              </div>
+              <ul
+                role="list"
+                aria-label={t("dispatch.unassignedPool")}
+                className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 list-none m-0"
+              >
+                {unassigned.length === 0 && (
+                  <li className="text-center text-[var(--color-text-muted)] text-sm py-6">
+                    {t("dispatch.pendingNone")}
+                  </li>
+                )}
+                {unassigned.map((o) => {
+                  const badge = priorityBadge(o);
+                  const badgeLabel = t(badge.key);
+                  const isCritical = o.state === "REQUESTED";
+                  const label = `${o.vmrsCode}, ${o.title ?? o.vmrsDescription ?? ""}, ${badgeLabel}, ${o.clientName ?? ""}`;
+                  return (
+                    <PoolCard
+                      key={o.id}
+                      order={o}
+                      isSelected={o.id === selectedOrderId}
+                      isCritical={isCritical}
+                      badge={{ label: badgeLabel, cls: badge.cls }}
+                      onSelect={setSelectedOrderId}
+                      label={label}
+                    />
+                  );
+                })}
+              </ul>
+            </aside>
+          </>
+        )}
       </main>
 
       {selectedOrder && (
