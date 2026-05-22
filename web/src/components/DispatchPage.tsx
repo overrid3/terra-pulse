@@ -330,9 +330,11 @@ export function DispatchPage() {
     }
   }
 
-  const dndModifiers = activeDrag?.kind === "event" || activeDrag?.kind === "resize"
-    ? [restrictToHorizontalAxis]
-    : [];
+  // Resize is intrinsically a horizontal-only gesture; for event chip moves we
+  // want vertical motion too so dnd-kit's collision detection picks up the row
+  // the cursor enters (otherwise the dragged overlay never overlaps another
+  // mechanic's row and cross-mechanic reassignment can't fire).
+  const dndModifiers = activeDrag?.kind === "resize" ? [restrictToHorizontalAxis] : [];
 
   return (
     <DndContext sensors={sensors} modifiers={dndModifiers} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
