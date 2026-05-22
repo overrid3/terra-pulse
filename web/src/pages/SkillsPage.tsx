@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { Plus, Wrench } from "lucide-react";
 import { skillsApi } from "@/api/skills";
 import { queryKeys } from "@/api/client";
 import { Skill } from "@/types";
@@ -31,6 +32,7 @@ export function SkillsPage() {
     maxWidth: 1100,
   });
   const qc = useQuery({ queryKey: queryKeys.skills, queryFn: skillsApi.list });
+  const [panelMode, setPanelMode] = useState<"empty" | "form">("empty");
   const [editing, setEditing] = useState<Skill | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -61,9 +63,11 @@ export function SkillsPage() {
     onError: (e: Error) => setError(e.message)
   });
 
-  function reset() { setEditing(null); setName(""); setError(null); }
+  function reset() { setPanelMode("empty"); setEditing(null); setName(""); setError(null); }
 
-  function loadForEdit(s: Skill) { setEditing(s); setName(s.name); setError(null); }
+  function openCreate() { setPanelMode("form"); setEditing(null); setName(""); setError(null); }
+
+  function loadForEdit(s: Skill) { setPanelMode("form"); setEditing(s); setName(s.name); setError(null); }
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -83,12 +87,18 @@ export function SkillsPage() {
       >
         <div className="flex items-center justify-between gap-3 mb-2.5 flex-wrap">
           <h2 className="m-0">{t("skills.pageTitle", { count: qc.data?.length ?? 0 })}</h2>
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder={t("skills.searchPlaceholder")}
-            className="w-full sm:w-64"
-          />
+          <div className="flex items-center gap-2 ml-auto">
+            <SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder={t("skills.searchPlaceholder")}
+              className="w-full sm:w-64"
+            />
+            <Button variant="default" size="sm" type="button" onClick={openCreate}>
+              <Plus className="w-4 h-4" />
+              {t("skills.newSkill")}
+            </Button>
+          </div>
         </div>
         <p className="text-(--color-text-muted)">{t("skills.help")}</p>
         <Table>
@@ -141,7 +151,14 @@ export function SkillsPage() {
 
       {!isMobile && <ResizableSplitHandle onStart={startDrag} />}
 
-      <section className="flex-1 min-w-0 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0">
+      <section className="flex-1 min-w-0 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0 flex flex-col">
+        {panelMode === "empty" ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-(--color-text-muted) gap-2">
+            <Wrench className="w-12 h-12 opacity-40" />
+            <span>{t("skills.selectSkill")}</span>
+          </div>
+        ) : (
+          <>
         <h2>{editing ? t("skills.renameSkill", { name: editing.name }) : t("skills.newSkill")}</h2>
         <form onSubmit={submit} className="flex flex-col gap-2.5">
           <div className="flex flex-col gap-1">
@@ -160,13 +177,13 @@ export function SkillsPage() {
             <Button type="submit" variant="default" disabled={createMut.isPending || renameMut.isPending}>
               {editing ? t("common.save") : t("common.create")}
             </Button>
-            {editing && (
-              <Button type="button" variant="ghost" onClick={reset}>
-                {t("common.cancel")}
-              </Button>
-            )}
+            <Button type="button" variant="ghost" onClick={reset}>
+              {t("common.cancel")}
+            </Button>
           </div>
         </form>
+          </>
+        )}
       </section>
     </main>
   );

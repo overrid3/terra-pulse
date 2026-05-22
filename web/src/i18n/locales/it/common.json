@@ -234,7 +234,8 @@
     "filterAll": "Tutti",
     "filterAvailable": "Disponibili",
     "filterInField": "Sul campo",
-    "filterOffDuty": "Fuori servizio"
+    "filterOffDuty": "Fuori servizio",
+    "selectMechanic": "Seleziona un meccanico"
   },
   "vehicles": {
     "pageTitle": "Mezzi ({{count}})",
@@ -268,7 +269,8 @@
     "noVehicles": "nessun mezzo ancora",
     "historyMeta": "richiesto {{requested}} · stima {{estimated}}m{{actualLine}}{{completedLine}}",
     "historyActualSuffix": " · effettivo {{actual}}m",
-    "historyCompletedSuffix": " · completato {{completed}}"
+    "historyCompletedSuffix": " · completato {{completed}}",
+    "selectVehicle": "Seleziona un mezzo"
   },
   "clients": {
     "pageTitle": "Clienti ({{count}})",
@@ -338,7 +340,8 @@
     "fieldName": "Nome",
     "namePlaceholder": "es. IDRAULICA",
     "noSkills": "nessuna competenza ancora",
-    "searchPlaceholder": "Cerca competenze…"
+    "searchPlaceholder": "Cerca competenze…",
+    "selectSkill": "Seleziona una competenza"
   },
   "absences": {
     "panelTitle": "Assenze · {{name}}",

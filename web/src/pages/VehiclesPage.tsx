@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil, Trash2, X, Check, History as HistoryIcon, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, History as HistoryIcon, MapPin, Truck } from "lucide-react";
 import { vehiclesApi } from "@/api/vehicles";
 import { sitesApi } from "@/api/sites";
 import { serviceOrdersApi } from "@/api/serviceOrders";
@@ -34,6 +34,7 @@ const EMPTY: VehicleUpsert = {
 };
 
 type PanelMode =
+  | { kind: "empty" }
   | { kind: "create" }
   | { kind: "edit"; vehicle: Vehicle }
   | { kind: "history"; vehicle: Vehicle };
@@ -58,7 +59,7 @@ export function VehiclesPage() {
     return map;
   }, [sitesQ.data]);
 
-  const [mode, setMode] = useState<PanelMode>({ kind: "create" });
+  const [mode, setMode] = useState<PanelMode>({ kind: "empty" });
   const [draft, setDraft] = useState<VehicleUpsert>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -84,6 +85,12 @@ export function VehiclesPage() {
   });
 
   function reset() {
+    setMode({ kind: "empty" });
+    setDraft(EMPTY);
+    setError(null);
+  }
+
+  function openCreate() {
     setMode({ kind: "create" });
     setDraft(EMPTY);
     setError(null);
@@ -113,7 +120,7 @@ export function VehiclesPage() {
   const set = <K extends keyof VehicleUpsert>(k: K, v: VehicleUpsert[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
-  const selectedId = mode.kind === "create" ? null : mode.vehicle.id;
+  const selectedId = (mode.kind === "edit" || mode.kind === "history") ? mode.vehicle.id : null;
   const q = search.trim().toLowerCase();
   const vehicles = (vehiclesQ.data ?? []).filter(v =>
     (statusFilter === "ALL" || v.status === statusFilter) &&
@@ -140,7 +147,7 @@ export function VehiclesPage() {
               {t("vehicles.pageSubtitle")}
             </p>
           </div>
-          <Button variant="default" type="button" onClick={reset} className="shrink-0">
+          <Button variant="default" type="button" onClick={openCreate} className="shrink-0">
             <Plus className="h-4 w-4" />
             {t("vehicles.registerUnit")}
           </Button>
@@ -293,8 +300,13 @@ export function VehiclesPage() {
 
       {!isMobile && <ResizableSplitHandle onStart={startDrag} />}
 
-      <section className="flex-1 min-w-1/6 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0">
-        {mode.kind === "history" ? (
+      <section className="flex-1 min-w-1/6 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0 flex flex-col">
+        {mode.kind === "empty" ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-(--color-text-muted) gap-2">
+            <Truck className="w-12 h-12 opacity-40" />
+            <span>{t("vehicles.selectVehicle")}</span>
+          </div>
+        ) : mode.kind === "history" ? (
           <VehicleHistory vehicle={mode.vehicle} onClose={reset} />
         ) : (
           <>
@@ -361,11 +373,9 @@ export function VehiclesPage() {
                   <Check className="h-4 w-4" />
                   {mode.kind === "edit" ? t("common.save") : t("common.create")}
                 </Button>
-                {mode.kind === "edit" && (
-                  <Button type="button" variant="ghost" onClick={reset}>
-                    {t("common.cancel")}
-                  </Button>
-                )}
+                <Button type="button" variant="ghost" onClick={reset}>
+                  {t("common.cancel")}
+                </Button>
               </div>
             </form>
           </>

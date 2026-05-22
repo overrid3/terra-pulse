@@ -234,7 +234,8 @@
     "filterAll": "All",
     "filterAvailable": "Available",
     "filterInField": "In Field",
-    "filterOffDuty": "Off Duty"
+    "filterOffDuty": "Off Duty",
+    "selectMechanic": "Select a mechanic to view details"
   },
   "vehicles": {
     "pageTitle": "Vehicles ({{count}})",
@@ -268,7 +269,8 @@
     "noVehicles": "no vehicles yet",
     "historyMeta": "requested {{requested}} · est {{estimated}}m{{actualLine}}{{completedLine}}",
     "historyActualSuffix": " · actual {{actual}}m",
-    "historyCompletedSuffix": " · completed {{completed}}"
+    "historyCompletedSuffix": " · completed {{completed}}",
+    "selectVehicle": "Select a vehicle to view details"
   },
   "clients": {
     "pageTitle": "Clients ({{count}})",
@@ -338,7 +340,8 @@
     "fieldName": "Name",
     "namePlaceholder": "e.g. HYDRAULICS",
     "noSkills": "no skills yet",
-    "searchPlaceholder": "Search skills…"
+    "searchPlaceholder": "Search skills…",
+    "selectSkill": "Select a skill to view details"
   },
   "absences": {
     "panelTitle": "Absences · {{name}}",

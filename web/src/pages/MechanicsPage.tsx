@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil, Trash2, CalendarOff, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, CalendarOff, MapPin, HardHat } from "lucide-react";
 import { mechanicsApi, MechanicUpsert } from "../api/mechanics";
 import { skillsApi } from "../api/skills";
 import { serviceOrdersApi } from "../api/serviceOrders";
@@ -75,6 +75,7 @@ export function MechanicsPage() {
   const skillsQ = useQuery({ queryKey: queryKeys.skills, queryFn: skillsApi.list });
   const ordersQ = useQuery({ queryKey: queryKeys.serviceOrders, queryFn: serviceOrdersApi.list });
   const catalog = (skillsQ.data ?? []).map((s) => s.name);
+  const [panelMode, setPanelMode] = useState<"empty" | "form">("empty");
   const [editing, setEditing] = useState<Mechanic | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [error, setError] = useState<string | null>(null);
@@ -101,9 +102,12 @@ export function MechanicsPage() {
     onError: (e: Error) => setError(e.message)
   });
 
-  function reset() { setEditing(null); setDraft(EMPTY); setError(null); }
+  function reset() { setPanelMode("empty"); setEditing(null); setDraft(EMPTY); setError(null); }
+
+  function openCreate() { setPanelMode("form"); setEditing(null); setDraft(EMPTY); setError(null); }
 
   function loadForEdit(m: Mechanic) {
+    setPanelMode("form");
     setEditing(m);
     setDraft({
       fullName: m.fullName,
@@ -196,7 +200,7 @@ export function MechanicsPage() {
           <Button
             variant="default"
             type="button"
-            onClick={() => { setEditing(null); setDraft(EMPTY); setError(null); }}
+            onClick={openCreate}
             className="shrink-0"
           >
             <Plus className="w-4 h-4" />
@@ -363,7 +367,14 @@ export function MechanicsPage() {
 
       {!isMobile && <ResizableSplitHandle onStart={startDrag} />}
 
-      <section className="flex-1 min-w-0 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0">
+      <section className="flex-1 min-w-0 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col">
+        {panelMode === "empty" ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-[var(--color-text-muted)] gap-2">
+            <HardHat className="w-12 h-12 opacity-40" />
+            <span>{t("mechanics.selectMechanic")}</span>
+          </div>
+        ) : (
+          <>
         <h2 className="m-0 mb-3 text-[var(--text-base)] font-semibold">
           {editing ? t("mechanics.editMechanic", { name: editing.fullName }) : t("mechanics.newMechanic")}
         </h2>
@@ -474,13 +485,13 @@ export function MechanicsPage() {
             >
               {editing ? t("common.save") : t("common.create")}
             </Button>
-            {editing && (
-              <Button type="button" variant="ghost" onClick={reset}>
-                {t("common.cancel")}
-              </Button>
-            )}
+            <Button type="button" variant="ghost" onClick={reset}>
+              {t("common.cancel")}
+            </Button>
           </div>
         </form>
+          </>
+        )}
       </section>
 
       <Sheet open={oooFor !== null} onOpenChange={(open) => !open && setOooFor(null)}>
