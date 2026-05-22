@@ -9,6 +9,7 @@ export type GanttPoolDragData = {
   kind: "pool";
   orderId: string;
   orderState: string;
+  estimatedMinutes: number;
 };
 
 export type GanttEventDragData = {

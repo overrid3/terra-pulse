@@ -1,5 +1,6 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Mechanic, MechanicAbsence, ServiceOrder } from "../../../types";
 import { findConflicts, ScheduledItem } from "../../../lib/findConflicts";
@@ -10,6 +11,8 @@ const LANE_GAP_PX = 4;
 const ROW_PADDING_PX = 4;
 const BASE_ROW_MIN_HEIGHT_PX = 72;
 
+const POOL_SNAP_MS = 30 * 60_000;
+
 type Props = {
   mechanic: Mechanic;
   orders: ServiceOrder[];
@@ -19,6 +22,8 @@ type Props = {
   eventPosition: (s: Date, e: Date) => { leftPct: number; rightPct: number } | null;
   chipLabel: (o: ServiceOrder) => string;
   chipTitle: (o: ServiceOrder) => string;
+  winStart: Date;
+  winEnd: Date;
   onSelectOrder: (id: string) => void;
   onAddAbsence: (mechanicId: string) => void;
   registerRow: (mechanicId: string, el: HTMLDivElement | null) => void;
@@ -57,9 +62,11 @@ export function GanttRow({
   mechanic, orders, absences,
   gridTemplate, minTimelineWidth,
   eventPosition, chipLabel, chipTitle,
+  winStart, winEnd,
   onSelectOrder, onAddAbsence, registerRow,
 }: Props) {
   const rowRef = useRef<HTMLDivElement | null>(null);
+  const [cursorX, setCursorX] = useState<number | null>(null);
 
   const initials = mechanic.fullName
     .split(/\s+/).slice(0, 2)
@@ -101,8 +108,20 @@ export function GanttRow({
   };
 
   const activeData = active?.data?.current as
-    | { kind?: string; orderState?: string; currentMechanicId?: string }
+    | { kind?: string; orderState?: string; currentMechanicId?: string; estimatedMinutes?: number }
     | undefined;
+
+  const dropCursor = useMemo(() => {
+    if (!isOver || activeData?.kind !== "pool" || cursorX === null) return null;
+    const width = rowRef.current?.getBoundingClientRect().width ?? 0;
+    if (width === 0) return null;
+    const ratio = Math.max(0, Math.min(1, cursorX / width));
+    const totalMs = winEnd.getTime() - winStart.getTime();
+    const rawMs = winStart.getTime() + ratio * totalMs;
+    const snappedMs = Math.round(rawMs / POOL_SNAP_MS) * POOL_SNAP_MS;
+    const snappedPct = Math.max(0, Math.min(100, ((snappedMs - winStart.getTime()) / totalMs) * 100));
+    return { leftPct: snappedPct, time: new Date(snappedMs) };
+  }, [isOver, activeData, cursorX, winStart, winEnd]);
 
   const validDrop: boolean | null =
     !active ? null :
@@ -150,6 +169,11 @@ export function GanttRow({
           isOver && validDrop === false && "bg-[color-mix(in_srgb,var(--color-danger)_15%,transparent)] ring-1 ring-[var(--color-danger)] ring-inset",
         )}
         style={{ minWidth: minTimelineWidth || undefined }}
+        onMouseMove={(e) => {
+          const rect = rowRef.current?.getBoundingClientRect();
+          if (rect) setCursorX(e.clientX - rect.left);
+        }}
+        onMouseLeave={() => setCursorX(null)}
       >
         <div
           aria-hidden="true"
@@ -168,6 +192,18 @@ export function GanttRow({
           if (!pos) return null;
           return <GanttAbsenceBand key={a.id} absence={a} leftPct={pos.leftPct} rightPct={pos.rightPct} />;
         })}
+
+        {dropCursor && (
+          <div
+            aria-hidden="true"
+            className="absolute top-0 bottom-0 w-0.5 bg-[var(--color-brand)] pointer-events-none z-20"
+            style={{ left: `${dropCursor.leftPct}%` }}
+          >
+            <span className="absolute -top-5 left-1 text-[10px] font-mono font-semibold text-[var(--color-brand)] whitespace-nowrap bg-[var(--color-surface-panel)] px-1 rounded shadow-sm">
+              {format(dropCursor.time, "HH:mm")}
+            </span>
+          </div>
+        )}
 
         {orders.map((o) => {
           const { start, end } = eventBounds(o);

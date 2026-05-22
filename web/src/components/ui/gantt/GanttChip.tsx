@@ -1,4 +1,4 @@
-import { KeyboardEvent, PointerEvent } from "react";
+import { KeyboardEvent } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import type { ServiceOrder } from "../../../types";
@@ -116,9 +116,6 @@ function ResizeHandle({
     data,
   });
 
-  // Prevent the parent chip click handler from firing when releasing the resize handle.
-  const stop = (e: PointerEvent<HTMLDivElement>) => e.stopPropagation();
-
   return (
     <div
       ref={setNodeRef}
@@ -132,8 +129,13 @@ function ResizeHandle({
         isDragging && "bg-[var(--color-brand-strong)]",
       )}
       onClick={(e) => e.stopPropagation()}
-      onPointerDown={stop}
-      onMouseDown={stop}
+      onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      onPointerDown={(e) => {
+        // Call dnd-kit's own listener first so resize drag activates,
+        // then stop propagation so the parent chip drag doesn't also start.
+        (listeners as Record<string, (ev: typeof e) => void> | undefined)?.onPointerDown?.(e);
+        e.stopPropagation();
+      }}
     />
   );
 }

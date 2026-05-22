@@ -478,7 +478,7 @@ function PoolCard({
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `pool:${order.id}`,
-    data: { kind: "pool", orderId: order.id, orderState: order.state },
+    data: { kind: "pool", orderId: order.id, orderState: order.state, estimatedMinutes: order.estimatedMinutes },
   });
   return (
     <li

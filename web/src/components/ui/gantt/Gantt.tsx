@@ -134,6 +134,8 @@ export function Gantt({
             eventPosition={eventPosition}
             chipLabel={chipLabel}
             chipTitle={chipTitle}
+            winStart={winStart}
+            winEnd={winEnd}
             onSelectOrder={onSelectOrder}
             onAddAbsence={onAddAbsence}
             registerRow={registerRow}
