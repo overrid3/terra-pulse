@@ -1,0 +1,1057 @@
+{
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/skills-lock.json": {
+    "mtime": 1778840819.0118804,
+    "ast_hash": "d4969c0554e0ea9b59cc798db13bfece",
+    "semantic_hash": "d4969c0554e0ea9b59cc798db13bfece"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/.mcp.json": {
+    "mtime": 1778835348.1851454,
+    "ast_hash": "9678b7800431f8b90fd5a5fda91976f7",
+    "semantic_hash": "9678b7800431f8b90fd5a5fda91976f7"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/package.json": {
+    "mtime": 1778835350.4195406,
+    "ast_hash": "74ba090ce3a4094796185bba5725494b",
+    "semantic_hash": "74ba090ce3a4094796185bba5725494b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/infra/seed.sh": {
+    "mtime": 1778935507.8554318,
+    "ast_hash": "2272a7c77d5af09769c42749aae4a07e",
+    "semantic_hash": "2272a7c77d5af09769c42749aae4a07e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/infra/postgres/init/01-create-db.sql": {
+    "mtime": 1778712230.1533291,
+    "ast_hash": "5f2a8b093a47dd54444b9c5dca573968",
+    "semantic_hash": "5f2a8b093a47dd54444b9c5dca573968"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/infra/pgadmin/servers.json": {
+    "mtime": 1778712231.7504978,
+    "ast_hash": "e75da4680e3dfe82de30b3751586623e",
+    "semantic_hash": "e75da4680e3dfe82de30b3751586623e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/tsconfig.node.json": {
+    "mtime": 1778713483.7227702,
+    "ast_hash": "ff9e33182596b56f366da31b78d2f3e1",
+    "semantic_hash": "ff9e33182596b56f366da31b78d2f3e1"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/package.json": {
+    "mtime": 1778936105.5254738,
+    "ast_hash": "1835b38c8e1a526ea56668dfb65d0640",
+    "semantic_hash": "1835b38c8e1a526ea56668dfb65d0640"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/components.json": {
+    "mtime": 1778840819.012485,
+    "ast_hash": "13ff02ffdf608fdd9e97845ce5b3aa8c",
+    "semantic_hash": "13ff02ffdf608fdd9e97845ce5b3aa8c"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/tsconfig.json": {
+    "mtime": 1779411192.2547722,
+    "ast_hash": "9890aed6ac56f17549966b1886942b7e",
+    "semantic_hash": "9890aed6ac56f17549966b1886942b7e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/vite.config.ts": {
+    "mtime": 1778840819.024968,
+    "ast_hash": "0725f8a7f94a6aa20239119e8ecd9b6d",
+    "semantic_hash": "0725f8a7f94a6aa20239119e8ecd9b6d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/App.tsx": {
+    "mtime": 1778840819.014632,
+    "ast_hash": "ce3c9ad7f4f466f285623d2ee789b432",
+    "semantic_hash": "ce3c9ad7f4f466f285623d2ee789b432"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/main.tsx": {
+    "mtime": 1778840819.022162,
+    "ast_hash": "48d1d642dc3d8fb470e76fcae6ca3bd8",
+    "semantic_hash": "48d1d642dc3d8fb470e76fcae6ca3bd8"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/types.ts": {
+    "mtime": 1778935800.029514,
+    "ast_hash": "b0b89962b3edb2e51f34711229c6c5e3",
+    "semantic_hash": "b0b89962b3edb2e51f34711229c6c5e3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/vite-env.d.ts": {
+    "mtime": 1778713493.31083,
+    "ast_hash": "3949526eeb7d615c36d539f012ff9012",
+    "semantic_hash": "3949526eeb7d615c36d539f012ff9012"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/NavBar.tsx": {
+    "mtime": 1778935507.860456,
+    "ast_hash": "11fb2d7995e8a44e26cbd9338655257e",
+    "semantic_hash": "11fb2d7995e8a44e26cbd9338655257e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/AbsenceCalendarPicker.tsx": {
+    "mtime": 1778840819.0151248,
+    "ast_hash": "7860bd86a59e72a247f738d0ca5c0619",
+    "semantic_hash": "7860bd86a59e72a247f738d0ca5c0619"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/DispatchPage.tsx": {
+    "mtime": 1779436415.2381525,
+    "ast_hash": "8c33a67562ca8551e131187b64ecd5bc",
+    "semantic_hash": "8c33a67562ca8551e131187b64ecd5bc"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ResizableSplitHandle.tsx": {
+    "mtime": 1778960574.8401299,
+    "ast_hash": "9bf760778501d24cc38da0d9226bc4fa",
+    "semantic_hash": "9bf760778501d24cc38da0d9226bc4fa"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/AbsencesPanel.tsx": {
+    "mtime": 1778840819.0156686,
+    "ast_hash": "909752cae38fa1e5c04e737567098e73",
+    "semantic_hash": "909752cae38fa1e5c04e737567098e73"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/CreateOrderForm.tsx": {
+    "mtime": 1778936184.128353,
+    "ast_hash": "933aaafe88187000cc4b943e2c4d7bab",
+    "semantic_hash": "933aaafe88187000cc4b943e2c4d7bab"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/SiteMap.tsx": {
+    "mtime": 1778831983.2981431,
+    "ast_hash": "41afc49581643eb1125f5e9c9c575bea",
+    "semantic_hash": "41afc49581643eb1125f5e9c9c575bea"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/MechanicPicker.tsx": {
+    "mtime": 1778935507.8600366,
+    "ast_hash": "f85cbc4706f95d01a389c9aad7878ba2",
+    "semantic_hash": "f85cbc4706f95d01a389c9aad7878ba2"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/AddressLookup.tsx": {
+    "mtime": 1778840819.0159721,
+    "ast_hash": "1cb8ee0f2aabb4860f55ffc865307a03",
+    "semantic_hash": "1cb8ee0f2aabb4860f55ffc865307a03"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/Toast.tsx": {
+    "mtime": 1778957805.7176733,
+    "ast_hash": "f9fe5181523db2dbe0ae9bca3f088065",
+    "semantic_hash": "f9fe5181523db2dbe0ae9bca3f088065"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/MechanicList.tsx": {
+    "mtime": 1778840819.0174267,
+    "ast_hash": "f099d8087bc6608e0cb11f4fe3c8473d",
+    "semantic_hash": "f099d8087bc6608e0cb11f4fe3c8473d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/OrderDetailsCard.tsx": {
+    "mtime": 1779410726.0830555,
+    "ast_hash": "00328788be55aba41e77b84b05d95229",
+    "semantic_hash": "00328788be55aba41e77b84b05d95229"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/DispatchModal.tsx": {
+    "mtime": 1778935860.1376429,
+    "ast_hash": "6bbe52e15d848e774a08bab3b0a922b7",
+    "semantic_hash": "6bbe52e15d848e774a08bab3b0a922b7"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ServiceOrderDrawer.tsx": {
+    "mtime": 1779410824.6990778,
+    "ast_hash": "bf028fb5da3d2f4a1eb0339332adc383",
+    "semantic_hash": "bf028fb5da3d2f4a1eb0339332adc383"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/LanguageSwitcher.tsx": {
+    "mtime": 1778840819.0170958,
+    "ast_hash": "7e533f6c42196636b8751af623e3770a",
+    "semantic_hash": "7e533f6c42196636b8751af623e3770a"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/OrderEditForm.tsx": {
+    "mtime": 1779412826.3743231,
+    "ast_hash": "00852ca022ac222cbab071d712fa102b",
+    "semantic_hash": "00852ca022ac222cbab071d712fa102b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/SearchInput.tsx": {
+    "mtime": 1778850363.9426894,
+    "ast_hash": "bccddec62e8f72e63db3d39680d11767",
+    "semantic_hash": "bccddec62e8f72e63db3d39680d11767"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/card.tsx": {
+    "mtime": 1778840819.0198238,
+    "ast_hash": "5f465338c9c83716fd67bba76b9852d4",
+    "semantic_hash": "5f465338c9c83716fd67bba76b9852d4"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/sheet.tsx": {
+    "mtime": 1778840819.0207217,
+    "ast_hash": "70f191fcbd262095ddd6afbcc8bbf99d",
+    "semantic_hash": "70f191fcbd262095ddd6afbcc8bbf99d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/label.tsx": {
+    "mtime": 1778840819.0202587,
+    "ast_hash": "84c1875f4b045f280ff7e6947cab726b",
+    "semantic_hash": "84c1875f4b045f280ff7e6947cab726b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/sonner.tsx": {
+    "mtime": 1778840819.020873,
+    "ast_hash": "1f6a34a31d439990ad97c4cde46446eb",
+    "semantic_hash": "1f6a34a31d439990ad97c4cde46446eb"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/toggle-group.tsx": {
+    "mtime": 1778840819.0212886,
+    "ast_hash": "5752d9fc30a6528c54c333d4fb1e442e",
+    "semantic_hash": "5752d9fc30a6528c54c333d4fb1e442e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/dialog.tsx": {
+    "mtime": 1778840819.0199723,
+    "ast_hash": "993a9ca4c90359250f452aadd3e2e28c",
+    "semantic_hash": "993a9ca4c90359250f452aadd3e2e28c"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/badge.tsx": {
+    "mtime": 1778840819.0195434,
+    "ast_hash": "8510911fff59be294d64dbfc67f5c710",
+    "semantic_hash": "8510911fff59be294d64dbfc67f5c710"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/table.tsx": {
+    "mtime": 1778840819.021027,
+    "ast_hash": "5af6efe80913e67455e53ad2fecf7ca2",
+    "semantic_hash": "5af6efe80913e67455e53ad2fecf7ca2"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/separator.tsx": {
+    "mtime": 1778840819.020549,
+    "ast_hash": "f61cb035415f9f306204006874b40def",
+    "semantic_hash": "f61cb035415f9f306204006874b40def"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/button.tsx": {
+    "mtime": 1778840819.0196843,
+    "ast_hash": "5eb5c23dfc552fe75b9beeffacede350",
+    "semantic_hash": "5eb5c23dfc552fe75b9beeffacede350"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/toggle.tsx": {
+    "mtime": 1778840819.0214314,
+    "ast_hash": "d21c665171abb398d823dc77bb10642d",
+    "semantic_hash": "d21c665171abb398d823dc77bb10642d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/select.tsx": {
+    "mtime": 1778840819.0204043,
+    "ast_hash": "8f59eda15860f917b57c8c427e6a6960",
+    "semantic_hash": "8f59eda15860f917b57c8c427e6a6960"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/textarea.tsx": {
+    "mtime": 1778840819.0211544,
+    "ast_hash": "b068d08e701aefd6216234a763e3a2ef",
+    "semantic_hash": "b068d08e701aefd6216234a763e3a2ef"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/input.tsx": {
+    "mtime": 1778840819.0201201,
+    "ast_hash": "186052fef4d6a678824a3ac70ec3bdec",
+    "semantic_hash": "186052fef4d6a678824a3ac70ec3bdec"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/context-menu.tsx": {
+    "mtime": 1778936106.4712186,
+    "ast_hash": "0665cd1c0b915f31a12064fff23ccbf5",
+    "semantic_hash": "0665cd1c0b915f31a12064fff23ccbf5"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/gantt/GanttRow.tsx": {
+    "mtime": 1779436919.470528,
+    "ast_hash": "ee3afb7ab3fe0678e410ee8126c5063f",
+    "semantic_hash": "ee3afb7ab3fe0678e410ee8126c5063f"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/gantt/GanttChip.tsx": {
+    "mtime": 1779436895.279301,
+    "ast_hash": "f13dd6ee8d4a5a4bb353eb64f6485d61",
+    "semantic_hash": "f13dd6ee8d4a5a4bb353eb64f6485d61"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/gantt/types.ts": {
+    "mtime": 1779436411.5761805,
+    "ast_hash": "59bc489712666c418fde4c687c162dfe",
+    "semantic_hash": "59bc489712666c418fde4c687c162dfe"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/gantt/Gantt.tsx": {
+    "mtime": 1779436421.52406,
+    "ast_hash": "2e48dfc76bbc8be7dc0cb8635c2b7a59",
+    "semantic_hash": "2e48dfc76bbc8be7dc0cb8635c2b7a59"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/gantt/index.ts": {
+    "mtime": 1778936366.383011,
+    "ast_hash": "6a51c34f921f6b99de114696730603d9",
+    "semantic_hash": "6a51c34f921f6b99de114696730603d9"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/gantt/GanttAbsenceBand.tsx": {
+    "mtime": 1778936286.80032,
+    "ast_hash": "2eea6216947681546c2aed5bd3edfac3",
+    "semantic_hash": "2eea6216947681546c2aed5bd3edfac3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/ui/gantt/time.ts": {
+    "mtime": 1779412959.3576775,
+    "ast_hash": "ee30164eb5dd5622068b8ebcc85a7773",
+    "semantic_hash": "ee30164eb5dd5622068b8ebcc85a7773"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/components/kibo-ui/gantt/index.tsx": {
+    "mtime": 1779028643.371543,
+    "ast_hash": "10ed60702fdb7bdf111729738f93f711",
+    "semantic_hash": "10ed60702fdb7bdf111729738f93f711"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/hooks/useResizableSplit.ts": {
+    "mtime": 1778938376.7419057,
+    "ast_hash": "12c237cd0e32585f34f892cc51d46a5f",
+    "semantic_hash": "12c237cd0e32585f34f892cc51d46a5f"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/hooks/useDispatchSocket.ts": {
+    "mtime": 1778937967.6390522,
+    "ast_hash": "cec476ce371d3f9de3e11bb24b68ec53",
+    "semantic_hash": "cec476ce371d3f9de3e11bb24b68ec53"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/lib/gantt-time.ts": {
+    "mtime": 1778936259.396604,
+    "ast_hash": "22d56c34bf57d65df17af33eaca836db",
+    "semantic_hash": "22d56c34bf57d65df17af33eaca836db"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/lib/findConflicts.test.ts": {
+    "mtime": 1778935507.86259,
+    "ast_hash": "e87e6b4e9496e6df4ac4ed5811f2ea94",
+    "semantic_hash": "e87e6b4e9496e6df4ac4ed5811f2ea94"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/lib/utils.ts": {
+    "mtime": 1778840819.021886,
+    "ast_hash": "d9837f38cc05303254571985e3164050",
+    "semantic_hash": "d9837f38cc05303254571985e3164050"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/lib/duration.test.ts": {
+    "mtime": 1778935507.8619497,
+    "ast_hash": "2446e57aa7d46419914f2675757d79e1",
+    "semantic_hash": "2446e57aa7d46419914f2675757d79e1"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/lib/duration.ts": {
+    "mtime": 1778935507.862253,
+    "ast_hash": "17399d6b89bcc43b4f85960b29c50b04",
+    "semantic_hash": "17399d6b89bcc43b4f85960b29c50b04"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/lib/gantt-time.test.ts": {
+    "mtime": 1779413127.3571866,
+    "ast_hash": "2ede74a69c4dc9eb8db2e1d6c5e18b2b",
+    "semantic_hash": "2ede74a69c4dc9eb8db2e1d6c5e18b2b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/lib/findConflicts.ts": {
+    "mtime": 1778935507.8628569,
+    "ast_hash": "477d6ea138aa67d3f1e9d40c267623bc",
+    "semantic_hash": "477d6ea138aa67d3f1e9d40c267623bc"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/vehicles.ts": {
+    "mtime": 1778716709.2453647,
+    "ast_hash": "a9e94afd9924ddfe7e0661e43996c1a3",
+    "semantic_hash": "a9e94afd9924ddfe7e0661e43996c1a3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/clients.ts": {
+    "mtime": 1778832083.5408032,
+    "ast_hash": "2d5b3785e274778d977738c26bc0cf20",
+    "semantic_hash": "2d5b3785e274778d977738c26bc0cf20"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/sites.ts": {
+    "mtime": 1778845386.9417188,
+    "ast_hash": "9214caf25253f2b9a85ba1e50261cd98",
+    "semantic_hash": "9214caf25253f2b9a85ba1e50261cd98"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/absences.ts": {
+    "mtime": 1778749276.989557,
+    "ast_hash": "e246ad887e303fc9175d84137b5c5145",
+    "semantic_hash": "e246ad887e303fc9175d84137b5c5145"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/serviceOrders.ts": {
+    "mtime": 1778936568.5740197,
+    "ast_hash": "dab05935e7181442fadac9563f63baf9",
+    "semantic_hash": "dab05935e7181442fadac9563f63baf9"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/mechanics.ts": {
+    "mtime": 1778714746.622772,
+    "ast_hash": "2683b2a73ff39926aac78e4dcd22ef40",
+    "semantic_hash": "2683b2a73ff39926aac78e4dcd22ef40"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/client.ts": {
+    "mtime": 1778935507.857797,
+    "ast_hash": "55a844e0494bcc2f4e67b259c709210d",
+    "semantic_hash": "55a844e0494bcc2f4e67b259c709210d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/skills.ts": {
+    "mtime": 1778748990.2459843,
+    "ast_hash": "9234faa6e1d62d8e7c2079bacea0cc8f",
+    "semantic_hash": "9234faa6e1d62d8e7c2079bacea0cc8f"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/vmrs.ts": {
+    "mtime": 1778935507.8582478,
+    "ast_hash": "2baaba1d40d1abc5569e3e05e5742e5e",
+    "semantic_hash": "2baaba1d40d1abc5569e3e05e5742e5e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/api/geo.ts": {
+    "mtime": 1778716835.6928554,
+    "ast_hash": "9e8af72df90bcdb9975db82cf846972a",
+    "semantic_hash": "9e8af72df90bcdb9975db82cf846972a"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/i18n/format.ts": {
+    "mtime": 1778777388.3739285,
+    "ast_hash": "b7765f3071b708e8d5b25023b07cde36",
+    "semantic_hash": "b7765f3071b708e8d5b25023b07cde36"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/i18n/index.ts": {
+    "mtime": 1778777289.9142916,
+    "ast_hash": "4b062dfdf97d307840a3d5e101ec5438",
+    "semantic_hash": "4b062dfdf97d307840a3d5e101ec5438"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/i18n/locales/it/common.json": {
+    "mtime": 1779413093.0963702,
+    "ast_hash": "8146aa0615ac37e297167c01dfb3da5b",
+    "semantic_hash": "8146aa0615ac37e297167c01dfb3da5b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/i18n/locales/en/common.json": {
+    "mtime": 1779413087.908874,
+    "ast_hash": "cfff5b7e3b23939ae3df277eb1674b81",
+    "semantic_hash": "cfff5b7e3b23939ae3df277eb1674b81"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/pages/VehiclesPage.tsx": {
+    "mtime": 1779410891.557181,
+    "ast_hash": "b269aed961157bd2ba9e997d305b4b1f",
+    "semantic_hash": "b269aed961157bd2ba9e997d305b4b1f"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/pages/ClientsPage.tsx": {
+    "mtime": 1779028219.4801874,
+    "ast_hash": "fd7148632f430f33fb2e199562bcf7d5",
+    "semantic_hash": "fd7148632f430f33fb2e199562bcf7d5"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/pages/SkillsPage.tsx": {
+    "mtime": 1779410884.3919392,
+    "ast_hash": "4adb780d5d3bc783c20c7ac42b5c3aaa",
+    "semantic_hash": "4adb780d5d3bc783c20c7ac42b5c3aaa"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/pages/OrdersPage.tsx": {
+    "mtime": 1779410844.6350741,
+    "ast_hash": "1493f16e8fa10c768171076cbd4ae70e",
+    "semantic_hash": "1493f16e8fa10c768171076cbd4ae70e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/pages/MechanicsPage.tsx": {
+    "mtime": 1779410862.0198872,
+    "ast_hash": "3be7848a6ab8cc0d166418ebf87031c0",
+    "semantic_hash": "3be7848a6ab8cc0d166418ebf87031c0"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/src/ws/dispatchSocket.ts": {
+    "mtime": 1778935507.864845,
+    "ast_hash": "433d01ece51de86cc3c509079b8bb91b",
+    "semantic_hash": "433d01ece51de86cc3c509079b8bb91b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/mvnw": {
+    "mtime": 1757330468.0,
+    "ast_hash": "ab50dd89da7da2346b28003352eeeeeb",
+    "semantic_hash": "ab50dd89da7da2346b28003352eeeeeb"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/api/ServiceOrderCreateTest.java": {
+    "mtime": 1778935507.8505585,
+    "ast_hash": "5ceac271cf0d98f12574a4325d5be85e",
+    "semantic_hash": "5ceac271cf0d98f12574a4325d5be85e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/api/ServiceOrderRescheduleTest.java": {
+    "mtime": 1778935507.8511913,
+    "ast_hash": "30b04b031ea6743f791af173778e0ed3",
+    "semantic_hash": "30b04b031ea6743f791af173778e0ed3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/api/VmrsResourceTest.java": {
+    "mtime": 1778935507.8518069,
+    "ast_hash": "8090c644abd9d3271590fc09afe7b313",
+    "semantic_hash": "8090c644abd9d3271590fc09afe7b313"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/api/ServiceOrderOverrideTest.java": {
+    "mtime": 1778935507.850826,
+    "ast_hash": "a02c92727018aebbd9a74695e4044d49",
+    "semantic_hash": "a02c92727018aebbd9a74695e4044d49"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/api/ServiceOrderScheduleTest.java": {
+    "mtime": 1778935507.8516667,
+    "ast_hash": "9a8de4c2647f1a7ff7c10994011d3ae3",
+    "semantic_hash": "9a8de4c2647f1a7ff7c10994011d3ae3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/api/EstimationResourceTest.java": {
+    "mtime": 1778935507.8501642,
+    "ast_hash": "ddc777f24ec4a4c3956e305c71924232",
+    "semantic_hash": "ddc777f24ec4a4c3956e305c71924232"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/service/EstimationParserTest.java": {
+    "mtime": 1778935507.8522663,
+    "ast_hash": "71a25c3fc08eb3fc6580720f5c399172",
+    "semantic_hash": "71a25c3fc08eb3fc6580720f5c399172"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/service/TitleGeneratorTest.java": {
+    "mtime": 1778777889.4710474,
+    "ast_hash": "91eab345ba40dcb72bc811cc1c76f6fa",
+    "semantic_hash": "91eab345ba40dcb72bc811cc1c76f6fa"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/test/java/com/terrapulse/domain/service/ServiceOrderStateMachineTest.java": {
+    "mtime": 1778935507.8520482,
+    "ast_hash": "065311714106b91dd352dd91168e4758",
+    "semantic_hash": "065311714106b91dd352dd91168e4758"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V7__service_order_client_fk.sql": {
+    "mtime": 1778714544.2299547,
+    "ast_hash": "c6dba477aff812ddcdf415a08e82056f",
+    "semantic_hash": "c6dba477aff812ddcdf415a08e82056f"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V13__client_state.sql": {
+    "mtime": 1778831968.3949764,
+    "ast_hash": "23e389aab632452a9e6e270930a14aed",
+    "semantic_hash": "23e389aab632452a9e6e270930a14aed"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V10__service_order_title.sql": {
+    "mtime": 1778777889.4705825,
+    "ast_hash": "75f352da74c0e785c94e005628e82dee",
+    "semantic_hash": "75f352da74c0e785c94e005628e82dee"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V5__client_table.sql": {
+    "mtime": 1778714538.455156,
+    "ast_hash": "279258c1dda3476fa22ec92aa139d9a2",
+    "semantic_hash": "279258c1dda3476fa22ec92aa139d9a2"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V11__site_table.sql": {
+    "mtime": 1778802584.9421527,
+    "ast_hash": "21aa96cd9c12b629df2843049c4a2e0a",
+    "semantic_hash": "21aa96cd9c12b629df2843049c4a2e0a"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V14__service_order_scheduling.sql": {
+    "mtime": 1778935507.8499014,
+    "ast_hash": "da19b9cf584d6177c27d02a9afe734fc",
+    "semantic_hash": "da19b9cf584d6177c27d02a9afe734fc"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V8__skill_catalog.sql": {
+    "mtime": 1778748846.4655173,
+    "ast_hash": "16f903e09d4335be9b5949255866ebe8",
+    "semantic_hash": "16f903e09d4335be9b5949255866ebe8"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V3__spatial_indexes.sql": {
+    "mtime": 1778712444.727829,
+    "ast_hash": "72b89c4acc78b41669e6da4abf6bafaa",
+    "semantic_hash": "72b89c4acc78b41669e6da4abf6bafaa"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V9__mechanic_absence.sql": {
+    "mtime": 1778749079.9751701,
+    "ast_hash": "557d75fa523fb9db53211b7b11ec2c94",
+    "semantic_hash": "557d75fa523fb9db53211b7b11ec2c94"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V6__reservation_client_fk.sql": {
+    "mtime": 1778714542.903889,
+    "ast_hash": "7cf5e2330d28125a367da876e6dda2c3",
+    "semantic_hash": "7cf5e2330d28125a367da876e6dda2c3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V1__enable_postgis.sql": {
+    "mtime": 1778712426.8590052,
+    "ast_hash": "d07ce3d3cfa85fc4d805fcc75c9ebcf1",
+    "semantic_hash": "d07ce3d3cfa85fc4d805fcc75c9ebcf1"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V12__service_order_site_fk.sql": {
+    "mtime": 1778802591.4239385,
+    "ast_hash": "5e325f7b36c9617ecc99b6ee699c2be0",
+    "semantic_hash": "5e325f7b36c9617ecc99b6ee699c2be0"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V2__core_tables.sql": {
+    "mtime": 1778712443.4287283,
+    "ast_hash": "5857e7083acde6ac82766edd4db19ead",
+    "semantic_hash": "5857e7083acde6ac82766edd4db19ead"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/resources/db/migration/V4__seed_vmrs_stub.sql": {
+    "mtime": 1778712713.7045033,
+    "ast_hash": "b1495d5d0deac89beb9818aeed0bab74",
+    "semantic_hash": "b1495d5d0deac89beb9818aeed0bab74"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/ServiceOrderRepository.java": {
+    "mtime": 1778716928.6441712,
+    "ast_hash": "2c7b1979693d22180066bf142613bd53",
+    "semantic_hash": "2c7b1979693d22180066bf142613bd53"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/ClientRepository.java": {
+    "mtime": 1778714551.5562356,
+    "ast_hash": "a0c78beb76cb5c1b6088e2edcb2e410a",
+    "semantic_hash": "a0c78beb76cb5c1b6088e2edcb2e410a"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/MechanicRepository.java": {
+    "mtime": 1778748907.8927634,
+    "ast_hash": "a9e575623c988c0acee171529f55c241",
+    "semantic_hash": "a9e575623c988c0acee171529f55c241"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/SkillRepository.java": {
+    "mtime": 1778748858.2125125,
+    "ast_hash": "7ca754147ef0b8babb6801af734c4abd",
+    "semantic_hash": "7ca754147ef0b8babb6801af734c4abd"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/ReservationRepository.java": {
+    "mtime": 1778713594.2601433,
+    "ast_hash": "79c3a9e16d506bbc90d0770a1783a2bb",
+    "semantic_hash": "79c3a9e16d506bbc90d0770a1783a2bb"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/MechanicAbsenceRepository.java": {
+    "mtime": 1778749098.1205394,
+    "ast_hash": "0d1606b4f7fae20b38e2e34892f3025d",
+    "semantic_hash": "0d1606b4f7fae20b38e2e34892f3025d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/VmrsCodeRepository.java": {
+    "mtime": 1778712811.7202532,
+    "ast_hash": "e36b3b208b991345dffc0d053b184879",
+    "semantic_hash": "e36b3b208b991345dffc0d053b184879"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/VehicleRepository.java": {
+    "mtime": 1778712796.1160402,
+    "ast_hash": "de6a894fafa23a800ddebb8a80dd481b",
+    "semantic_hash": "de6a894fafa23a800ddebb8a80dd481b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/repository/SiteRepository.java": {
+    "mtime": 1778802596.0161707,
+    "ast_hash": "b4a10c4bba297de7aeca85004597602d",
+    "semantic_hash": "b4a10c4bba297de7aeca85004597602d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/ServiceOrderResource.java": {
+    "mtime": 1778936106.0894985,
+    "ast_hash": "8ff338a8a7e49a490f253708425413d0",
+    "semantic_hash": "8ff338a8a7e49a490f253708425413d0"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/SitesResource.java": {
+    "mtime": 1778845369.5839255,
+    "ast_hash": "11976d7d362c26d643b5543a21a26582",
+    "semantic_hash": "11976d7d362c26d643b5543a21a26582"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/MechanicResource.java": {
+    "mtime": 1778936149.0946233,
+    "ast_hash": "becadc1cbfc82ea165a0b00e18cd446e",
+    "semantic_hash": "becadc1cbfc82ea165a0b00e18cd446e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/GeoResource.java": {
+    "mtime": 1778828338.8342898,
+    "ast_hash": "de1a30e0f079121bf604abc91131f10b",
+    "semantic_hash": "de1a30e0f079121bf604abc91131f10b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/DevResource.java": {
+    "mtime": 1778828311.4924393,
+    "ast_hash": "fbdc00b828c183726640b311744e93f8",
+    "semantic_hash": "fbdc00b828c183726640b311744e93f8"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/SiteResource.java": {
+    "mtime": 1778935507.8475034,
+    "ast_hash": "9c2c582ca9a00f54dc629868141b024d",
+    "semantic_hash": "9c2c582ca9a00f54dc629868141b024d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/EstimationResource.java": {
+    "mtime": 1778935507.846794,
+    "ast_hash": "6e5469cd3a827d5abab24727498fd9e4",
+    "semantic_hash": "6e5469cd3a827d5abab24727498fd9e4"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/SkillResource.java": {
+    "mtime": 1778828302.8806329,
+    "ast_hash": "c912bcfec368d35c7745a5d9f07e2b74",
+    "semantic_hash": "c912bcfec368d35c7745a5d9f07e2b74"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/PingResource.java": {
+    "mtime": 1778712275.4487038,
+    "ast_hash": "48e80d0e18a24c3586e67d87ba242859",
+    "semantic_hash": "48e80d0e18a24c3586e67d87ba242859"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/MechanicAbsenceResource.java": {
+    "mtime": 1778828299.9148772,
+    "ast_hash": "57965ae7342f7ed17158ff7705ee759b",
+    "semantic_hash": "57965ae7342f7ed17158ff7705ee759b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/VmrsResource.java": {
+    "mtime": 1778935507.8478222,
+    "ast_hash": "904441f54ae9932e87cb2c8948a5ee49",
+    "semantic_hash": "904441f54ae9932e87cb2c8948a5ee49"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/ClientResource.java": {
+    "mtime": 1778832005.2039647,
+    "ast_hash": "f0e8852b550f6d3e81f209f8688f6f79",
+    "semantic_hash": "f0e8852b550f6d3e81f209f8688f6f79"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/ReservationResource.java": {
+    "mtime": 1778828291.6629772,
+    "ast_hash": "8982277fea7a723fc2d166353eedd8e3",
+    "semantic_hash": "8982277fea7a723fc2d166353eedd8e3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/VehicleResource.java": {
+    "mtime": 1778828287.5513222,
+    "ast_hash": "1962f8c271fb8abb426740343c1de499",
+    "semantic_hash": "1962f8c271fb8abb426740343c1de499"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/dto/VehicleDtos.java": {
+    "mtime": 1778802631.7666223,
+    "ast_hash": "0376e7e8a5293577ab9912b414049ec1",
+    "semantic_hash": "0376e7e8a5293577ab9912b414049ec1"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/dto/ServiceOrderDtos.java": {
+    "mtime": 1778936088.1430945,
+    "ast_hash": "58b92388c1e305236ba6dc703b7a6a64",
+    "semantic_hash": "58b92388c1e305236ba6dc703b7a6a64"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/dto/ClientDtos.java": {
+    "mtime": 1778831986.019282,
+    "ast_hash": "71c6e54cc35b73ea26554b7797aafa05",
+    "semantic_hash": "71c6e54cc35b73ea26554b7797aafa05"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/dto/LatLng.java": {
+    "mtime": 1778712793.8768759,
+    "ast_hash": "4aca22fc31652985cdd685f272fe94cc",
+    "semantic_hash": "4aca22fc31652985cdd685f272fe94cc"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/dto/MechanicDtos.java": {
+    "mtime": 1778936115.050855,
+    "ast_hash": "16bb2d50d58b862749553bbc3964a984",
+    "semantic_hash": "16bb2d50d58b862749553bbc3964a984"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/dto/SiteDtos.java": {
+    "mtime": 1778845363.7288663,
+    "ast_hash": "3ce8980e7b1d099208e838f2e08c9ca5",
+    "semantic_hash": "3ce8980e7b1d099208e838f2e08c9ca5"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/dto/ReservationDtos.java": {
+    "mtime": 1778714597.896536,
+    "ast_hash": "63fd4ad648999a7700e588a952b37457",
+    "semantic_hash": "63fd4ad648999a7700e588a952b37457"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/api/exception/ExceptionMappers.java": {
+    "mtime": 1778712848.3992155,
+    "ast_hash": "ddfc6401add54c7d7bc309b2bb821569",
+    "semantic_hash": "ddfc6401add54c7d7bc309b2bb821569"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/service/TitleGenerator.java": {
+    "mtime": 1778777889.470339,
+    "ast_hash": "5cd9187708f597dcb2ae1c8ab3016f2f",
+    "semantic_hash": "5cd9187708f597dcb2ae1c8ab3016f2f"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/service/GeometrySupport.java": {
+    "mtime": 1778712792.5444577,
+    "ast_hash": "da951f78315fc1da3840ee8ed3d8772e",
+    "semantic_hash": "da951f78315fc1da3840ee8ed3d8772e"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/service/EstimationParser.java": {
+    "mtime": 1778935507.8493032,
+    "ast_hash": "263a949a26ea98e0185fa966f74582d3",
+    "semantic_hash": "263a949a26ea98e0185fa966f74582d3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/service/EstimationService.java": {
+    "mtime": 1778712814.3746445,
+    "ast_hash": "b22c5a96dd47f9eca8b818386379eb94",
+    "semantic_hash": "b22c5a96dd47f9eca8b818386379eb94"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/service/NearestMechanicService.java": {
+    "mtime": 1778712816.8371625,
+    "ast_hash": "10cc5f3a8f3b25e2996554767ffb4783",
+    "semantic_hash": "10cc5f3a8f3b25e2996554767ffb4783"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/skill/Skill.java": {
+    "mtime": 1778748852.426373,
+    "ast_hash": "c313d1f828c679e4839c51f39f209505",
+    "semantic_hash": "c313d1f828c679e4839c51f39f209505"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/vehicle/VehicleStatus.java": {
+    "mtime": 1778712461.6897871,
+    "ast_hash": "9b0414e0c8779e1d7e2a1a9acee0de30",
+    "semantic_hash": "9b0414e0c8779e1d7e2a1a9acee0de30"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/vehicle/VehicleClass.java": {
+    "mtime": 1778712460.3550696,
+    "ast_hash": "3fdd105de508fc8ee49c05b15d9ac9d6",
+    "semantic_hash": "3fdd105de508fc8ee49c05b15d9ac9d6"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/vehicle/Vehicle.java": {
+    "mtime": 1778802630.736511,
+    "ast_hash": "5e6d59f628c322691463aba30ab32fb9",
+    "semantic_hash": "5e6d59f628c322691463aba30ab32fb9"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/mechanic/Mechanic.java": {
+    "mtime": 1778748879.61867,
+    "ast_hash": "e12737667d1c9f409e740ba4bc8f5ef1",
+    "semantic_hash": "e12737667d1c9f409e740ba4bc8f5ef1"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/mechanic/MechanicAbsence.java": {
+    "mtime": 1778749092.1749177,
+    "ast_hash": "67c930cbf7fe204541599fdf0c304757",
+    "semantic_hash": "67c930cbf7fe204541599fdf0c304757"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/mechanic/AbsenceType.java": {
+    "mtime": 1778749083.9798028,
+    "ast_hash": "0bcd4076df1da0504f61d6c5166100d4",
+    "semantic_hash": "0bcd4076df1da0504f61d6c5166100d4"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/mechanic/MechanicStatus.java": {
+    "mtime": 1778712484.8949857,
+    "ast_hash": "23ce83c51ada1dc57971e45b3458977d",
+    "semantic_hash": "23ce83c51ada1dc57971e45b3458977d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/reservation/DryHireReservation.java": {
+    "mtime": 1778712479.5483549,
+    "ast_hash": "bed21effbd398aebab1d0d33dbbfad45",
+    "semantic_hash": "bed21effbd398aebab1d0d33dbbfad45"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/reservation/Reservation.java": {
+    "mtime": 1778714559.8568606,
+    "ast_hash": "64c8df14ea666c693a3706fb57ca315d",
+    "semantic_hash": "64c8df14ea666c693a3706fb57ca315d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/reservation/WetHireReservation.java": {
+    "mtime": 1778712483.1625268,
+    "ast_hash": "b1f63177a46c2d4a1a25af590d810dc9",
+    "semantic_hash": "b1f63177a46c2d4a1a25af590d810dc9"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/reservation/HireType.java": {
+    "mtime": 1778712468.7992668,
+    "ast_hash": "34b9f8c6bbf6b195d97964cd018e787d",
+    "semantic_hash": "34b9f8c6bbf6b195d97964cd018e787d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/reservation/ReservationStatus.java": {
+    "mtime": 1778712470.2011197,
+    "ast_hash": "10ebfb7896b9f2c8ef6fd9a1acc7f4d6",
+    "semantic_hash": "10ebfb7896b9f2c8ef6fd9a1acc7f4d6"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/vmrs/VmrsCode.java": {
+    "mtime": 1778712511.819467,
+    "ast_hash": "d681af8e0320280aa883cf56f6250d22",
+    "semantic_hash": "d681af8e0320280aa883cf56f6250d22"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/site/Site.java": {
+    "mtime": 1778802594.503781,
+    "ast_hash": "1ff9b3a62955ba2e837336fded2dfa00",
+    "semantic_hash": "1ff9b3a62955ba2e837336fded2dfa00"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/service/ServiceOrder.java": {
+    "mtime": 1778935507.8485339,
+    "ast_hash": "6179691c0051e87999b816e94d0b2825",
+    "semantic_hash": "6179691c0051e87999b816e94d0b2825"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/service/ServiceOrderState.java": {
+    "mtime": 1778935507.8488293,
+    "ast_hash": "1a917e51eb56dbc110848eb6616763d8",
+    "semantic_hash": "1a917e51eb56dbc110848eb6616763d8"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/service/ServiceOrderStateMachine.java": {
+    "mtime": 1778935507.8490062,
+    "ast_hash": "6c9ead4aade2ba10a4060e68584bef18",
+    "semantic_hash": "6c9ead4aade2ba10a4060e68584bef18"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/service/IllegalStateTransitionException.java": {
+    "mtime": 1778712509.384664,
+    "ast_hash": "ac83b9be83f8e77fb8de9159522178c5",
+    "semantic_hash": "ac83b9be83f8e77fb8de9159522178c5"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/client/Client.java": {
+    "mtime": 1778831977.8518684,
+    "ast_hash": "729c80564d1d39e1505a17464a5b76b7",
+    "semantic_hash": "729c80564d1d39e1505a17464a5b76b7"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/domain/client/ClientState.java": {
+    "mtime": 1778831963.8690236,
+    "ast_hash": "281330b49eb54eea1fd038e4c302a4a3",
+    "semantic_hash": "281330b49eb54eea1fd038e4c302a4a3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/ws/DispatchEvent.java": {
+    "mtime": 1778936082.8601046,
+    "ast_hash": "65b895408cea40018240618072881da6",
+    "semantic_hash": "65b895408cea40018240618072881da6"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/ws/DispatchEventBus.java": {
+    "mtime": 1778713298.7263644,
+    "ast_hash": "ae9a278001e43f5e7b73ce4ffcd6a0a7",
+    "semantic_hash": "ae9a278001e43f5e7b73ce4ffcd6a0a7"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/backend/src/main/java/com/terrapulse/ws/DispatchBoardSocket.java": {
+    "mtime": 1778712993.2326453,
+    "ast_hash": "71ef7a480bcd53174b75921df12e0f03",
+    "semantic_hash": "71ef7a480bcd53174b75921df12e0f03"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/.impeccable/design.json": {
+    "mtime": 1778795844.8809469,
+    "ast_hash": "f43593b0bf2678e3f063f7ca0d1dc9e5",
+    "semantic_hash": "f43593b0bf2678e3f063f7ca0d1dc9e5"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/PRODUCT.md": {
+    "mtime": 1778776073.2776937,
+    "ast_hash": "255e48816acb0407ac094c7d09876373",
+    "semantic_hash": "255e48816acb0407ac094c7d09876373"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/Pre plan prompt 1.md": {
+    "mtime": 1778711143.5091984,
+    "ast_hash": "09b994861e4da1d0018eb8f33ff247a5",
+    "semantic_hash": "09b994861e4da1d0018eb8f33ff247a5"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/README.md": {
+    "mtime": 1778712241.0681815,
+    "ast_hash": "9827d5475e7d842c18bd83d2c2679181",
+    "semantic_hash": "9827d5475e7d842c18bd83d2c2679181"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docker-compose.yml": {
+    "mtime": 1778712228.1957905,
+    "ast_hash": "43a546ca412b6f465d1cd7df5a07bfda",
+    "semantic_hash": "43a546ca412b6f465d1cd7df5a07bfda"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/DESIGN.md": {
+    "mtime": 1778800297.117372,
+    "ast_hash": "76cf01bad440a52b1e38e0b361f7ccbb",
+    "semantic_hash": "76cf01bad440a52b1e38e0b361f7ccbb"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/CLAUDE.md": {
+    "mtime": 1778792931.4077885,
+    "ast_hash": "00f1a4c3aa223951d89ed94abdde88d9",
+    "semantic_hash": "00f1a4c3aa223951d89ed94abdde88d9"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/index.html": {
+    "mtime": 1778840819.0128825,
+    "ast_hash": "5bf49313850ba2e6524e04e1e1460674",
+    "semantic_hash": "5bf49313850ba2e6524e04e1e1460674"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/stack-quirks.md": {
+    "mtime": 1778935507.854172,
+    "ast_hash": "2556f7107bf34a0e76805ae192b11e2b",
+    "semantic_hash": "2556f7107bf34a0e76805ae192b11e2b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/architecture.md": {
+    "mtime": 1778935507.8530357,
+    "ast_hash": "17a3a03bec0d479bd01d3c88952d93d0",
+    "semantic_hash": "17a3a03bec0d479bd01d3c88952d93d0"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/api.md": {
+    "mtime": 1778935507.8527775,
+    "ast_hash": "cf9d5dbf242d08009295095a5702b344",
+    "semantic_hash": "cf9d5dbf242d08009295095a5702b344"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/quick-start.md": {
+    "mtime": 1778792910.0054104,
+    "ast_hash": "9e5a7437eadc69e221ce08b4994029a8",
+    "semantic_hash": "9e5a7437eadc69e221ce08b4994029a8"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/scope-fence.md": {
+    "mtime": 1778792922.907773,
+    "ast_hash": "b94ce0a1afd30e6d66396f97d602d1c6",
+    "semantic_hash": "b94ce0a1afd30e6d66396f97d602d1c6"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/commit-style.md": {
+    "mtime": 1778792925.0534422,
+    "ast_hash": "7ad3e4dc7cc69df7a07ee4f38fe7b01b",
+    "semantic_hash": "7ad3e4dc7cc69df7a07ee4f38fe7b01b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/domain.md": {
+    "mtime": 1778935507.853298,
+    "ast_hash": "591b817abeacdf86bdc36cf7e484c5d7",
+    "semantic_hash": "591b817abeacdf86bdc36cf7e484c5d7"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/non-negotiables.md": {
+    "mtime": 1778935507.8539073,
+    "ast_hash": "f443ec3daabf2ab168541ec3762e062f",
+    "semantic_hash": "f443ec3daabf2ab168541ec3762e062f"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/dev-setup.md": {
+    "mtime": 1778715382.1227593,
+    "ast_hash": "3bcbc2750a3badaf80711af941d73a16",
+    "semantic_hash": "3bcbc2750a3badaf80711af941d73a16"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/layout.md": {
+    "mtime": 1778935507.8536422,
+    "ast_hash": "8d53c67f687d68795c2811bc08223233",
+    "semantic_hash": "8d53c67f687d68795c2811bc08223233"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_dashboard_light/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "e5428e16869bf0f386b4933a5d46221b",
+    "semantic_hash": "e5428e16869bf0f386b4933a5d46221b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_vehicles_inventory/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "a53f8fe818790b18a70368b988c75190",
+    "semantic_hash": "a53f8fe818790b18a70368b988c75190"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_dispatch_mobile/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "44e9447dc8634c919af787cdb72e66b0",
+    "semantic_hash": "44e9447dc8634c919af787cdb72e66b0"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/precision_industrial/DESIGN.md": {
+    "mtime": 1778791688.0,
+    "ast_hash": "73fc8a5a0c37a7db5bafe610440e13b0",
+    "semantic_hash": "73fc8a5a0c37a7db5bafe610440e13b0"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_dispatch_board_interactions/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "fcb6e26d9b95efab92c5adf2bda04b26",
+    "semantic_hash": "fcb6e26d9b95efab92c5adf2bda04b26"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_clients_sites/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "61abed26330d1851c0660512ce0420d1",
+    "semantic_hash": "61abed26330d1851c0660512ce0420d1"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_order_management/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "bdc417e8106d2e61003e18f70e54adce",
+    "semantic_hash": "bdc417e8106d2e61003e18f70e54adce"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_dispatch_board_light/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "902278ffaa494ace7eb51b873541a0c2",
+    "semantic_hash": "902278ffaa494ace7eb51b873541a0c2"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_service_orders_mobile/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "3dfc92c8566f7322d49ab13ad4fd3272",
+    "semantic_hash": "3dfc92c8566f7322d49ab13ad4fd3272"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_mechanics_board/code.html": {
+    "mtime": 1778791688.0,
+    "ast_hash": "abbe3dc0067689459935bc879b33e863",
+    "semantic_hash": "abbe3dc0067689459935bc879b33e863"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/industrial_telemetry/DESIGN.md": {
+    "mtime": 1778791688.0,
+    "ast_hash": "e3351f560ed1d0f1049fc630950344a3",
+    "semantic_hash": "e3351f560ed1d0f1049fc630950344a3"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/mobile/README.md": {
+    "mtime": 1778712234.894662,
+    "ast_hash": "e3176ca49ef591420b93a389c145b852",
+    "semantic_hash": "e3176ca49ef591420b93a389c145b852"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/public/favicon.svg": {
+    "mtime": 1778935507.8574286,
+    "ast_hash": "f2bd3fe04a6c57cd5ebb6924ca744643",
+    "semantic_hash": "f2bd3fe04a6c57cd5ebb6924ca744643"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/web/public/terra-pulse-logo.svg": {
+    "mtime": 1778935507.8575375,
+    "ast_hash": "f2bd3fe04a6c57cd5ebb6924ca744643",
+    "semantic_hash": "f2bd3fe04a6c57cd5ebb6924ca744643"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/logo2.png": {
+    "mtime": 1778838886.2140565,
+    "ast_hash": "88f71a30d151cb8a6e257878e4911422",
+    "semantic_hash": "88f71a30d151cb8a6e257878e4911422"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/terra-pulse-logo.svg": {
+    "mtime": 1778856408.6871567,
+    "ast_hash": "d8abc6f39a7e51e616e82a6dab784e06",
+    "semantic_hash": "d8abc6f39a7e51e616e82a6dab784e06"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_dashboard_light/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "d7da4ecc9b15903a3fa999ad78dfe2c8",
+    "semantic_hash": "d7da4ecc9b15903a3fa999ad78dfe2c8"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_vehicles_inventory/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "0c19e10b789719d50dd25b79d7fd938b",
+    "semantic_hash": "0c19e10b789719d50dd25b79d7fd938b"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_dispatch_mobile/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "2c11614a9bb49ff9e70839d27a1d19f5",
+    "semantic_hash": "2c11614a9bb49ff9e70839d27a1d19f5"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_dispatch_board_interactions/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "f515eefa27ae088229e326447cc1e435",
+    "semantic_hash": "f515eefa27ae088229e326447cc1e435"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_clients_sites/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "918665158449417408fa3c64f0aca58d",
+    "semantic_hash": "918665158449417408fa3c64f0aca58d"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_order_management/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "24fdf0198636c8d10261c073b1bd34b1",
+    "semantic_hash": "24fdf0198636c8d10261c073b1bd34b1"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_dispatch_board_light/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "45bb85d20fb24e80d30f221e06b7a142",
+    "semantic_hash": "45bb85d20fb24e80d30f221e06b7a142"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_service_orders_mobile/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "2ed750105e8d81d532a8239294e5acf5",
+    "semantic_hash": "2ed750105e8d81d532a8239294e5acf5"
+  },
+  "/Users/c.bertuccioli/workspace/learning/terra-pulse/docs/design/terrapulse_mechanics_board/screen.png": {
+    "mtime": 1778791688.0,
+    "ast_hash": "ca4a3ce3f66daee5156a06915003c936",
+    "semantic_hash": "ca4a3ce3f66daee5156a06915003c936"
+  }
+}
