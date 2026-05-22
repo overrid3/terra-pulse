@@ -26,9 +26,9 @@ export function SkillsPage() {
   const isMobile = useIsMobile();
   const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableSplit({
     storageKey: "tp.skills.listWidth",
-    defaultWidth: 480,
-    minWidth: 720,
-    maxWidth: 1024,
+    defaultWidth: 760,
+    minWidth: 480,
+    maxWidth: 1100,
   });
   const qc = useQuery({ queryKey: queryKeys.skills, queryFn: skillsApi.list });
   const [editing, setEditing] = useState<Skill | null>(null);
@@ -79,7 +79,7 @@ export function SkillsPage() {
       <section
         ref={listPanelRef}
         style={{ width: isMobile ? undefined : listInitialWidth }}
-        className="md:shrink-0 md:min-w-180 bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0"
+        className="md:shrink-0 md:min-w-[480px] md:max-w-[1100px] bg-(--color-surface-panel) border border-(--color-hairline) rounded-md p-3.5 overflow-auto min-h-0"
       >
         <div className="flex items-center justify-between gap-3 mb-2.5 flex-wrap">
           <h2 className="m-0">{t("skills.pageTitle", { count: qc.data?.length ?? 0 })}</h2>

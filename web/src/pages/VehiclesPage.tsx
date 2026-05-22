@@ -44,9 +44,9 @@ export function VehiclesPage() {
   const isMobile = useIsMobile();
   const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableSplit({
     storageKey: "tp.vehicles.listWidth",
-    defaultWidth: 720,
-    minWidth: 500,
-    maxWidth: 1024,
+    defaultWidth: 900,
+    minWidth: 600,
+    maxWidth: 1200,
   });
 
   const vehiclesQ = useQuery({ queryKey: queryKeys.vehicles, queryFn: vehiclesApi.list });

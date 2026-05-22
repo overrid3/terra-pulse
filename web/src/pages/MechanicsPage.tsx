@@ -67,9 +67,9 @@ export function MechanicsPage() {
   const isMobile = useIsMobile();
   const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableSplit({
     storageKey: "tp.mechanics.listWidth",
-    defaultWidth: 480,
-    minWidth: 320,
-    maxWidth: 720,
+    defaultWidth: 760,
+    minWidth: 480,
+    maxWidth: 1100,
   });
   const qc = useQuery({ queryKey: queryKeys.mechanics, queryFn: mechanicsApi.list });
   const skillsQ = useQuery({ queryKey: queryKeys.skills, queryFn: skillsApi.list });
@@ -182,7 +182,7 @@ export function MechanicsPage() {
       <section
         ref={listPanelRef}
         style={{ width: !isMobile ? listInitialWidth : undefined }}
-        className="md:shrink-0 md:min-w-[320px] md:max-w-[720px] bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3"
+        className="md:shrink-0 md:min-w-[480px] md:max-w-[1100px] bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3"
       >
         <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
