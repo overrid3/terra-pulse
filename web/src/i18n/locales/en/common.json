@@ -37,6 +37,9 @@
     "deleteConfirm": "Delete {{label}}?",
     "minutesShort": "{{count}}m",
     "minutes": "{{count}} min",
+    "minutesUnit": "min",
+    "previous": "Previous",
+    "next": "Next",
     "search": "Search",
     "filter": "Filter",
     "refresh": "Refresh",
@@ -79,7 +82,14 @@
     "scheduleSuccess": "Order scheduled",
     "rescheduleSuccess": "Schedule updated",
     "conflictWarning": "Overlaps with {{title}} at {{time}}",
-    "addAbsence": "+ Absence"
+    "addAbsence": "+ Absence",
+    "orderCreatedToast": "Order created",
+    "errorStartBeforeEnd": "Start must be before end",
+    "errorEndAfterStart": "End must be after start",
+    "errorMustBeApproved": "Order must be APPROVED to schedule (current: {{state}})",
+    "priorityCritical": "Critical",
+    "priorityQuoted": "Quoted",
+    "priorityScheduled": "Scheduled"
   },
   "orders": {
     "pageTitle": "Service orders",
@@ -112,7 +122,12 @@
     "fieldCompleted": "Completed",
     "fieldDispatched": "Dispatched",
     "fieldStarted": "Started",
+    "fieldScheduled": "Scheduled",
     "fieldNotesHistory": "Notes",
+    "actionEdit": "Edit details",
+    "savedToast": "Order updated",
+    "startedToast": "Order started",
+    "overriddenToast": "Order state updated",
     "noOrders": "no orders match",
     "selectPlaceholder": "— pick —",
     "vehicleOption": "{{make}} {{model}} · {{serial}}",
@@ -333,7 +348,10 @@
     "pickVisually": "Pick on calendar",
     "hideCalendar": "Hide calendar",
     "daysSummary_one": "{{count}} day",
-    "daysSummary_other": "{{count}} days"
+    "daysSummary_other": "{{count}} days",
+    "sheetTitle": "Absences — {{name}}",
+    "sheetTitleEmpty": "Absences",
+    "sheetDescription": "Manage time-off and unavailability windows for this mechanic."
   },
   "address": {
     "placeholderFallback": "Search address (e.g. Piazza Duomo Milano)",

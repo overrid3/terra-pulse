@@ -33,10 +33,10 @@ import { pxToTime } from "../lib/gantt-time";
 
 const PENDING_STATES = new Set(["REQUESTED", "QUOTED", "APPROVED"]);
 
-function priorityBadge(o: ServiceOrder): { label: string; cls: string } {
-  if (o.state === "REQUESTED") return { label: "CRITICAL", cls: "state-REQUESTED" };
-  if (o.state === "QUOTED")    return { label: "QUOTED",   cls: "state-QUOTED" };
-  return { label: "SCHEDULED", cls: "state-APPROVED" };
+function priorityBadge(o: ServiceOrder): { key: string; cls: string } {
+  if (o.state === "REQUESTED") return { key: "dispatch.priorityCritical",  cls: "state-REQUESTED" };
+  if (o.state === "QUOTED")    return { key: "dispatch.priorityQuoted",    cls: "state-QUOTED" };
+  return                              { key: "dispatch.priorityScheduled", cls: "state-APPROVED" };
 }
 
 export function DispatchPage() {
@@ -89,7 +89,7 @@ export function DispatchPage() {
     onSuccess: () => {
       invalidateOrders();
       setCreateOpen(false);
-      toast.success("Order created");
+      toast.success(t("dispatch.orderCreatedToast"));
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -97,7 +97,7 @@ export function DispatchPage() {
   const scheduleMut = useMutation({
     mutationFn: (args: { id: UUID; mechanicId: UUID; start: string; end: string }) =>
       serviceOrdersApi.schedule(args.id, { mechanicId: args.mechanicId, scheduledStartAt: args.start, scheduledEndAt: args.end }),
-    onSuccess: () => { invalidateOrders(); toast.success("Order scheduled"); },
+    onSuccess: () => { invalidateOrders(); toast.success(t("dispatch.scheduleSuccess")); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -108,7 +108,7 @@ export function DispatchPage() {
         scheduledStartAt: args.start,
         scheduledEndAt: args.end,
       }),
-    onSuccess: () => { invalidateOrders(); toast.success("Schedule updated"); },
+    onSuccess: () => { invalidateOrders(); toast.success(t("dispatch.rescheduleSuccess")); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -175,15 +175,15 @@ export function DispatchPage() {
       const rect = rowRefs.current.get(o.mechanicId)?.getBoundingClientRect();
       if (!rect) return;
       const cursorX = ((e.activatorEvent as MouseEvent | null)?.clientX ?? 0) + (e.delta?.x ?? 0);
-      const t = pxToTime(rect, cursorX, view, winStart, winEnd);
+      const time = pxToTime(rect, cursorX, view, winStart, winEnd);
       if (a.edge === "start") {
         const end = new Date(a.scheduledEndAt!);
-        if (t >= end) { toast.error("Start must be before end"); return; }
-        rescheduleMut.mutate({ id: a.orderId as UUID, start: t.toISOString() });
+        if (time >= end) { toast.error(t("dispatch.errorStartBeforeEnd")); return; }
+        rescheduleMut.mutate({ id: a.orderId as UUID, start: time.toISOString() });
       } else {
         const start = new Date(a.scheduledStartAt!);
-        if (t <= start) { toast.error("End must be after start"); return; }
-        rescheduleMut.mutate({ id: a.orderId as UUID, end: t.toISOString() });
+        if (time <= start) { toast.error(t("dispatch.errorEndAfterStart")); return; }
+        rescheduleMut.mutate({ id: a.orderId as UUID, end: time.toISOString() });
       }
       return;
     }
@@ -196,17 +196,17 @@ export function DispatchPage() {
     if (!rect) return;
 
     const cursorX = ((e.activatorEvent as MouseEvent | null)?.clientX ?? 0) + (e.delta?.x ?? 0);
-    const t = pxToTime(rect, cursorX, view, winStart, winEnd);
+    const time = pxToTime(rect, cursorX, view, winStart, winEnd);
 
     if (a.kind === "pool") {
       if (a.orderState !== "APPROVED") {
-        toast.error(`Order must be APPROVED to schedule (current: ${a.orderState})`);
+        toast.error(t("dispatch.errorMustBeApproved", { state: a.orderState }));
         return;
       }
       const order = ordersQ.data?.find((x) => x.id === orderId);
       if (!order) return;
-      const end = new Date(t.getTime() + order.estimatedMinutes * 60_000);
-      scheduleMut.mutate({ id: orderId, mechanicId, start: t.toISOString(), end: end.toISOString() });
+      const end = new Date(time.getTime() + order.estimatedMinutes * 60_000);
+      scheduleMut.mutate({ id: orderId, mechanicId, start: time.toISOString(), end: end.toISOString() });
       return;
     }
 
@@ -215,7 +215,7 @@ export function DispatchPage() {
       const oldStart = new Date(a.scheduledStartAt);
       const oldEnd   = new Date(a.scheduledEndAt);
       const duration = oldEnd.getTime() - oldStart.getTime();
-      const newStart = t;
+      const newStart = time;
       const newEnd = new Date(newStart.getTime() + duration);
       const sameRow = a.currentMechanicId === mechanicId;
       const sameTime = newStart.getTime() === oldStart.getTime();
@@ -249,13 +249,13 @@ export function DispatchPage() {
             <ToggleGroupItem value="month">{t("dispatch.viewMonth")}</ToggleGroupItem>
           </ToggleGroup>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" onClick={() => navigate(-1)} aria-label="previous">
+            <Button variant="outline" size="sm" onClick={() => navigate(-1)} aria-label={t("common.previous")}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="sm" onClick={jumpToday}>
               {t("dispatch.today")}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate(1)} aria-label="next">
+            <Button variant="outline" size="sm" onClick={() => navigate(1)} aria-label={t("common.next")}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -266,10 +266,10 @@ export function DispatchPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="h-4 w-4 mr-1" />New Order</Button>
+              <Button size="sm"><Plus className="h-4 w-4 mr-1" />{t("dispatch.newOrder")}</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>New Order</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{t("dispatch.newOrder")}</DialogTitle></DialogHeader>
               <CreateOrderForm
                 submitting={createMut.isPending}
                 onCancel={() => setCreateOpen(false)}
@@ -347,15 +347,16 @@ export function DispatchPage() {
             )}
             {unassigned.map((o) => {
               const badge = priorityBadge(o);
+              const badgeLabel = t(badge.key);
               const isCritical = o.state === "REQUESTED";
-              const label = `${o.vmrsCode}, ${o.title ?? o.vmrsDescription ?? ""}, ${badge.label}, ${o.clientName ?? ""}`;
+              const label = `${o.vmrsCode}, ${o.title ?? o.vmrsDescription ?? ""}, ${badgeLabel}, ${o.clientName ?? ""}`;
               return (
                 <PoolCard
                   key={o.id}
                   order={o}
                   isSelected={o.id === selectedOrderId}
                   isCritical={isCritical}
-                  badge={badge}
+                  badge={{ label: badgeLabel, cls: badge.cls }}
                   onSelect={setSelectedOrderId}
                   label={label}
                 />
@@ -376,8 +377,8 @@ export function DispatchPage() {
             return (
               <>
                 <SheetHeader className="border-b border-[var(--color-hairline)] px-4 py-3">
-                  <SheetTitle>{mech ? `Absences — ${mech.fullName}` : "Absences"}</SheetTitle>
-                  <SheetDescription>Manage time-off and unavailability windows for this mechanic.</SheetDescription>
+                  <SheetTitle>{mech ? t("absences.sheetTitle", { name: mech.fullName }) : t("absences.sheetTitleEmpty")}</SheetTitle>
+                  <SheetDescription>{t("absences.sheetDescription")}</SheetDescription>
                 </SheetHeader>
                 <div className="p-0">
                   <AbsencesPanel mechanicId={absenceMechanicId} mechanicName={mech?.fullName ?? ""} />

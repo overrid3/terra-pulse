@@ -37,6 +37,9 @@
     "deleteConfirm": "Eliminare {{label}}?",
     "minutesShort": "{{count}}m",
     "minutes": "{{count}} min",
+    "minutesUnit": "min",
+    "previous": "Precedente",
+    "next": "Successivo",
     "search": "Cerca",
     "filter": "Filtro",
     "refresh": "Aggiorna",
@@ -79,7 +82,14 @@
     "scheduleSuccess": "Ordine pianificato",
     "rescheduleSuccess": "Pianificazione aggiornata",
     "conflictWarning": "Sovrapposizione con {{title}} alle {{time}}",
-    "addAbsence": "+ Assenza"
+    "addAbsence": "+ Assenza",
+    "orderCreatedToast": "Ordine creato",
+    "errorStartBeforeEnd": "L'inizio deve precedere la fine",
+    "errorEndAfterStart": "La fine deve essere successiva all'inizio",
+    "errorMustBeApproved": "L'ordine deve essere APPROVATO per essere pianificato (attuale: {{state}})",
+    "priorityCritical": "Critico",
+    "priorityQuoted": "Preventivato",
+    "priorityScheduled": "Pianificato"
   },
   "orders": {
     "pageTitle": "Ordini di servizio",
@@ -112,7 +122,12 @@
     "fieldCompleted": "Completato",
     "fieldDispatched": "Assegnato",
     "fieldStarted": "Avviato",
+    "fieldScheduled": "Pianificato",
     "fieldNotesHistory": "Note",
+    "actionEdit": "Modifica dettagli",
+    "savedToast": "Ordine aggiornato",
+    "startedToast": "Ordine avviato",
+    "overriddenToast": "Stato ordine aggiornato",
     "noOrders": "nessun ordine corrisponde",
     "selectPlaceholder": "— scegli —",
     "vehicleOption": "{{make}} {{model}} · {{serial}}",
@@ -333,7 +348,10 @@
     "pickVisually": "Scegli sul calendario",
     "hideCalendar": "Nascondi calendario",
     "daysSummary_one": "{{count}} giorno",
-    "daysSummary_other": "{{count}} giorni"
+    "daysSummary_other": "{{count}} giorni",
+    "sheetTitle": "Assenze — {{name}}",
+    "sheetTitleEmpty": "Assenze",
+    "sheetDescription": "Gestisci ferie e periodi di indisponibilità per questo meccanico."
   },
   "address": {
     "placeholderFallback": "Cerca un indirizzo (es. Piazza Duomo Milano)",
