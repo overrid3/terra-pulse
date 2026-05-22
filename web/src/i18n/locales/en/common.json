@@ -159,6 +159,7 @@
     "filterAll": "All",
     "filterRequested": "Requested",
     "filterDispatched": "Dispatched",
+    "filterScheduled": "Scheduled",
     "filterInProgress": "In-Progress",
     "filterCompleted": "Completed",
     "selectOrCreate": "Pick or create a new order",
