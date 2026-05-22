@@ -14,6 +14,8 @@ import {
   startOfDay,
   differenceInCalendarDays
 } from "date-fns";
+import { it as itLocale } from "date-fns/locale/it";
+import { enUS as enLocale } from "date-fns/locale/en-US";
 import { useTranslation } from "react-i18next";
 import {
   AbsenceType,
@@ -32,14 +34,18 @@ import {
   SelectValue
 } from "@/components/ui/select";
 
-const locales = { "en-US": undefined };
+const locales = { "en-US": enLocale, it: itLocale };
 const localizer = dateFnsLocalizer({
   format,
   parse,
   startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
   getDay,
-  locales: locales as any
+  locales
 });
+
+function cultureFor(lang: string | undefined): keyof typeof locales {
+  return (lang ?? "it").startsWith("it") ? "it" : "en-US";
+}
 
 export type AbsenceDraft = {
   startAt: string;
@@ -85,7 +91,8 @@ export function AbsenceCalendarPicker({
   onSubmit,
   onCancel
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const culture = cultureFor(i18n.resolvedLanguage);
   const [showCalendar, setShowCalendar] = useState(false);
   const [start, setStart] = useState<string>(instantToIsoLocal(initialDraft?.startAt ?? ""));
   const [end, setEnd] = useState<string>(instantToIsoLocal(initialDraft?.endAt ?? ""));
@@ -265,6 +272,7 @@ export function AbsenceCalendarPicker({
           <div className="flex-1 min-h-0">
             <Calendar
               localizer={localizer}
+              culture={culture}
               events={events}
               view="week"
               views={["week"]}

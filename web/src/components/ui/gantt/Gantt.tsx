@@ -4,6 +4,7 @@ import {
   addDays, format, getHours, getMinutes, getDaysInMonth, getDate,
 } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useDateLocale } from "@/i18n/format";
 import type { ServiceOrder } from "../../../types";
 import { DAY_HOURS, DAY_HOUR_START, DAY_HOUR_END } from "./time";
 import type { GanttRenderProps } from "./types";
@@ -18,6 +19,7 @@ export function Gantt({
   onAddAbsence, registerRow,
 }: GanttRenderProps) {
   const { t } = useTranslation();
+  const locale = useDateLocale();
   const visibleMechanics = selectedMechanicId
     ? mechanics.filter((m) => m.id === selectedMechanicId)
     : mechanics;
@@ -101,7 +103,7 @@ export function Gantt({
               className="border-r border-[var(--color-hairline)] flex items-center justify-center text-xs font-mono text-[var(--color-text-muted)] py-2"
             >
               {view === "day" && `${String(c as number).padStart(2, "0")}:00`}
-              {view === "week" && format(c as Date, "EEE dd")}
+              {view === "week" && format(c as Date, "EEE dd", { locale })}
               {view === "month" && (
                 <span
                   className={cn(
@@ -109,7 +111,7 @@ export function Gantt({
                       "text-[var(--color-brand-strong)] font-bold",
                   )}
                 >
-                  {format(c as Date, "d")}
+                  {format(c as Date, "d", { locale })}
                 </span>
               )}
             </div>

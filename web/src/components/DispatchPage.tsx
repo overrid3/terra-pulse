@@ -9,6 +9,7 @@ import {
   MouseSensor, TouchSensor, useSensor, useSensors, useDraggable, useDndMonitor,
 } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
+import { useDateLocale } from "@/i18n/format";
 import { mechanicsApi } from "../api/mechanics";
 import { serviceOrdersApi, CreateOrderBody, ServiceOrderPatchBody } from "../api/serviceOrders";
 import { absencesApi } from "../api/absences";
@@ -90,6 +91,7 @@ function intersectsAbsence(absences: MechanicAbsence[], mechanicId: string, star
 
 export function DispatchPage() {
   const { t } = useTranslation();
+  const locale = useDateLocale();
   const qc = useQueryClient();
   const [selectedMechanicId, setSelectedMechanicId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -242,9 +244,9 @@ export function DispatchPage() {
   function handleViewChange(v: GanttView) { setNavDir("fade"); setView(v); }
 
   function rangeLabel(): string {
-    if (view === "day")   return format(date, "EEE dd MMM yyyy");
-    if (view === "week")  return `${format(date, "MMM dd")} – ${format(addDays(date, 6), "MMM dd, yyyy")}`;
-    return format(date, "MMMM yyyy");
+    if (view === "day")   return format(date, "EEE dd MMM yyyy", { locale });
+    if (view === "week")  return `${format(date, "MMM dd", { locale })} – ${format(addDays(date, 6), "MMM dd, yyyy", { locale })}`;
+    return format(date, "MMMM yyyy", { locale });
   }
 
   const sensors = useSensors(
