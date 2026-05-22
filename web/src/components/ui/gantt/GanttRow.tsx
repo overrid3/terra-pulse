@@ -33,9 +33,24 @@ type Props = {
 };
 
 function eventBounds(o: ServiceOrder) {
+  // Planned dates are authoritative for the chip span. The estimation is
+  // only a suggestion — once scheduled, the user controls start/end via
+  // drag + resize handles. Fall back to estimation-derived end only when
+  // no scheduledEndAt exists (REQUESTED/QUOTED/APPROVED rows that don't
+  // normally render on the gantt anyway).
   const start = new Date(o.startedAt ?? o.scheduledStartAt ?? o.requestedAt);
+  if (o.scheduledEndAt) return { start, end: new Date(o.scheduledEndAt) };
   const minutes = o.actualMinutes ?? o.estimatedMinutes;
   return { start, end: new Date(start.getTime() + minutes * 60_000) };
+}
+
+function estimateGhostBounds(o: ServiceOrder) {
+  if (o.state !== "SCHEDULED" || !o.scheduledStartAt || !o.scheduledEndAt) return null;
+  const start = new Date(o.scheduledStartAt);
+  const scheduledMs = new Date(o.scheduledEndAt).getTime() - start.getTime();
+  const estimatedMs = o.estimatedMinutes * 60_000;
+  if (Math.abs(scheduledMs - estimatedMs) < 60_000) return null;
+  return { start, end: new Date(start.getTime() + estimatedMs) };
 }
 
 function assignLanes(items: ServiceOrder[]) {
@@ -233,6 +248,29 @@ export function GanttRow({
             </span>
           </div>
         )}
+
+        {orders.map((o) => {
+          const ghost = estimateGhostBounds(o);
+          if (!ghost) return null;
+          const pos = eventPosition(ghost.start, ghost.end);
+          if (!pos) return null;
+          const lane = laneByOrder.get(o.id) ?? 0;
+          const top = ROW_PADDING_PX + lane * (LANE_HEIGHT_PX + LANE_GAP_PX);
+          return (
+            <div
+              key={`ghost:${o.id}`}
+              aria-hidden="true"
+              title={`Estimated ${o.estimatedMinutes}m`}
+              className="absolute rounded-[var(--radius-sm)] border border-dashed border-[var(--color-text-muted)] opacity-40 pointer-events-none"
+              style={{
+                left: `${pos.leftPct}%`,
+                right: `${pos.rightPct}%`,
+                top,
+                height: LANE_HEIGHT_PX,
+              }}
+            />
+          );
+        })}
 
         {orders.map((o) => {
           const { start, end } = eventBounds(o);
