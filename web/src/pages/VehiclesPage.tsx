@@ -192,7 +192,7 @@ export function VehiclesPage() {
         </div>
 
         <div className="border border-(--color-hairline) rounded-md overflow-x-auto">
-          <Table>
+          <Table className="tp-responsive-table">
             <TableHeader>
               <TableRow className="bg-(--color-surface-sunken) hover:bg-(--color-surface-sunken)">
                 <TableHead className="uppercase tracking-wider text-xs font-semibold text-(--color-text-muted)">
@@ -227,21 +227,21 @@ export function VehiclesPage() {
                       selectedId === v.id && "bg-brand-soft hover:bg-brand-soft"
                     )}
                   >
-                    <TableCell>
+                    <TableCell data-label="Serial">
                       <span className="font-mono text-xs text-(--color-text) bg-(--color-surface-container) px-1.5 py-0.5 rounded-(--radius-sm) border border-(--color-hairline) whitespace-nowrap">
                         {v.serialNumber}
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Make / Model">
                       <div className="font-medium text-(--color-text)">{v.make} {v.model}</div>
                       <div className="text-xs text-(--color-text-muted)">{t(`vehicleClass.${v.vehicleClass}`)}</div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Status">
                       <Badge className={"status-" + v.status} variant="secondary">
                         {t(`vehicleStatus.${v.status}`)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Location">
                       {site ? (
                         <span className="inline-flex items-center gap-1 text-sm text-(--color-text)">
                           <MapPin className="h-3.5 w-3.5 text-(--color-text-muted) shrink-0" />
@@ -253,13 +253,13 @@ export function VehiclesPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-sm text-right">
+                    <TableCell data-label="Hours" className="font-mono text-sm text-right">
                       {Number(v.engineHours).toFixed(1)}
                     </TableCell>
-                    <TableCell className="font-mono text-sm text-right text-(--color-text-subtle) italic">
+                    <TableCell data-label="Next Service" className="font-mono text-sm text-right text-(--color-text-subtle) italic">
                       {t("vehicles.nextServiceTbd")}
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Actions">
                       <div
                         className={cn(
                           "flex gap-1 whitespace-nowrap justify-end transition-opacity",

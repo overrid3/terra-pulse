@@ -254,7 +254,7 @@ export function MechanicsPage() {
         </div>
 
         <div className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] overflow-x-auto">
-          <Table>
+          <Table className="tp-responsive-table">
             <TableHeader>
               <TableRow className="bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-sunken)]">
                 <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">{t("mechanics.columnName")}</TableHead>
@@ -277,7 +277,7 @@ export function MechanicsPage() {
                       editing?.id === m.id && "bg-[var(--color-brand-soft)] hover:bg-[var(--color-brand-soft)]"
                     )}
                   >
-                    <TableCell>
+                    <TableCell data-label="Name">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-[var(--color-surface-container-highest)] border border-[var(--color-hairline)] flex items-center justify-center font-mono text-xs text-[var(--color-text)] shrink-0">
                           {initials || "??"}
@@ -290,13 +290,13 @@ export function MechanicsPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Status">
                       <div className="flex items-center gap-1.5">
                         <span className={cn("status-dot", `dot-${m.status}`)} aria-hidden="true" />
                         <span className="font-mono text-xs text-[var(--color-text)]">{m.status}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Skills">
                       {m.skills.length > 0 ? (
                         <span className="flex flex-nowrap gap-1 max-w-full overflow-x-auto">
                           {m.skills.map((s) => (
@@ -307,7 +307,7 @@ export function MechanicsPage() {
                         <span className="text-[var(--color-text-subtle)] italic text-sm">{t("mechanics.noAssignment")}</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Assignment">
                       {assignment ? (
                         <span className="font-mono text-xs text-[var(--color-text)] bg-[var(--color-surface-container)] px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] whitespace-nowrap">
                           {assignment.code}
@@ -316,7 +316,7 @@ export function MechanicsPage() {
                         <span className="text-[var(--color-text-subtle)] italic text-sm">{t("mechanics.noAssignment")}</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Location">
                       {m.location ? (
                         <span className="inline-flex items-center gap-1 text-sm">
                           <MapPin className="h-3.5 w-3.5 text-[var(--color-text-muted)] shrink-0" />
@@ -326,7 +326,7 @@ export function MechanicsPage() {
                         <span className="text-[var(--color-text-subtle)] italic text-sm">{t("mechanics.noAssignment")}</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="Actions">
                       <div
                         className={cn(
                           "flex gap-1 whitespace-nowrap justify-end transition-opacity",

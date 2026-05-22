@@ -184,7 +184,7 @@ export function OrdersPage() {
         </div>
 
         <div className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] overflow-x-auto">
-          <Table>
+          <Table className="tp-responsive-table">
             <TableHeader>
               <TableRow className="bg-[var(--color-surface-sunken)] hover:bg-[var(--color-surface-sunken)]">
                 <TableHead className="uppercase tracking-wider text-xs font-semibold text-[var(--color-text-muted)]">{t("orders.columnState")}</TableHead>
@@ -207,18 +207,18 @@ export function OrdersPage() {
                     selected?.id === o.id && "bg-[var(--color-brand-soft)] hover:bg-[var(--color-brand-soft)]"
                   )}
                 >
-                  <TableCell><Badge className={"state-" + o.state} variant="secondary">{t(`state.${o.state}`)}</Badge></TableCell>
-                  <TableCell className="font-medium">{o.title ?? <span className="text-[var(--color-text-muted)] italic">{t("common.dash")}</span>}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="State"><Badge className={"state-" + o.state} variant="secondary">{t(`state.${o.state}`)}</Badge></TableCell>
+                  <TableCell data-label="Title" className="font-medium">{o.title ?? <span className="text-[var(--color-text-muted)] italic">{t("common.dash")}</span>}</TableCell>
+                  <TableCell data-label="VMRS">
                     <span className="font-mono text-xs text-[var(--color-text)] bg-[var(--color-surface-container)] px-1.5 py-0.5 rounded-[var(--radius-sm)] border border-[var(--color-hairline)] whitespace-nowrap">
                       {o.vmrsCode}
                     </span>
                   </TableCell>
-                  <TableCell>{o.clientName ?? <span className="text-[var(--color-text-muted)] italic">{t("common.dash")}</span>}</TableCell>
-                  <TableCell className="font-mono text-sm text-right">{t("common.minutesShort", { count: o.estimatedMinutes })}</TableCell>
-                  <TableCell className="font-mono text-sm text-right text-[var(--color-text-muted)]">{o.actualMinutes ?? t("common.dash")}</TableCell>
-                  <TableCell className="text-[var(--color-text-muted)] text-xs">{fmtDateTime(o.requestedAt)}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="Client">{o.clientName ?? <span className="text-[var(--color-text-muted)] italic">{t("common.dash")}</span>}</TableCell>
+                  <TableCell data-label="Est." className="font-mono text-sm text-right">{t("common.minutesShort", { count: o.estimatedMinutes })}</TableCell>
+                  <TableCell data-label="Actual" className="font-mono text-sm text-right text-[var(--color-text-muted)]">{o.actualMinutes ?? t("common.dash")}</TableCell>
+                  <TableCell data-label="Requested" className="text-[var(--color-text-muted)] text-xs">{fmtDateTime(o.requestedAt)}</TableCell>
+                  <TableCell data-label="Actions">
                     <div
                       className={cn(
                         "flex gap-1 whitespace-nowrap justify-end transition-opacity",
