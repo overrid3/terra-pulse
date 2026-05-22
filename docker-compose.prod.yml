@@ -1,0 +1,43 @@
+name: terrapulse-prod
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgis-prod:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ghcr.io/${GHCR_OWNER}/terra-pulse-backend:latest
+    restart: unless-stopped
+    environment:
+      QUARKUS_DATASOURCE_USERNAME: ${DB_USER}
+      QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://db:5432/${DB_NAME}
+      QUARKUS_OIDC_AUTH_SERVER_URL: ${CLERK_ISSUER_URL}
+      QUARKUS_HTTP_CORS_ORIGINS: ${CORS_ORIGIN}
+      QUARKUS_PROFILE: prod
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: ghcr.io/${GHCR_OWNER}/terra-pulse-web:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgis-prod:
