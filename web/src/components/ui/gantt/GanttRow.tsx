@@ -1,3 +1,4 @@
+import type React from "react";
 import { useMemo, useRef, useState } from "react";
 import { useDndMonitor, useDroppable } from "@dnd-kit/core";
 import { format } from "date-fns";
@@ -12,6 +13,15 @@ const ROW_PADDING_PX = 4;
 const BASE_ROW_MIN_HEIGHT_PX = 72;
 
 const POOL_SNAP_MS = 30 * 60_000;
+const RESIZE_SNAP_MS = 30 * 60_000;
+
+type ResizePreview = {
+  edge: "start" | "end";
+  leftPct: number;
+  rightPct: number;
+  startTime: Date;
+  endTime: Date;
+} | null;
 
 type Props = {
   mechanic: Mechanic;
@@ -86,6 +96,7 @@ export function GanttRow({
 }: Props) {
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [cursorX, setCursorX] = useState<number | null>(null);
+  const [resizePreview, setResizePreview] = useState<ResizePreview>(null);
 
   const initials = mechanic.fullName
     .split(/\s+/).slice(0, 2)
@@ -136,13 +147,52 @@ export function GanttRow({
           baseX = (activator as TouchEvent).touches[0].clientX;
         }
       }
-      if (baseX == null) return;
       const rect = rowRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      setCursorX(baseX + e.delta.x - rect.left);
+      if (rect && baseX != null) setCursorX(baseX + e.delta.x - rect.left);
+
+      // Resize preview: only the row that owns the order being resized
+      // computes & shows it. Anchor preview to the actual scheduled times
+      // (not the chip's current visual span) using the snapped delta.
+      const data = e.active.data.current as
+        | { kind?: string; edge?: "start" | "end"; scheduledStartAt?: string; scheduledEndAt?: string; currentMechanicId?: string }
+        | undefined;
+      if (
+        rect &&
+        data?.kind === "resize" &&
+        data.currentMechanicId === mechanic.id &&
+        data.scheduledStartAt &&
+        data.scheduledEndAt
+      ) {
+        const totalMs = winEnd.getTime() - winStart.getTime();
+        const rawDelta = (e.delta.x / rect.width) * totalMs;
+        const deltaMs = Math.round(rawDelta / RESIZE_SNAP_MS) * RESIZE_SNAP_MS;
+        const oldStart = new Date(data.scheduledStartAt);
+        const oldEnd = new Date(data.scheduledEndAt);
+        let newStart = oldStart;
+        let newEnd = oldEnd;
+        if (data.edge === "start") {
+          const ns = new Date(oldStart.getTime() + deltaMs);
+          if (ns < oldEnd) newStart = ns;
+        } else {
+          const ne = new Date(oldEnd.getTime() + deltaMs);
+          if (ne > oldStart) newEnd = ne;
+        }
+        const pos = eventPosition(newStart, newEnd);
+        if (pos) {
+          setResizePreview({
+            edge: data.edge!,
+            leftPct: pos.leftPct,
+            rightPct: pos.rightPct,
+            startTime: newStart,
+            endTime: newEnd,
+          });
+        }
+      } else {
+        setResizePreview(null);
+      }
     },
-    onDragEnd:    () => setCursorX(null),
-    onDragCancel: () => setCursorX(null),
+    onDragEnd:    () => { setCursorX(null); setResizePreview(null); },
+    onDragCancel: () => { setCursorX(null); setResizePreview(null); },
   });
 
   const composedRef = (el: HTMLDivElement | null) => {
@@ -162,9 +212,17 @@ export function GanttRow({
     const ratio = Math.max(0, Math.min(1, cursorX / width));
     const totalMs = winEnd.getTime() - winStart.getTime();
     const rawMs = winStart.getTime() + ratio * totalMs;
-    const snappedMs = Math.round(rawMs / POOL_SNAP_MS) * POOL_SNAP_MS;
-    const snappedPct = Math.max(0, Math.min(100, ((snappedMs - winStart.getTime()) / totalMs) * 100));
-    return { leftPct: snappedPct, time: new Date(snappedMs) };
+    const snappedStartMs = Math.round(rawMs / POOL_SNAP_MS) * POOL_SNAP_MS;
+    const estMin = activeData.estimatedMinutes ?? 0;
+    const snappedEndMs = snappedStartMs + estMin * 60_000;
+    const startPct = Math.max(0, Math.min(100, ((snappedStartMs - winStart.getTime()) / totalMs) * 100));
+    const endPct = Math.max(0, Math.min(100, ((snappedEndMs - winStart.getTime()) / totalMs) * 100));
+    return {
+      startPct,
+      endPct,
+      startTime: new Date(snappedStartMs),
+      endTime: new Date(snappedEndMs),
+    };
   }, [isOver, activeData, cursorX, winStart, winEnd]);
 
   const validDrop: boolean | null =
@@ -238,15 +296,39 @@ export function GanttRow({
         })}
 
         {dropCursor && (
-          <div
-            aria-hidden="true"
-            className="absolute top-0 bottom-0 w-0.5 bg-[var(--color-brand)] pointer-events-none z-20"
-            style={{ left: `${dropCursor.leftPct}%` }}
-          >
-            <span className="absolute -top-5 left-1 text-[10px] font-mono font-semibold text-[var(--color-brand)] whitespace-nowrap bg-[var(--color-surface-panel)] px-1 rounded shadow-sm">
-              {format(dropCursor.time, "HH:mm")}
-            </span>
-          </div>
+          <>
+            <div
+              aria-hidden="true"
+              className="absolute top-0 bottom-0 z-20 pointer-events-none rounded-[var(--radius-sm)] border border-[var(--color-brand)] bg-[color-mix(in_srgb,var(--color-brand)_18%,transparent)]"
+              style={{ left: `${dropCursor.startPct}%`, right: `${100 - dropCursor.endPct}%` }}
+            />
+            <CalloutLine pct={dropCursor.startPct} time={dropCursor.startTime} variant="brand" anchor="start" />
+            <CalloutLine pct={dropCursor.endPct}   time={dropCursor.endTime}   variant="brand" anchor="end" />
+          </>
+        )}
+
+        {resizePreview && (
+          <>
+            <div
+              aria-hidden="true"
+              className="absolute top-0 bottom-0 z-20 pointer-events-none rounded-[var(--radius-sm)] border border-dashed border-[var(--color-brand-strong)] bg-[color-mix(in_srgb,var(--color-brand)_12%,transparent)]"
+              style={{ left: `${resizePreview.leftPct}%`, right: `${resizePreview.rightPct}%` }}
+            />
+            <CalloutLine
+              pct={resizePreview.leftPct}
+              time={resizePreview.startTime}
+              variant="strong"
+              anchor="start"
+              showGuide={resizePreview.edge === "start"}
+            />
+            <CalloutLine
+              pct={100 - resizePreview.rightPct}
+              time={resizePreview.endTime}
+              variant="strong"
+              anchor="end"
+              showGuide={resizePreview.edge === "end"}
+            />
+          </>
         )}
 
         {orders.map((o) => {
@@ -298,6 +380,39 @@ export function GanttRow({
         })}
 
       </div>
+    </div>
+  );
+}
+
+function CalloutLine({
+  pct, time, variant, anchor, showGuide = true,
+}: {
+  pct: number;
+  time: Date;
+  variant: "brand" | "strong";
+  anchor: "start" | "end";
+  showGuide?: boolean;
+}) {
+  const color = variant === "strong" ? "var(--color-brand-strong)" : "var(--color-brand)";
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute top-0 bottom-0 pointer-events-none z-20"
+      style={{ left: `${pct}%` }}
+    >
+      {showGuide && (
+        <div className="absolute top-0 bottom-0 w-0.5" style={{ background: color }} />
+      )}
+      <span
+        className="absolute -top-5 text-[10px] font-mono font-semibold whitespace-nowrap bg-[var(--color-surface-panel)] px-1 rounded shadow-sm"
+        style={{
+          color,
+          [anchor === "start" ? "left" : "right"]: 0,
+          transform: anchor === "start" ? "translateX(-50%)" : "translateX(50%)",
+        } as React.CSSProperties}
+      >
+        {format(time, "HH:mm")}
+      </span>
     </div>
   );
 }

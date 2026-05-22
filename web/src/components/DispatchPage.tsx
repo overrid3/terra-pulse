@@ -6,7 +6,7 @@ import { Filter, RefreshCw, Inbox, MapPin, ChevronLeft, ChevronRight, Plus } fro
 import { addDays, addMonths, addWeeks, startOfDay, format } from "date-fns";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
-  MouseSensor, TouchSensor, useSensor, useSensors, useDraggable,
+  MouseSensor, TouchSensor, useSensor, useSensors, useDraggable, useDndMonitor,
 } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { mechanicsApi } from "../api/mechanics";
@@ -564,9 +564,13 @@ export function DispatchPage() {
         const o = ordersQ.data?.find((x) => x.id === activeDrag.orderId);
         if (!o) return null;
         return (
-          <div className={cn("rounded-[var(--radius-sm)] border px-2 py-1 shadow-md text-xs", `state-${o.state}`)}>
-            {o.title ?? o.vmrsCode}
-          </div>
+          <EventDragGhost
+            order={o}
+            rowRefs={rowRefs}
+            winStart={winStart}
+            winEnd={winEnd}
+            snapMs={EVENT_SNAP_MS}
+          />
         );
       })()}
       {activeDrag?.kind === "resize" && (
@@ -574,6 +578,54 @@ export function DispatchPage() {
       )}
     </DragOverlay>
     </DndContext>
+  );
+}
+
+function EventDragGhost({
+  order, rowRefs, winStart, winEnd, snapMs: snapStep,
+}: {
+  order: ServiceOrder;
+  rowRefs: { current: Map<string, HTMLDivElement> };
+  winStart: Date;
+  winEnd: Date;
+  snapMs: number;
+}) {
+  const [preview, setPreview] = useState<{ start: Date; end: Date } | null>(null);
+  useDndMonitor({
+    onDragMove(e) {
+      const d = e.active.data.current as
+        | { kind?: string; currentMechanicId?: string; scheduledStartAt?: string; scheduledEndAt?: string }
+        | undefined;
+      if (d?.kind !== "event" || !d.scheduledStartAt || !d.scheduledEndAt || !d.currentMechanicId) {
+        setPreview(null);
+        return;
+      }
+      const rect = rowRefs.current.get(d.currentMechanicId)?.getBoundingClientRect();
+      if (!rect) return;
+      const totalMs = winEnd.getTime() - winStart.getTime();
+      const rawDelta = (e.delta.x / rect.width) * totalMs;
+      const deltaMs = Math.round(rawDelta / snapStep) * snapStep;
+      const ns = new Date(new Date(d.scheduledStartAt).getTime() + deltaMs);
+      const ne = new Date(new Date(d.scheduledEndAt).getTime() + deltaMs);
+      setPreview({ start: ns, end: ne });
+    },
+    onDragEnd:    () => setPreview(null),
+    onDragCancel: () => setPreview(null),
+  });
+  return (
+    <div className={cn("rounded-[var(--radius-sm)] border px-2 py-1 shadow-md text-xs relative", `state-${order.state}`)}>
+      {order.title ?? order.vmrsCode}
+      {preview && (
+        <>
+          <span className="absolute -top-5 left-0 -translate-x-1/2 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] px-1 rounded text-[10px] font-mono font-semibold shadow-sm whitespace-nowrap text-[var(--color-brand-strong)]">
+            {format(preview.start, "HH:mm")}
+          </span>
+          <span className="absolute -top-5 right-0 translate-x-1/2 bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] px-1 rounded text-[10px] font-mono font-semibold shadow-sm whitespace-nowrap text-[var(--color-brand-strong)]">
+            {format(preview.end, "HH:mm")}
+          </span>
+        </>
+      )}
+    </div>
   );
 }
 
