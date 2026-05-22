@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { useDroppable } from "@dnd-kit/core";
+import { useDndMonitor, useDroppable } from "@dnd-kit/core";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Mechanic, MechanicAbsence, ServiceOrder } from "../../../types";
@@ -103,6 +103,31 @@ export function GanttRow({
   const { isOver, setNodeRef, active } = useDroppable({
     id: `row:${mechanic.id}`,
     data: { kind: "row", mechanicId: mechanic.id },
+  });
+
+  // While dnd-kit owns the pointer (during a drag) the browser's mousemove
+  // events still fire on this row, but in practice React's onMouseMove can
+  // miss frames depending on overlay z-order. Subscribe to the drag monitor
+  // and derive cursorX from the activator event + cumulative delta — that
+  // is what dnd-kit itself uses, so it's always in sync with isOver.
+  useDndMonitor({
+    onDragMove: (e) => {
+      const activator = e.activatorEvent as MouseEvent | PointerEvent | TouchEvent | null;
+      let baseX: number | null = null;
+      if (activator) {
+        if ("clientX" in activator && typeof (activator as MouseEvent).clientX === "number") {
+          baseX = (activator as MouseEvent).clientX;
+        } else if ("touches" in activator && (activator as TouchEvent).touches.length > 0) {
+          baseX = (activator as TouchEvent).touches[0].clientX;
+        }
+      }
+      if (baseX == null) return;
+      const rect = rowRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setCursorX(baseX + e.delta.x - rect.left);
+    },
+    onDragEnd:    () => setCursorX(null),
+    onDragCancel: () => setCursorX(null),
   });
 
   const composedRef = (el: HTMLDivElement | null) => {
