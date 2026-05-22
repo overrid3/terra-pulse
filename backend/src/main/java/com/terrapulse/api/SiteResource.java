@@ -17,8 +17,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/clients/{clientId}/sites")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class SiteResource {
 
     private final SiteRepository repo;

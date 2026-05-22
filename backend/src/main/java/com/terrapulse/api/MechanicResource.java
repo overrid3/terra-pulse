@@ -36,8 +36,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/mechanics")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class MechanicResource {
 
     private final MechanicRepository repo;

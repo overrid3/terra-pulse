@@ -48,8 +48,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/service-orders")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class ServiceOrderResource {
 
     private final ServiceOrderRepository repo;

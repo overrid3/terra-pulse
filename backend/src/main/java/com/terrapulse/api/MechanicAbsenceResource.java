@@ -23,8 +23,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/mechanic-absences")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class MechanicAbsenceResource {
 
     private final MechanicRepository mechanics;

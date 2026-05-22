@@ -28,8 +28,11 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.UUID;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/clients")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class ClientResource {
 
     private final ClientRepository repo;

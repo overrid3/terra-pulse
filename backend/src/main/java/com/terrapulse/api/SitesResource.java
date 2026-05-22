@@ -9,8 +9,11 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/sites")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class SitesResource {
 
     private final SiteRepository repo;

@@ -24,8 +24,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/geo")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class GeoResource {
 
     private static final Logger LOG = Logger.getLogger(GeoResource.class);

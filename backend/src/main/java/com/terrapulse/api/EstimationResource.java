@@ -10,9 +10,12 @@ import jakarta.ws.rs.core.Response;
 
 import java.util.Map;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/estimation")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Authenticated
 public class EstimationResource {
 
     public record ParseRequest(String input) {}

@@ -34,8 +34,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/reservations")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class ReservationResource {
 
     private final ReservationRepository repo;

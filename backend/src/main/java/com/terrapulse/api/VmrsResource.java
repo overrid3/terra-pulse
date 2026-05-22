@@ -11,8 +11,11 @@ import jakarta.ws.rs.core.MediaType;
 import java.math.BigDecimal;
 import java.util.List;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/vmrs-codes")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class VmrsResource {
 
     public record VmrsCodeDto(String code, String description, int srtMinutes, BigDecimal difficultyFactor) {

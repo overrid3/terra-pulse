@@ -26,8 +26,11 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import io.quarkus.security.Authenticated;
+
 @Path("/api/vehicles")
 @Produces(MediaType.APPLICATION_JSON)
+@Authenticated
 public class VehicleResource {
 
     private final VehicleRepository repo;
