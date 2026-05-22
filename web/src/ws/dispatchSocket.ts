@@ -11,8 +11,16 @@ export type DispatchEvent = {
 
 type Listener = (e: DispatchEvent) => void;
 
+function resolveWsUrl(): string {
+  if (import.meta.env.VITE_WS_BASE) {
+    return `${import.meta.env.VITE_WS_BASE}/dispatch`;
+  }
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}/ws/dispatch`;
+}
+
 export function connectDispatchSocket(onEvent: Listener): () => void {
-  const url = (import.meta.env.VITE_WS_BASE ?? "ws://localhost:8080/ws") + "/dispatch";
+  const url = resolveWsUrl();
   let ws: WebSocket | null = null;
   let closed = false;
   let backoffMs = 500;
