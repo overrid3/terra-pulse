@@ -1,6 +1,7 @@
 import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { NavBar } from "./components/NavBar";
+import { BottomNav } from "./components/BottomNav";
 import { DispatchPage } from "./components/DispatchPage";
 import { ClientsPage } from "./pages/ClientsPage";
 import { MechanicsPage } from "./pages/MechanicsPage";
@@ -10,17 +11,22 @@ import { SkillsPage } from "./pages/SkillsPage";
 import { ToastProvider } from "./components/Toast";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useDispatchSocket } from "./hooks/useDispatchSocket";
+import { useIsMobile } from "./hooks/useResizableSplit";
 import { ClerkSync } from "./components/ClerkSync";
 
 function AuthenticatedShell() {
   useDispatchSocket();
+  const isMobile = useIsMobile();
   return (
     <ToastProvider>
       <TooltipProvider>
         <BrowserRouter>
-          <div className="flex flex-row h-full overflow-hidden">
-            <NavBar />
-            <div className="flex-1 min-w-0 h-full overflow-y-auto bg-[var(--color-surface-app)] flex flex-col">
+          <div className={isMobile ? "flex flex-col h-full" : "flex flex-row h-full overflow-hidden"}>
+            {!isMobile && <NavBar />}
+            <div
+              className="flex-1 min-w-0 overflow-y-auto bg-[var(--color-surface-app)] flex flex-col"
+              style={isMobile ? { paddingBottom: "56px" } : { height: "100%" }}
+            >
               <Routes>
                 <Route path="/" element={<Navigate to="/dispatch" replace />} />
                 <Route path="/dispatch" element={<DispatchPage />} />
@@ -31,6 +37,7 @@ function AuthenticatedShell() {
                 <Route path="/clients" element={<ClientsPage />} />
               </Routes>
             </div>
+            {isMobile && <BottomNav />}
           </div>
         </BrowserRouter>
       </TooltipProvider>
