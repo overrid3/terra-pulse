@@ -374,7 +374,7 @@ body.clients-resizing * { cursor: col-resize !important; }
   .tp-responsive-table tbody td {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: flex-start;
     padding: 0.25rem 0;
     border: none;
   }
