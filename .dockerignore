@@ -1,0 +1,7 @@
+.git
+docs
+mobile
+web/node_modules
+web/dist
+*.md
+.env*
