@@ -102,6 +102,7 @@ export function DispatchPage() {
   const [absenceMechanicId, setAbsenceMechanicId] = useState<string | null>(null);
 
   const [activeDrag, setActiveDrag] = useState<{ kind: string; orderId?: string } | null>(null);
+  const [navDir, setNavDir] = useState<"next" | "prev" | "fade">("fade");
 
   const isMobile = useIsMobile();
   const { panelRef: poolPanelRef, initialWidth: poolInitialWidth, startDrag: startPoolDrag } =
@@ -230,12 +231,15 @@ export function DispatchPage() {
   const filteredOrders = allOrders.filter(matchSearch);
 
   function navigate(delta: -1 | 1) {
+    setNavDir(delta === 1 ? "next" : "prev");
     if (view === "day")        setDate((d) => addDays(d, delta));
     else if (view === "week")  setDate((d) => addWeeks(d, delta));
     else                       setDate((d) => addMonths(d, delta));
   }
 
-  function jumpToday() { setDate(startOfDay(new Date())); }
+  function jumpToday() { setNavDir("fade"); setDate(startOfDay(new Date())); }
+
+  function handleViewChange(v: GanttView) { setNavDir("fade"); setView(v); }
 
   function rangeLabel(): string {
     if (view === "day")   return format(date, "EEE dd MMM yyyy");
@@ -363,7 +367,7 @@ export function DispatchPage() {
           <ToggleGroup
             type="single"
             value={view}
-            onValueChange={(v) => v && setView(v as GanttView)}
+            onValueChange={(v) => v && handleViewChange(v as GanttView)}
             variant="outline"
             size="sm"
           >
@@ -431,22 +435,32 @@ export function DispatchPage() {
 
       <main className="flex-1 min-h-0 min-w-0 p-3 flex flex-row gap-0">
         <section className="flex-1 min-w-0 border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 overflow-hidden">
-          <Gantt
-            mechanics={mechanicsQ.data ?? []}
-            orders={filteredOrders}
-            absences={absencesQ.data ?? []}
-            selectedMechanicId={selectedMechanicId}
-            view={view}
-            date={date}
-            winStart={winStart}
-            winEnd={winEnd}
-            onSelectOrder={setSelectedOrderId}
-            onEditOrder={setEditOrderId}
-            onUnassignOrder={(id) => unassignMut.mutate(id as UUID)}
-            onDeleteOrder={setDeleteOrderId}
-            onAddAbsence={setAbsenceMechanicId}
-            registerRow={registerRow}
-          />
+          <div
+            key={`${view}-${winStart.toISOString()}`}
+            className={cn(
+              "flex-1 min-h-0 flex flex-col",
+              navDir === "next" && "tp-gantt-anim-next",
+              navDir === "prev" && "tp-gantt-anim-prev",
+              navDir === "fade" && "tp-gantt-anim-fade",
+            )}
+          >
+            <Gantt
+              mechanics={mechanicsQ.data ?? []}
+              orders={filteredOrders}
+              absences={absencesQ.data ?? []}
+              selectedMechanicId={selectedMechanicId}
+              view={view}
+              date={date}
+              winStart={winStart}
+              winEnd={winEnd}
+              onSelectOrder={setSelectedOrderId}
+              onEditOrder={setEditOrderId}
+              onUnassignOrder={(id) => unassignMut.mutate(id as UUID)}
+              onDeleteOrder={setDeleteOrderId}
+              onAddAbsence={setAbsenceMechanicId}
+              registerRow={registerRow}
+            />
+          </div>
         </section>
 
         {!isMobile && <ResizableSplitHandle onStart={startPoolDrag} ariaLabel={t("dispatch.unassignedPool")} />}
