@@ -18,6 +18,7 @@ import com.terrapulse.repository.VehicleRepository;
 import com.terrapulse.repository.VmrsCodeRepository;
 import com.terrapulse.service.GeometrySupport;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -40,6 +41,7 @@ import static org.hamcrest.Matchers.equalTo;
  * created rows to isolate tests.
  */
 @QuarkusTest
+@TestSecurity(authorizationEnabled = false)
 class ServiceOrderScheduleTest {
 
     @Inject ServiceOrderRepository repo;

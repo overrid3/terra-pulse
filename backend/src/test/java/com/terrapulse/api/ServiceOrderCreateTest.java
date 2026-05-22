@@ -16,6 +16,7 @@ import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
 import com.terrapulse.repository.VmrsCodeRepository;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -41,6 +42,7 @@ import static org.hamcrest.Matchers.nullValue;
  * rollback, which cannot span across the HTTP request boundary.
  */
 @QuarkusTest
+@TestSecurity(authorizationEnabled = false)
 class ServiceOrderCreateTest {
 
     @Inject ServiceOrderRepository repo;

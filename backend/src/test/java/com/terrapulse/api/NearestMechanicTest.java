@@ -9,6 +9,7 @@ import com.terrapulse.domain.skill.Skill;
 import com.terrapulse.repository.*;
 import com.terrapulse.service.GeometrySupport;
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -26,6 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
+@TestSecurity(authorizationEnabled = false)
 class NearestMechanicTest {
 
     @Inject MechanicRepository mechanicRepo;
