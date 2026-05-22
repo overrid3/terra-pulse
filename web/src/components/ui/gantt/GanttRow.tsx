@@ -255,7 +255,7 @@ export function GanttRow({
     >
       <div
         role="rowheader"
-        className="w-48 shrink-0 border-r border-[var(--color-hairline)] sticky left-0 bg-[var(--color-surface-panel)] group-hover:bg-[var(--color-surface-sunken)] z-10 flex items-center gap-2 px-3 py-2"
+        className="w-48 shrink-0 border-r border-[var(--color-hairline)] sticky left-0 bg-[var(--color-surface-panel)] group-hover:bg-[var(--color-surface-sunken)] z-10 flex items-center gap-2 px-3 py-2 relative"
       >
         <div className="w-8 h-8 rounded bg-[var(--color-surface-container-highest)] border border-[var(--color-hairline)] flex items-center justify-center font-mono text-xs shrink-0">
           {initials || "??"}
@@ -269,7 +269,7 @@ export function GanttRow({
         </div>
         <button
           type="button"
-          className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] px-1 shrink-0"
+          className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] bg-[var(--color-surface-panel)] group-hover:bg-[var(--color-surface-sunken)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-1.5 py-0.5 shadow-sm"
           onClick={(e) => { e.stopPropagation(); onAddAbsence(mechanic.id); }}
           aria-label={`Add absence for ${mechanic.fullName}`}
         >
