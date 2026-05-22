@@ -5,10 +5,15 @@ export type ResizableSplitOpts = {
   defaultWidth: number;
   minWidth: number;
   maxWidth: number;
+  /**
+   * When true, drag-left widens the panel (handle sits to the LEFT of the
+   * panel — i.e. the panel is on the right side of the layout).
+   */
+  reverse?: boolean;
 };
 
 export function useResizableSplit(opts: ResizableSplitOpts) {
-  const { storageKey, defaultWidth, minWidth, maxWidth } = opts;
+  const { storageKey, defaultWidth, minWidth, maxWidth, reverse = false } = opts;
   const panelRef = useRef<HTMLDivElement>(null);
   const initialWidth = useRef<number | null>(null);
   if (initialWidth.current === null) {
@@ -24,7 +29,8 @@ export function useResizableSplit(opts: ResizableSplitOpts) {
     const onMove = (ev: MouseEvent | TouchEvent) => {
       const clientX = "touches" in ev ? ev.touches[0]?.clientX : (ev).clientX;
       if (clientX == null) return;
-      const next = Math.max(minWidth, Math.min(maxWidth, startWidth + (clientX - startX)));
+      const dx = reverse ? (startX - clientX) : (clientX - startX);
+      const next = Math.max(minWidth, Math.min(maxWidth, startWidth + dx));
       if (panelRef.current) panelRef.current.style.width = `${next}px`;
     };
     const onUp = () => {
@@ -41,7 +47,7 @@ export function useResizableSplit(opts: ResizableSplitOpts) {
     globalThis.addEventListener("mouseup", onUp);
     globalThis.addEventListener("touchmove", onMove, { passive: false });
     globalThis.addEventListener("touchend", onUp);
-  }, [minWidth, maxWidth, storageKey]);
+  }, [minWidth, maxWidth, storageKey, reverse]);
   return { panelRef, initialWidth: initialWidth.current, startDrag };
 }
 

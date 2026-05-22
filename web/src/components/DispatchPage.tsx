@@ -20,6 +20,8 @@ import { AbsencesPanel } from "./AbsencesPanel";
 import { SearchInput } from "./SearchInput";
 import { CreateOrderForm } from "./CreateOrderForm";
 import { OrderEditForm, OrderSaveBody } from "./OrderEditForm";
+import { ResizableSplitHandle } from "./ResizableSplitHandle";
+import { useResizableSplit, useIsMobile } from "@/hooks/useResizableSplit";
 import { ServiceOrder, MechanicAbsence, ServiceOrderState, UUID } from "../types";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -92,6 +94,16 @@ export function DispatchPage() {
   const [absenceMechanicId, setAbsenceMechanicId] = useState<string | null>(null);
 
   const [activeDrag, setActiveDrag] = useState<{ kind: string; orderId?: string } | null>(null);
+
+  const isMobile = useIsMobile();
+  const { panelRef: poolPanelRef, initialWidth: poolInitialWidth, startDrag: startPoolDrag } =
+    useResizableSplit({
+      storageKey: "tp.dispatch.poolWidth",
+      defaultWidth: 320,
+      minWidth: 240,
+      maxWidth: 600,
+      reverse: true,
+    });
 
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -399,8 +411,8 @@ export function DispatchPage() {
         </div>
       </header>
 
-      <main className="flex-1 min-h-0 min-w-0 p-3 grid gap-3 grid-cols-[minmax(0,1fr)_320px]">
-        <section className="border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 min-w-0 overflow-hidden">
+      <main className="flex-1 min-h-0 min-w-0 p-3 flex flex-row gap-0">
+        <section className="flex-1 min-w-0 border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 overflow-hidden">
           <Gantt
             mechanics={mechanicsQ.data ?? []}
             orders={filteredOrders}
@@ -419,7 +431,13 @@ export function DispatchPage() {
           />
         </section>
 
-        <aside className="bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 overflow-hidden">
+        {!isMobile && <ResizableSplitHandle onStart={startPoolDrag} ariaLabel={t("dispatch.unassignedPool")} />}
+
+        <aside
+          ref={poolPanelRef}
+          style={{ width: isMobile ? undefined : poolInitialWidth }}
+          className="md:shrink-0 md:min-w-[240px] md:max-w-[600px] bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] flex flex-col min-h-0 overflow-hidden"
+        >
           <div className="px-3 py-2.5 border-b border-[var(--color-hairline)] bg-[var(--color-surface-sunken)] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <Inbox className="h-4 w-4 text-[var(--color-text-muted)]" />
