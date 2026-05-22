@@ -5,7 +5,6 @@ on:
     branches: [main]
 
 env:
-  REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/terra-pulse-backend
   WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/terra-pulse-web
 
@@ -55,10 +54,12 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VITE_API_BASE=/api
+            VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Deploy to Oracle VM
         uses: appleboy/ssh-action@v1
