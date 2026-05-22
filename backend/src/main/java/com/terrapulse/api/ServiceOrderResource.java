@@ -31,6 +31,7 @@ import com.terrapulse.ws.DispatchEventBus;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.PATCH;
@@ -296,6 +297,54 @@ public class ServiceOrderResource {
     @Transactional
     public ServiceOrderDto cancel(@PathParam("id") UUID id) {
         return applyTransition(load(id), ServiceOrderState.CANCELLED);
+    }
+
+    @POST
+    @Path("/{id}/unassign")
+    @Transactional
+    public ServiceOrderDto unassign(@PathParam("id") UUID id) {
+        ServiceOrder so = load(id);
+        if (so.state != ServiceOrderState.SCHEDULED) {
+            throw new com.terrapulse.domain.service.IllegalStateTransitionException(
+                    "unassign only allowed in SCHEDULED state (got " + so.state + ")");
+        }
+        UUID previousMechanicId = so.mechanic != null ? so.mechanic.id : null;
+        so.mechanic = null;
+        so.scheduledStartAt = null;
+        so.scheduledEndAt = null;
+        so.dispatchedAt = null;
+        so.state = ServiceOrderState.APPROVED;
+
+        ServiceOrderDto dto = ServiceOrderDto.of(so);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", so.id);
+        payload.put("fromState", ServiceOrderState.SCHEDULED);
+        payload.put("toState", ServiceOrderState.APPROVED);
+        payload.put("fromMechanicId", previousMechanicId);
+        payload.put("mechanicId", null);
+        payload.put("unassigned", true);
+        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
+        return dto;
+    }
+
+    @DELETE
+    @Path("/{id}")
+    @Transactional
+    public Response delete(@PathParam("id") UUID id) {
+        ServiceOrder so = load(id);
+        if (so.state == ServiceOrderState.IN_PROGRESS) {
+            throw new com.terrapulse.domain.service.IllegalStateTransitionException(
+                    "cannot hard-delete IN_PROGRESS order; cancel or complete first");
+        }
+        UUID deletedId = so.id;
+        UUID mechanicId = so.mechanic != null ? so.mechanic.id : null;
+        repo.delete(so);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", deletedId);
+        payload.put("mechanicId", mechanicId);
+        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_DELETED, payload));
+        return Response.noContent().build();
     }
 
     @POST

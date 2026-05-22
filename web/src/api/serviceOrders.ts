@@ -47,6 +47,8 @@ export const serviceOrdersApi = {
   complete:      (id: UUID, actualMinutes: number) =>
                                                    api.post<ServiceOrder>(`/service-orders/${id}/complete`, { actualMinutes }),
   cancel:        (id: UUID)                     => api.post<ServiceOrder>(`/service-orders/${id}/cancel`),
+  unassign:      (id: UUID)                     => api.post<ServiceOrder>(`/service-orders/${id}/unassign`),
+  delete:        (id: UUID)                     => api.delete<void>(`/service-orders/${id}`),
   override:      (id: UUID, body: {
                    state: "REQUESTED" | "QUOTED" | "APPROVED" | "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
                    reason: string;
