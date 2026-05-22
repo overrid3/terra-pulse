@@ -338,6 +338,10 @@
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+  /* Gantt nav: skip entirely instead of 0.01ms — avoids opacity-0 flash from `from` keyframe */
+  .tp-gantt-anim-next,
+  .tp-gantt-anim-prev,
+  .tp-gantt-anim-fade { animation: none; }
 }
 
 /* ============================================================
