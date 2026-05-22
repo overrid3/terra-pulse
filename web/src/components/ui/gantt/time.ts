@@ -3,9 +3,9 @@ import {
 } from "date-fns";
 import type { GanttView } from "./types";
 
-// Day view renders 07:00 -> 19:00 (12 hours)
-export const DAY_HOUR_START = 7;
-export const DAY_HOUR_END = 19;
+// Day view renders 06:00 -> 20:00 (14 hours)
+export const DAY_HOUR_START = 6;
+export const DAY_HOUR_END = 20;
 export const DAY_HOURS = DAY_HOUR_END - DAY_HOUR_START;
 
 /** Returns [winStart, winEnd] in the user's local timezone matching the rendered grid. */

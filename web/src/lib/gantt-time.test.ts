@@ -28,7 +28,7 @@ describe("snap", () => {
   });
 });
 
-describe("pxToTime (day view, 07:00-19:00 window)", () => {
+describe("pxToTime (day view, 06:00-20:00 window)", () => {
   it("midpoint maps to 13:00", () => {
     const [winStart, winEnd] = dayBoundary(new Date(2026, 5, 1));
     const t = pxToTime(RECT, 600, "day", winStart, winEnd);
@@ -36,15 +36,15 @@ describe("pxToTime (day view, 07:00-19:00 window)", () => {
     expect(t.getMinutes()).toBe(0);
   });
 
-  it("left edge maps to 07:00", () => {
+  it("left edge maps to 06:00", () => {
     const [winStart, winEnd] = dayBoundary(new Date(2026, 5, 1));
     const t = pxToTime(RECT, 0, "day", winStart, winEnd);
-    expect(t.getHours()).toBe(7);
+    expect(t.getHours()).toBe(6);
   });
 
-  it("right edge maps to 19:00", () => {
+  it("right edge maps to 20:00", () => {
     const [winStart, winEnd] = dayBoundary(new Date(2026, 5, 1));
     const t = pxToTime(RECT, 1200, "day", winStart, winEnd);
-    expect(t.getHours()).toBe(19);
+    expect(t.getHours()).toBe(20);
   });
 });

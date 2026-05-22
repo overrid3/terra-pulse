@@ -87,6 +87,7 @@
     "errorStartBeforeEnd": "Start must be before end",
     "errorEndAfterStart": "End must be after start",
     "errorMustBeApproved": "Order must be APPROVED to schedule (current: {{state}})",
+    "errorBlockedByAbsence": "Mechanic is on absence in that time window",
     "priorityCritical": "Critical",
     "priorityQuoted": "Quoted",
     "priorityScheduled": "Scheduled"

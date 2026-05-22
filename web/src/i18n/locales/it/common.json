@@ -87,6 +87,7 @@
     "errorStartBeforeEnd": "L'inizio deve precedere la fine",
     "errorEndAfterStart": "La fine deve essere successiva all'inizio",
     "errorMustBeApproved": "L'ordine deve essere APPROVATO per essere pianificato (attuale: {{state}})",
+    "errorBlockedByAbsence": "Il meccanico è assente in quella finestra",
     "priorityCritical": "Critico",
     "priorityQuoted": "Preventivato",
     "priorityScheduled": "Pianificato"
