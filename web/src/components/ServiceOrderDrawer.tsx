@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ServiceOrder } from "../types";
+import { ServiceOrder, ServiceOrderState } from "../types";
 import { serviceOrdersApi, ServiceOrderPatchBody } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
 import { DispatchModal } from "./DispatchModal";
 import { OrderDetailsCard } from "./OrderDetailsCard";
+import { OrderSaveBody } from "./OrderEditForm";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -29,7 +30,7 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
   const approve  = useMutation({ mutationFn: () => serviceOrdersApi.approve(order.id),  onSuccess: invalidate });
   const start    = useMutation({
     mutationFn: () => serviceOrdersApi.start(order.id),
-    onSuccess: () => { invalidate(); toast.success("Order started"); },
+    onSuccess: () => { invalidate(); toast.success(t("orders.startedToast")); },
     onError: (e: Error) => toast.error(e.message),
   });
   const complete = useMutation({
@@ -39,13 +40,28 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
   const cancel   = useMutation({ mutationFn: () => serviceOrdersApi.cancel(order.id),   onSuccess: invalidate });
   const patchMut = useMutation({
     mutationFn: (body: ServiceOrderPatchBody) => serviceOrdersApi.patch(order.id, body),
-    onSuccess: () => { invalidate(); toast.success(t("orders.savedToast", { defaultValue: "Order updated" })); },
+    onSuccess: () => { invalidate(); toast.success(t("orders.savedToast")); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const overrideMut = useMutation({
+    mutationFn: (body: {
+      state: ServiceOrderState;
+      reason: string;
+      mechanicId?: string;
+      actualMinutes?: number;
+    }) => serviceOrdersApi.override(order.id, body),
+    onSuccess: () => { invalidate(); toast.success(t("orders.overriddenToast")); },
     onError: (e: Error) => toast.error(e.message),
   });
   const renameMut = useMutation({
     mutationFn: (title: string) => serviceOrdersApi.renameTitle(order.id, title),
     onSuccess: invalidate,
   });
+
+  async function handleSave(body: OrderSaveBody) {
+    if (body.patch) await patchMut.mutateAsync(body.patch);
+    if (body.override) await overrideMut.mutateAsync(body.override);
+  }
 
   const [actualMin, setActualMin] = useState<number>(order.estimatedMinutes);
 
@@ -89,8 +105,8 @@ export function ServiceOrderDrawer({ order, onClose }: Props) {
           <OrderDetailsCard
             order={order}
             actions={actions}
-            onPatch={(body) => patchMut.mutate(body)}
-            patching={patchMut.isPending}
+            onSave={handleSave}
+            saving={patchMut.isPending || overrideMut.isPending}
             onRename={(title) => renameMut.mutate(title)}
             renaming={renameMut.isPending}
             showNotes

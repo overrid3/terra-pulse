@@ -4,16 +4,13 @@ import { useTranslation } from "react-i18next";
 import { X, Plus } from "lucide-react";
 import { serviceOrdersApi, CreateOrderBody, ServiceOrderPatchBody } from "../api/serviceOrders";
 import { queryKeys } from "../api/client";
-import { ServiceOrder, ServiceOrderState, UUID } from "../types";
+import { ServiceOrder, ServiceOrderState } from "../types";
 import { SearchInput } from "../components/SearchInput";
 import { OrderDetailsCard } from "../components/OrderDetailsCard";
-import { MechanicPicker } from "../components/MechanicPicker";
+import { OrderSaveBody } from "../components/OrderEditForm";
 import { CreateOrderForm } from "../components/CreateOrderForm";
 import { fmtDateTime } from "../i18n/format";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -46,9 +43,9 @@ export function OrdersPage() {
   const isMobile = useIsMobile();
   const { panelRef: listPanelRef, initialWidth: listInitialWidth, startDrag } = useResizableSplit({
     storageKey: "tp.orders.listWidth",
-    defaultWidth: 480,
-    minWidth: 320,
-    maxWidth: 720,
+    defaultWidth: 760,
+    minWidth: 480,
+    maxWidth: 1100,
   });
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("OPEN");
@@ -95,7 +92,7 @@ export function OrdersPage() {
       mechanicId: args.mechanicId,
       actualMinutes: args.actualMinutes,
     }),
-    onSuccess: invalidate
+    onSuccess: (updated) => { invalidate(); setSelected(updated); }
   });
   const renameMut = useMutation({
     mutationFn: (args: { id: string; title: string }) => serviceOrdersApi.renameTitle(args.id, args.title),
@@ -109,6 +106,19 @@ export function OrdersPage() {
     onSuccess: (updated) => { invalidate(); setSelected(updated); }
   });
 
+  async function handleSave(id: string, body: OrderSaveBody) {
+    if (body.patch) await patchMut.mutateAsync({ id, body: body.patch });
+    if (body.override) {
+      await overrideMut.mutateAsync({
+        id,
+        state: body.override.state,
+        reason: body.override.reason,
+        mechanicId: body.override.mechanicId,
+        actualMinutes: body.override.actualMinutes,
+      });
+    }
+  }
+
   return (
     <main className="flex-1 min-h-0 p-3.5 flex flex-row gap-0">
       <section
@@ -116,7 +126,7 @@ export function OrdersPage() {
         style={{ width: !isMobile && selected ? listInitialWidth : undefined }}
         className={cn(
           "bg-[var(--color-surface-panel)] border border-[var(--color-hairline)] rounded-[var(--radius-md)] p-3.5 overflow-auto min-h-0 flex flex-col gap-3",
-          selected ? "md:shrink-0 md:min-w-[320px] md:max-w-[720px]" : "flex-1"
+          selected ? "md:shrink-0 md:min-w-[480px] md:max-w-[1100px]" : "flex-1"
         )}
       >
         <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -238,13 +248,10 @@ export function OrdersPage() {
           <OrderDetail
             order={selected}
             onClose={() => setSelected(null)}
-            onOverride={(state, reason, mechanicId, actualMinutes) =>
-              overrideMut.mutate({ id: selected.id, state, reason, mechanicId, actualMinutes })}
-            overriding={overrideMut.isPending}
             onRename={(title) => renameMut.mutate({ id: selected.id, title })}
             renaming={renameMut.isPending}
-            onPatch={(body) => patchMut.mutate({ id: selected.id, body })}
-            patching={patchMut.isPending}
+            onSave={(body) => handleSave(selected.id, body)}
+            saving={patchMut.isPending || overrideMut.isPending}
           />
           </section>
         </>
@@ -254,90 +261,16 @@ export function OrdersPage() {
 }
 
 function OrderDetail({
-  order, onClose, onOverride, overriding, onRename, renaming, onPatch, patching
+  order, onClose, onRename, renaming, onSave, saving
 }: {
   order: ServiceOrder;
   onClose: () => void;
-  onOverride: (state: ServiceOrderState, reason: string, mechanicId?: string, actualMinutes?: number) => void;
-  overriding: boolean;
   onRename: (title: string) => void;
   renaming: boolean;
-  onPatch: (body: ServiceOrderPatchBody) => void;
-  patching: boolean;
+  onSave: (body: OrderSaveBody) => void;
+  saving: boolean;
 }) {
   const { t } = useTranslation();
-  const ALL_STATES: ServiceOrderState[] = ["REQUESTED", "QUOTED", "APPROVED", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED"];
-  const [overrideState, setOverrideState] = useState<ServiceOrderState>("CANCELLED");
-  const [reason, setReason] = useState("");
-  const [mechanicId, setMechanicId] = useState<string | undefined>(order.mechanicId ?? undefined);
-  const [actualMinutes, setActualMinutes] = useState<number>(order.actualMinutes ?? order.estimatedMinutes);
-
-  const needsMechanic =
-    (overrideState === "SCHEDULED" || overrideState === "IN_PROGRESS" || overrideState === "COMPLETED")
-    && !order.mechanicId;
-  const needsMinutes = overrideState === "COMPLETED" && order.actualMinutes == null;
-
-  const canSubmit =
-    overrideState !== order.state
-    && (!needsMechanic || !!mechanicId)
-    && (!needsMinutes || (actualMinutes > 0));
-
-  function submit() {
-    onOverride(
-      overrideState,
-      reason,
-      needsMechanic ? mechanicId : undefined,
-      needsMinutes ? actualMinutes : undefined,
-    );
-  }
-
-  const overrideSlot = (
-    <div className="mt-4 border-t border-[var(--color-hairline)] pt-3">
-      <h3 className="mt-0 mb-1.5 text-[var(--text-base)] font-semibold text-[var(--color-text)]">
-        {t("orders.overrideHeading")}
-      </h3>
-      <p className="text-[var(--text-sm)] text-[var(--color-text-muted)] m-0 mb-2">
-        {t("orders.overrideHelp")}
-      </p>
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="override-target">{t("orders.overrideTarget")}</Label>
-          <Select value={overrideState} onValueChange={(v) => setOverrideState(v as ServiceOrderState)}>
-            <SelectTrigger id="override-target"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {ALL_STATES.map((s) => (
-                <SelectItem key={s} value={s}>{t(`state.${s}`)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="override-reason">{t("orders.overrideReason")}</Label>
-          <Input id="override-reason" value={reason} onChange={(e) => setReason(e.target.value)}
-                 placeholder={t("orders.overrideReasonPlaceholder")} />
-        </div>
-        {needsMechanic && (
-          <div className="flex flex-col gap-1 col-span-2">
-            <Label htmlFor="override-mechanic">{t("orders.fieldMechanic")}</Label>
-            <MechanicPicker id="override-mechanic" value={mechanicId} onChange={setMechanicId} />
-          </div>
-        )}
-        {needsMinutes && (
-          <div className="flex flex-col gap-1 col-span-2">
-            <Label htmlFor="override-minutes">{t("orders.fieldActual")}</Label>
-            <Input id="override-minutes" type="number" min={1} value={actualMinutes}
-                   onChange={(e) => setActualMinutes(Number(e.target.value))} />
-          </div>
-        )}
-      </div>
-      <div className="flex justify-end mt-2.5">
-        <Button variant="default" disabled={!canSubmit || overriding} onClick={submit}>
-          {t("orders.actionOverrideApply")}
-        </Button>
-      </div>
-    </div>
-  );
-
   return (
     <div>
       <div className="flex items-center justify-between mb-2.5">
@@ -351,9 +284,8 @@ function OrderDetail({
         onRename={onRename}
         renaming={renaming}
         showNotes
-        overrideSlot={overrideSlot}
-        onPatch={onPatch}
-        patching={patching}
+        onSave={onSave}
+        saving={saving}
       />
     </div>
   );

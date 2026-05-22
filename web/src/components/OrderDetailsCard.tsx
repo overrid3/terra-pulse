@@ -1,12 +1,10 @@
 import { ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { format } from "date-fns";
 import { Pencil } from "lucide-react";
 import { ServiceOrder } from "../types";
 import { fmtDateTime } from "../i18n/format";
 import { formatDuration } from "../lib/duration";
-import { ServiceOrderPatchBody } from "../api/serviceOrders";
-import { OrderEditForm } from "./OrderEditForm";
+import { OrderEditForm, OrderSaveBody } from "./OrderEditForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +15,8 @@ type Props = {
   renaming?: boolean;
   showNotes?: boolean;
   actions?: ReactNode;
-  overrideSlot?: ReactNode;
-  onPatch?: (body: ServiceOrderPatchBody) => void;
-  patching?: boolean;
+  onSave?: (body: OrderSaveBody) => void;
+  saving?: boolean;
 };
 
 export function OrderDetailsCard({
@@ -28,9 +25,8 @@ export function OrderDetailsCard({
   renaming,
   showNotes = false,
   actions,
-  overrideSlot,
-  onPatch,
-  patching,
+  onSave,
+  saving,
 }: Props) {
   const { t } = useTranslation();
   const [titleDraft, setTitleDraft] = useState<string | null>(null);
@@ -52,6 +48,20 @@ export function OrderDetailsCard({
     setTitleErr(null);
     onRename(trimmed);
     setTitleDraft(null);
+  }
+
+  if (onSave && editing) {
+    return (
+      <OrderEditForm
+        order={order}
+        submitting={saving}
+        onCancel={() => setEditing(false)}
+        onSubmit={(body) => {
+          onSave(body);
+          setEditing(false);
+        }}
+      />
+    );
   }
 
   return (
@@ -141,9 +151,9 @@ export function OrderDetailsCard({
 
         {order.scheduledStartAt && order.scheduledEndAt && (
           <>
-            <dt className="text-[var(--color-text-muted)]">Scheduled</dt>
+            <dt className="text-[var(--color-text-muted)]">{t("orders.fieldScheduled")}</dt>
             <dd className="m-0">
-              {format(new Date(order.scheduledStartAt), "PP HH:mm")} → {format(new Date(order.scheduledEndAt), "PP HH:mm")}
+              {fmtDateTime(order.scheduledStartAt)} → {fmtDateTime(order.scheduledEndAt)}
             </dd>
           </>
         )}
@@ -204,28 +214,16 @@ export function OrderDetailsCard({
         )}
       </dl>
 
-      {onPatch && !editing && (
+      {onSave && (
         <div>
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             <Pencil className="h-4 w-4 mr-1" />
-            {t("orders.actionEdit", { defaultValue: "Edit details" })}
+            {t("orders.actionEdit")}
           </Button>
         </div>
       )}
-      {onPatch && editing && (
-        <OrderEditForm
-          order={order}
-          submitting={patching}
-          onCancel={() => setEditing(false)}
-          onSubmit={(body) => {
-            onPatch(body);
-            setEditing(false);
-          }}
-        />
-      )}
 
       {actions && <div className="flex flex-col gap-1.5">{actions}</div>}
-      {overrideSlot}
     </div>
   );
 }

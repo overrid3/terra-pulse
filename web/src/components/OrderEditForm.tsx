@@ -1,25 +1,40 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ServiceOrder } from "../types";
+import { ServiceOrder, ServiceOrderState } from "../types";
 import { vehiclesApi } from "../api/vehicles";
 import { clientsApi } from "../api/clients";
 import { sitesApi } from "../api/sites";
 import { vmrsApi } from "../api/vmrs";
 import { queryKeys } from "../api/client";
 import { ServiceOrderPatchBody } from "../api/serviceOrders";
+import { MechanicPicker } from "./MechanicPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
+export type OrderSaveBody = {
+  patch?: ServiceOrderPatchBody;
+  override?: {
+    state: ServiceOrderState;
+    reason: string;
+    mechanicId?: string;
+    actualMinutes?: number;
+  };
+};
+
 type Props = {
   order: ServiceOrder;
   onCancel: () => void;
-  onSubmit: (body: ServiceOrderPatchBody) => void;
+  onSubmit: (body: OrderSaveBody) => void;
   submitting?: boolean;
 };
+
+const ALL_STATES: ServiceOrderState[] = [
+  "REQUESTED", "QUOTED", "APPROVED", "SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED",
+];
 
 function toLocalInput(iso: string | null): string {
   if (!iso) return "";
@@ -51,6 +66,11 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
   const [endAt, setEndAt] = useState<string>(toLocalInput(order.scheduledEndAt));
   const [endManual, setEndManual] = useState<boolean>(!!order.scheduledEndAt);
 
+  const [stateVal, setStateVal] = useState<ServiceOrderState>(order.state);
+  const [reason, setReason] = useState("");
+  const [mechanicId, setMechanicId] = useState<string | undefined>(order.mechanicId ?? undefined);
+  const [actualMinutes, setActualMinutes] = useState<number>(order.actualMinutes ?? order.estimatedMinutes);
+
   useEffect(() => {
     if (!startAt) { setEndAt(""); setEndManual(false); return; }
     if (endManual) return;
@@ -65,29 +85,92 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
     [sitesQ.data, clientId]
   );
 
+  const stateChanged = stateVal !== order.state;
+  const needsMechanic =
+    stateChanged
+    && (stateVal === "SCHEDULED" || stateVal === "IN_PROGRESS" || stateVal === "COMPLETED")
+    && !order.mechanicId;
+  const needsMinutes = stateChanged && stateVal === "COMPLETED" && order.actualMinutes == null;
+
+  const canSubmit =
+    (!stateChanged || ((!needsMechanic || !!mechanicId) && (!needsMinutes || actualMinutes > 0)));
+
   function submit(e: FormEvent) {
     e.preventDefault();
-    const body: ServiceOrderPatchBody = {};
+    const patch: ServiceOrderPatchBody = {};
     const trimmedTitle = title.trim();
-    if (trimmedTitle && trimmedTitle !== (order.title ?? "")) body.title = trimmedTitle;
-    if (vehicleId !== order.vehicleId) body.vehicleId = vehicleId;
-    if ((clientId || null) !== (order.clientId ?? null) && clientId) body.clientId = clientId;
-    if (siteId !== order.siteId) body.siteId = siteId;
-    if (vmrsCode !== order.vmrsCode) body.vmrsCode = vmrsCode;
-    if (notes !== (order.notes ?? "")) body.notes = notes;
-    if (estimatedMinutes !== order.estimatedMinutes) body.estimatedMinutes = estimatedMinutes;
+    if (trimmedTitle && trimmedTitle !== (order.title ?? "")) patch.title = trimmedTitle;
+    if (vehicleId !== order.vehicleId) patch.vehicleId = vehicleId;
+    if ((clientId || null) !== (order.clientId ?? null) && clientId) patch.clientId = clientId;
+    if (siteId !== order.siteId) patch.siteId = siteId;
+    if (vmrsCode !== order.vmrsCode) patch.vmrsCode = vmrsCode;
+    if (notes !== (order.notes ?? "")) patch.notes = notes;
+    if (estimatedMinutes !== order.estimatedMinutes) patch.estimatedMinutes = estimatedMinutes;
     const newStart = fromLocalInput(startAt);
     const newEnd = fromLocalInput(endAt);
-    if (newStart !== (order.scheduledStartAt ?? null)) body.scheduledStartAt = newStart ?? undefined;
-    if (newEnd !== (order.scheduledEndAt ?? null)) body.scheduledEndAt = newEnd ?? undefined;
+    if (newStart !== (order.scheduledStartAt ?? null)) patch.scheduledStartAt = newStart ?? undefined;
+    if (newEnd !== (order.scheduledEndAt ?? null)) patch.scheduledEndAt = newEnd ?? undefined;
+
+    const body: OrderSaveBody = {};
+    if (Object.keys(patch).length > 0) body.patch = patch;
+    if (stateChanged) {
+      body.override = {
+        state: stateVal,
+        reason,
+        mechanicId: needsMechanic ? mechanicId : undefined,
+        actualMinutes: needsMinutes ? actualMinutes : undefined,
+      };
+    }
     onSubmit(body);
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3 border-t border-[var(--color-hairline)] pt-3 mt-3">
+    <form onSubmit={submit} className="flex flex-col gap-3">
       <div className="grid gap-1.5">
         <Label>{t("orders.columnTitle")}</Label>
         <Input value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} />
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label>{t("orders.columnState")}</Label>
+        <Select value={stateVal} onValueChange={(v) => setStateVal(v as ServiceOrderState)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {ALL_STATES.map((s) => (
+              <SelectItem key={s} value={s}>{t(`state.${s}`)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {stateChanged && (
+          <>
+            <p className="text-[var(--text-sm)] text-[var(--color-text-muted)] m-0">
+              {t("orders.overrideHelp")}
+            </p>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={t("orders.overrideReasonPlaceholder")}
+              aria-label={t("orders.overrideReason")}
+            />
+            {needsMechanic && (
+              <div className="grid gap-1.5">
+                <Label>{t("orders.fieldMechanic")}</Label>
+                <MechanicPicker value={mechanicId} onChange={setMechanicId} />
+              </div>
+            )}
+            {needsMinutes && (
+              <div className="grid gap-1.5">
+                <Label>{t("orders.fieldActual")}</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={actualMinutes}
+                  onChange={(e) => setActualMinutes(Number(e.target.value))}
+                />
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <div className="grid gap-1.5">
@@ -159,7 +242,7 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
           />
         </div>
         <div className="grid gap-1.5">
-          <Label>{t("createOrder.endLabel", { defaultValue: "End" })}</Label>
+          <Label>{t("createOrder.endLabel")}</Label>
           <Input
             type="datetime-local"
             value={endAt}
@@ -177,7 +260,7 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
 
       <div className="flex justify-end gap-2 mt-1">
         <Button type="button" variant="ghost" onClick={onCancel}>{t("common.cancel")}</Button>
-        <Button type="submit" variant="default" disabled={submitting}>{t("common.save")}</Button>
+        <Button type="submit" variant="default" disabled={submitting || !canSubmit}>{t("common.save")}</Button>
       </div>
     </form>
   );
