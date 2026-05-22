@@ -77,9 +77,8 @@ public class MechanicResource {
                                      @QueryParam("limit") Integer limit,
                                      @QueryParam("skill") String skill) {
         int lim = limit != null ? limit : 5;
-        Set<UUID> onAbsence = mechanicsOnAbsenceNow();
+        // NearestMechanicService now filters out mechanics on absence.
         return nearest.findNearest(lat, lng, lim, skill).stream()
-                .filter(m -> !onAbsence.contains(m.id))
                 .map(m -> MechanicDto.of(m, false))
                 .toList();
     }
