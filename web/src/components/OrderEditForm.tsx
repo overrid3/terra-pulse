@@ -8,6 +8,7 @@ import { sitesApi } from "../api/sites";
 import { vmrsApi } from "../api/vmrs";
 import { queryKeys } from "../api/client";
 import { ServiceOrderPatchBody } from "../api/serviceOrders";
+import { parseDuration, formatDuration } from "../lib/duration";
 import { MechanicPicker } from "./MechanicPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,30 +56,33 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
   const sitesQ    = useQuery({ queryKey: queryKeys.sitesAll, queryFn: sitesApi.listAll });
   const vmrsQ     = useQuery({ queryKey: queryKeys.vmrs,     queryFn: vmrsApi.list });
 
-  const [title, setTitle] = useState(order.title ?? "");
-  const [vehicleId, setVehicleId] = useState(order.vehicleId);
-  const [clientId, setClientId] = useState<string>(order.clientId ?? "");
-  const [siteId, setSiteId] = useState(order.siteId);
-  const [vmrsCode, setVmrsCode] = useState(order.vmrsCode);
-  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(order.estimatedMinutes);
-  const [notes, setNotes] = useState(order.notes ?? "");
-  const [startAt, setStartAt] = useState<string>(toLocalInput(order.scheduledStartAt));
-  const [endAt, setEndAt] = useState<string>(toLocalInput(order.scheduledEndAt));
-  const [endManual, setEndManual] = useState<boolean>(!!order.scheduledEndAt);
+  const [title, setTitle]           = useState(order.title ?? "");
+  const [vehicleId, setVehicleId]   = useState(order.vehicleId);
+  const [clientId, setClientId]     = useState<string>(order.clientId ?? "");
+  const [siteId, setSiteId]         = useState(order.siteId);
+  const [vmrsCode, setVmrsCode]     = useState(order.vmrsCode);
+  const [estimation, setEstimation] = useState<string>(formatDuration(order.estimatedMinutes));
+  const [notes, setNotes]           = useState(order.notes ?? "");
+  const [startAt, setStartAt]       = useState<string>(toLocalInput(order.scheduledStartAt));
+  const [endAt, setEndAt]           = useState<string>(toLocalInput(order.scheduledEndAt));
+  const [endManual, setEndManual]   = useState<boolean>(!!order.scheduledEndAt);
 
   const [stateVal, setStateVal] = useState<ServiceOrderState>(order.state);
   const [reason, setReason] = useState("");
   const [mechanicId, setMechanicId] = useState<string | undefined>(order.mechanicId ?? undefined);
   const [actualMinutes, setActualMinutes] = useState<number>(order.actualMinutes ?? order.estimatedMinutes);
 
+  const parsedMinutes   = useMemo(() => parseDuration(estimation), [estimation]);
+  const estimationError = estimation !== "" && parsedMinutes === null;
+
   useEffect(() => {
     if (!startAt) { setEndAt(""); setEndManual(false); return; }
     if (endManual) return;
-    if (!estimatedMinutes || estimatedMinutes <= 0) return;
-    const d = new Date(new Date(startAt).getTime() + estimatedMinutes * 60_000);
+    if (!parsedMinutes || parsedMinutes <= 0) return;
+    const d = new Date(new Date(startAt).getTime() + parsedMinutes * 60_000);
     const pad = (n: number) => String(n).padStart(2, "0");
     setEndAt(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
-  }, [startAt, estimatedMinutes, endManual]);
+  }, [startAt, parsedMinutes, endManual]);
 
   const filteredSites = useMemo(
     () => (sitesQ.data ?? []).filter((s) => !clientId || s.clientId === clientId),
@@ -93,7 +97,8 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
   const needsMinutes = stateChanged && stateVal === "COMPLETED" && order.actualMinutes == null;
 
   const canSubmit =
-    (!stateChanged || ((!needsMechanic || !!mechanicId) && (!needsMinutes || actualMinutes > 0)));
+    !estimationError
+    && (!stateChanged || ((!needsMechanic || !!mechanicId) && (!needsMinutes || actualMinutes > 0)));
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -105,7 +110,7 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
     if (siteId !== order.siteId) patch.siteId = siteId;
     if (vmrsCode !== order.vmrsCode) patch.vmrsCode = vmrsCode;
     if (notes !== (order.notes ?? "")) patch.notes = notes;
-    if (estimatedMinutes !== order.estimatedMinutes) patch.estimatedMinutes = estimatedMinutes;
+    if (parsedMinutes != null && parsedMinutes !== order.estimatedMinutes) patch.estimatedMinutes = parsedMinutes;
     const newStart = fromLocalInput(startAt);
     const newEnd = fromLocalInput(endAt);
     if (newStart !== (order.scheduledStartAt ?? null)) patch.scheduledStartAt = newStart ?? undefined;
@@ -126,11 +131,6 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <div className="grid gap-1.5">
-        <Label>{t("orders.columnTitle")}</Label>
-        <Input value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} />
-      </div>
-
       <div className="grid gap-1.5">
         <Label>{t("orders.columnState")}</Label>
         <Select value={stateVal} onValueChange={(v) => setStateVal(v as ServiceOrderState)}>
@@ -174,9 +174,14 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
       </div>
 
       <div className="grid gap-1.5">
+        <Label>{t("createOrder.title")}</Label>
+        <Input value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} placeholder={t("createOrder.titlePlaceholder")} />
+      </div>
+
+      <div className="grid gap-1.5">
         <Label>{t("createOrder.vehicleLabel")}</Label>
         <Select value={vehicleId} onValueChange={setVehicleId}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={t("createOrder.vehiclePlaceholder")} /></SelectTrigger>
           <SelectContent>
             {(vehiclesQ.data ?? []).map((v) => (
               <SelectItem key={v.id} value={v.id}>{v.make} {v.model} ({v.serialNumber})</SelectItem>
@@ -188,7 +193,7 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
       <div className="grid gap-1.5">
         <Label>{t("createOrder.clientLabel")}</Label>
         <Select value={clientId} onValueChange={(v) => { setClientId(v); setSiteId(""); }}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={t("createOrder.clientPlaceholder")} /></SelectTrigger>
           <SelectContent>
             {(clientsQ.data ?? []).map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -199,8 +204,10 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
 
       <div className="grid gap-1.5">
         <Label>{t("createOrder.siteLabel")}</Label>
-        <Select value={siteId} onValueChange={setSiteId}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+        <Select value={siteId} onValueChange={setSiteId} disabled={!clientId}>
+          <SelectTrigger>
+            <SelectValue placeholder={clientId ? t("createOrder.sitePlaceholder") : t("createOrder.siteDisabledPlaceholder")} />
+          </SelectTrigger>
           <SelectContent>
             {filteredSites.map((s) => (
               <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -212,7 +219,7 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
       <div className="grid gap-1.5">
         <Label>{t("createOrder.vmrsLabel")}</Label>
         <Select value={vmrsCode} onValueChange={setVmrsCode}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={t("createOrder.vmrsPlaceholder")} /></SelectTrigger>
           <SelectContent>
             {(vmrsQ.data ?? []).map((c) => (
               <SelectItem key={c.code} value={c.code}>{c.code} — {c.description}</SelectItem>
@@ -222,34 +229,45 @@ export function OrderEditForm({ order, onCancel, onSubmit, submitting }: Props) 
       </div>
 
       <div className="grid gap-1.5">
-        <Label>{t("orders.fieldEstimated")} ({t("common.minutesUnit", { defaultValue: "min" })})</Label>
+        <Label>{t("createOrder.estimationLabel")}</Label>
         <Input
-          type="number"
-          min={1}
-          value={estimatedMinutes}
-          onChange={(e) => setEstimatedMinutes(Number(e.target.value))}
+          value={estimation}
+          onChange={(e) => setEstimation(e.target.value)}
+          placeholder={t("createOrder.estimationPlaceholder")}
+          aria-invalid={!!estimationError}
         />
+        <span className={`text-xs ${estimationError ? "text-[var(--color-danger-fg)]" : "text-[var(--color-text-muted)]"}`}>
+          {estimationError
+            ? t("createOrder.estimationInvalid")
+            : parsedMinutes != null
+              ? t("createOrder.estimationParsed", { minutes: parsedMinutes })
+              : t("createOrder.estimationHint")}
+        </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="grid gap-1.5">
-          <Label>{t("createOrder.startLabel")}</Label>
-          <Input
-            type="datetime-local"
-            value={startAt}
-            onChange={(e) => setStartAt(e.target.value)}
-            step={3600}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label>{t("createOrder.endLabel")}</Label>
-          <Input
-            type="datetime-local"
-            value={endAt}
-            onChange={(e) => { setEndAt(e.target.value); setEndManual(!!e.target.value); }}
-            step={3600}
-            disabled={!startAt}
-          />
+      <div className="border-t pt-3 mt-1">
+        <div className="text-sm text-[var(--color-text-muted)] mb-2">{t("createOrder.scheduleSectionTitle")}</div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-1.5">
+            <Label>{t("createOrder.startLabel")}</Label>
+            <Input
+              type="datetime-local"
+              value={startAt}
+              onChange={(e) => setStartAt(e.target.value)}
+              step={3600}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>{t("createOrder.endLabel")}</Label>
+            <Input
+              type="datetime-local"
+              value={endAt}
+              onChange={(e) => { setEndAt(e.target.value); setEndManual(!!e.target.value); }}
+              step={3600}
+              disabled={!startAt}
+            />
+          </div>
         </div>
       </div>
 
