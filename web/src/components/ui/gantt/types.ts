@@ -45,6 +45,9 @@ export type GanttRenderProps = {
   winStart: Date;
   winEnd: Date;
   onSelectOrder: (id: string) => void;
+  onEditOrder: (id: string) => void;
+  onUnassignOrder: (id: string) => void;
+  onDeleteOrder: (id: string) => void;
   onAddAbsence: (mechanicId: string) => void;
   registerRow: (mechanicId: string, el: HTMLDivElement | null) => void;
 };

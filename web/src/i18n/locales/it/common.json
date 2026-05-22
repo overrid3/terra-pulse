@@ -90,7 +90,17 @@
     "errorBlockedByAbsence": "Il meccanico è assente in quella finestra",
     "priorityCritical": "Critico",
     "priorityQuoted": "Preventivato",
-    "priorityScheduled": "Pianificato"
+    "priorityScheduled": "Pianificato",
+    "menuViewDetails": "Vedi dettagli",
+    "menuEdit": "Modifica",
+    "menuUnassign": "Rimuovi assegnazione",
+    "menuDelete": "Elimina",
+    "editOrderTitle": "Modifica ordine",
+    "editOrderDescription": "Aggiorna i dettagli dell'ordine. I campi di pianificazione mantengono i valori attuali se lasciati vuoti.",
+    "deleteOrderTitle": "Eliminare l'ordine?",
+    "deleteOrderConfirm": "Eliminare definitivamente \"{{title}}\"? Operazione irreversibile.",
+    "unassignSuccess": "Assegnazione rimossa",
+    "deleteSuccess": "Ordine eliminato"
   },
   "orders": {
     "pageTitle": "Ordini di servizio",

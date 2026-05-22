@@ -25,6 +25,9 @@ type Props = {
   winStart: Date;
   winEnd: Date;
   onSelectOrder: (id: string) => void;
+  onEditOrder: (id: string) => void;
+  onUnassignOrder: (id: string) => void;
+  onDeleteOrder: (id: string) => void;
   onAddAbsence: (mechanicId: string) => void;
   registerRow: (mechanicId: string, el: HTMLDivElement | null) => void;
 };
@@ -63,7 +66,8 @@ export function GanttRow({
   gridTemplate, minTimelineWidth,
   eventPosition, chipLabel, chipTitle,
   winStart, winEnd,
-  onSelectOrder, onAddAbsence, registerRow,
+  onSelectOrder, onEditOrder, onUnassignOrder, onDeleteOrder,
+  onAddAbsence, registerRow,
 }: Props) {
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [cursorX, setCursorX] = useState<number | null>(null);
@@ -223,6 +227,9 @@ export function GanttRow({
               tooltip={chipTitle(o)}
               hasConflict={conflictIds.has(o.id)}
               onSelect={onSelectOrder}
+              onEdit={onEditOrder}
+              onUnassign={onUnassignOrder}
+              onDelete={onDeleteOrder}
             />
           );
         })}

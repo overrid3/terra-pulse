@@ -10,7 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { mechanicsApi } from "../api/mechanics";
-import { serviceOrdersApi, CreateOrderBody } from "../api/serviceOrders";
+import { serviceOrdersApi, CreateOrderBody, ServiceOrderPatchBody } from "../api/serviceOrders";
 import { absencesApi } from "../api/absences";
 import { queryKeys } from "../api/client";
 import { Gantt, dayBoundary, weekBoundary, monthBoundary } from "@/components/ui/gantt";
@@ -19,7 +19,8 @@ import { ServiceOrderDrawer } from "./ServiceOrderDrawer";
 import { AbsencesPanel } from "./AbsencesPanel";
 import { SearchInput } from "./SearchInput";
 import { CreateOrderForm } from "./CreateOrderForm";
-import { ServiceOrder, MechanicAbsence, UUID } from "../types";
+import { OrderEditForm, OrderSaveBody } from "./OrderEditForm";
+import { ServiceOrder, MechanicAbsence, ServiceOrderState, UUID } from "../types";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,7 @@ import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -86,6 +87,8 @@ export function DispatchPage() {
   const [view, setView] = useState<GanttView>("day");
   const [date, setDate] = useState<Date>(startOfDay(new Date()));
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOrderId, setEditOrderId] = useState<string | null>(null);
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
   const [absenceMechanicId, setAbsenceMechanicId] = useState<string | null>(null);
 
   const [activeDrag, setActiveDrag] = useState<{ kind: string; orderId?: string } | null>(null);
@@ -146,6 +149,45 @@ export function DispatchPage() {
     onSuccess: () => { invalidateOrders(); toast.success(t("dispatch.rescheduleSuccess")); },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const patchMut = useMutation({
+    mutationFn: (args: { id: UUID; body: ServiceOrderPatchBody }) =>
+      serviceOrdersApi.patch(args.id, args.body),
+    onSuccess: () => { invalidateOrders(); toast.success(t("orders.savedToast")); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const overrideMut = useMutation({
+    mutationFn: (args: {
+      id: UUID;
+      body: { state: ServiceOrderState; reason: string; mechanicId?: string; actualMinutes?: number };
+    }) => serviceOrdersApi.override(args.id, args.body),
+    onSuccess: () => { invalidateOrders(); toast.success(t("orders.overriddenToast")); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const unassignMut = useMutation({
+    mutationFn: (id: UUID) => serviceOrdersApi.unassign(id),
+    onSuccess: () => { invalidateOrders(); toast.success(t("dispatch.unassignSuccess")); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: UUID) => serviceOrdersApi.delete(id),
+    onSuccess: () => {
+      invalidateOrders();
+      setDeleteOrderId(null);
+      if (selectedOrderId === deleteOrderId) setSelectedOrderId(null);
+      toast.success(t("dispatch.deleteSuccess"));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  async function handleEditSave(id: UUID, body: OrderSaveBody) {
+    if (body.patch) await patchMut.mutateAsync({ id, body: body.patch });
+    if (body.override) await overrideMut.mutateAsync({ id, body: body.override });
+    setEditOrderId(null);
+  }
 
   const selectedOrder = useMemo(
     () => ordersQ.data?.find((o) => o.id === selectedOrderId) ?? null,
@@ -369,6 +411,9 @@ export function DispatchPage() {
             winStart={winStart}
             winEnd={winEnd}
             onSelectOrder={setSelectedOrderId}
+            onEditOrder={setEditOrderId}
+            onUnassignOrder={(id) => unassignMut.mutate(id as UUID)}
+            onDeleteOrder={setDeleteOrderId}
             onAddAbsence={setAbsenceMechanicId}
             registerRow={registerRow}
           />
@@ -420,6 +465,51 @@ export function DispatchPage() {
       {selectedOrder && (
         <ServiceOrderDrawer order={selectedOrder} onClose={() => setSelectedOrderId(null)} />
       )}
+
+      <Dialog open={!!editOrderId} onOpenChange={(open) => !open && setEditOrderId(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t("dispatch.editOrderTitle")}</DialogTitle>
+            <DialogDescription>{t("dispatch.editOrderDescription")}</DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const order = ordersQ.data?.find((o) => o.id === editOrderId);
+            if (!order) return null;
+            return (
+              <OrderEditForm
+                order={order}
+                submitting={patchMut.isPending || overrideMut.isPending}
+                onCancel={() => setEditOrderId(null)}
+                onSubmit={(body) => handleEditSave(order.id as UUID, body)}
+              />
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteOrderId} onOpenChange={(open) => !open && setDeleteOrderId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("dispatch.deleteOrderTitle")}</DialogTitle>
+            <DialogDescription>
+              {(() => {
+                const o = ordersQ.data?.find((x) => x.id === deleteOrderId);
+                return t("dispatch.deleteOrderConfirm", { title: o?.title ?? o?.vmrsCode ?? "" });
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOrderId(null)}>{t("common.cancel")}</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMut.isPending}
+              onClick={() => deleteOrderId && deleteMut.mutate(deleteOrderId as UUID)}
+            >
+              {t("dispatch.menuDelete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={!!absenceMechanicId} onOpenChange={(open) => !open && setAbsenceMechanicId(null)}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto p-0">

@@ -14,7 +14,8 @@ function clampPct(n: number) { return Math.max(0, Math.min(100, n)); }
 export function Gantt({
   mechanics, orders, absences, selectedMechanicId,
   view, date, winStart, winEnd,
-  onSelectOrder, onAddAbsence, registerRow,
+  onSelectOrder, onEditOrder, onUnassignOrder, onDeleteOrder,
+  onAddAbsence, registerRow,
 }: GanttRenderProps) {
   const { t } = useTranslation();
   const visibleMechanics = selectedMechanicId
@@ -137,6 +138,9 @@ export function Gantt({
             winStart={winStart}
             winEnd={winEnd}
             onSelectOrder={onSelectOrder}
+            onEditOrder={onEditOrder}
+            onUnassignOrder={onUnassignOrder}
+            onDeleteOrder={onDeleteOrder}
             onAddAbsence={onAddAbsence}
             registerRow={registerRow}
           />

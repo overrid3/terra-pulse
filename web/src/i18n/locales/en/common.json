@@ -90,7 +90,17 @@
     "errorBlockedByAbsence": "Mechanic is on absence in that time window",
     "priorityCritical": "Critical",
     "priorityQuoted": "Quoted",
-    "priorityScheduled": "Scheduled"
+    "priorityScheduled": "Scheduled",
+    "menuViewDetails": "View details",
+    "menuEdit": "Edit",
+    "menuUnassign": "Unassign",
+    "menuDelete": "Delete",
+    "editOrderTitle": "Edit order",
+    "editOrderDescription": "Update order details. Schedule fields keep their current values when blank.",
+    "deleteOrderTitle": "Delete order?",
+    "deleteOrderConfirm": "Permanently delete \"{{title}}\"? This cannot be undone.",
+    "unassignSuccess": "Order unassigned",
+    "deleteSuccess": "Order deleted"
   },
   "orders": {
     "pageTitle": "Service orders",
