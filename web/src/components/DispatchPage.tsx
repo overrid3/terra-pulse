@@ -44,6 +44,7 @@ function priorityBadge(o: ServiceOrder): { key: string; cls: string } {
 
 const POOL_SNAP_MS = 30 * 60_000;
 const EVENT_SNAP_MS = 15 * 60_000;
+const RESIZE_SNAP_MS = 30 * 60_000;
 
 function snapMs(ms: number, step: number): number {
   return Math.round(ms / step) * step;
@@ -206,7 +207,7 @@ export function DispatchPage() {
       if (!targetMechanicId) return;
       const rect = rowRefs.current.get(targetMechanicId)?.getBoundingClientRect();
       if (!rect) return;
-      const deltaMs = snapMs(pxDeltaToMs(e.delta.x, rect.width, winStart, winEnd), EVENT_SNAP_MS);
+      const deltaMs = snapMs(pxDeltaToMs(e.delta.x, rect.width, winStart, winEnd), RESIZE_SNAP_MS);
       const oldStart = new Date(a.scheduledStartAt);
       const oldEnd = new Date(a.scheduledEndAt);
       if (a.edge === "start") {

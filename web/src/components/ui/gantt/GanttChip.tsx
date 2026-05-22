@@ -1,4 +1,4 @@
-import { KeyboardEvent } from "react";
+import React, { KeyboardEvent } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import type { ServiceOrder } from "../../../types";
@@ -78,6 +78,7 @@ export function GanttChip({
           edge="start"
           scheduledStartAt={order.scheduledStartAt}
           scheduledEndAt={order.scheduledEndAt}
+          currentMechanicId={order.mechanicId ?? ""}
         />
       )}
       <span className="text-[11px] font-semibold truncate min-w-0">{label}</span>
@@ -90,6 +91,7 @@ export function GanttChip({
           edge="end"
           scheduledStartAt={order.scheduledStartAt}
           scheduledEndAt={order.scheduledEndAt}
+          currentMechanicId={order.mechanicId ?? ""}
         />
       )}
     </div>
@@ -97,12 +99,13 @@ export function GanttChip({
 }
 
 function ResizeHandle({
-  orderId, edge, scheduledStartAt, scheduledEndAt,
+  orderId, edge, scheduledStartAt, scheduledEndAt, currentMechanicId,
 }: {
   orderId: string;
   edge: "start" | "end";
   scheduledStartAt: string;
   scheduledEndAt: string;
+  currentMechanicId: string;
 }) {
   const data: GanttResizeDragData = {
     kind: "resize",
@@ -110,32 +113,40 @@ function ResizeHandle({
     edge,
     scheduledStartAt,
     scheduledEndAt,
+    currentMechanicId,
   };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `resize:${orderId}:${edge}`,
     data,
   });
 
+  // Compose dnd-kit listeners with our own stopPropagation so the parent chip
+  // drag doesn't also start. We must invoke listeners.onMouseDown / onTouchStart
+  // ourselves — spreading {...listeners} after our handler would clobber ours,
+  // spreading it before lets React's later prop win and drop dnd-kit's.
+  type AnyEvt = React.MouseEvent | React.TouchEvent | React.PointerEvent;
+  const fwd = (key: "onMouseDown" | "onTouchStart" | "onPointerDown") =>
+    (e: AnyEvt) => {
+      const l = listeners as Partial<Record<typeof key, (ev: AnyEvt) => void>> | undefined;
+      l?.[key]?.(e);
+      e.stopPropagation();
+    };
+
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
       {...attributes}
       role="separator"
       aria-label={`Resize ${edge}`}
       className={cn(
-        "absolute top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-[var(--color-brand-strong)] z-10",
+        "absolute top-0 bottom-0 w-2 cursor-ew-resize hover:bg-[var(--color-brand-strong)] z-10 touch-none",
         edge === "start" ? "left-0" : "right-0",
         isDragging && "bg-[var(--color-brand-strong)]",
       )}
       onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-      onPointerDown={(e) => {
-        // Call dnd-kit's own listener first so resize drag activates,
-        // then stop propagation so the parent chip drag doesn't also start.
-        (listeners as Record<string, (ev: typeof e) => void> | undefined)?.onPointerDown?.(e);
-        e.stopPropagation();
-      }}
+      onMouseDown={fwd("onMouseDown")}
+      onTouchStart={fwd("onTouchStart")}
+      onPointerDown={fwd("onPointerDown")}
     />
   );
 }

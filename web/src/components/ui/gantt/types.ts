@@ -27,6 +27,7 @@ export type GanttResizeDragData = {
   edge: "start" | "end";
   scheduledStartAt: string;
   scheduledEndAt: string;
+  currentMechanicId: string;
 };
 
 export type GanttDragData =
