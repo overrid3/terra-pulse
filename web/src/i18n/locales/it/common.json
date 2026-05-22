@@ -83,6 +83,7 @@
     "rescheduleSuccess": "Pianificazione aggiornata",
     "conflictWarning": "Sovrapposizione con {{title}} alle {{time}}",
     "addAbsence": "+ Assenza",
+    "addAbsenceForMechanic": "Aggiungi assenza per {{name}}",
     "orderCreatedToast": "Ordine creato",
     "errorStartBeforeEnd": "L'inizio deve precedere la fine",
     "errorEndAfterStart": "La fine deve essere successiva all'inizio",

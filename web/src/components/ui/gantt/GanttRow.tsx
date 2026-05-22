@@ -2,6 +2,7 @@ import type React from "react";
 import { useMemo, useRef, useState } from "react";
 import { useDndMonitor, useDroppable } from "@dnd-kit/core";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { Mechanic, MechanicAbsence, ServiceOrder } from "../../../types";
 import { findConflicts, ScheduledItem } from "../../../lib/findConflicts";
@@ -102,6 +103,7 @@ export function GanttRow({
   onSelectOrder, onEditOrder, onUnassignOrder, onDeleteOrder,
   onAddAbsence, registerRow,
 }: Props) {
+  const { t } = useTranslation();
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [cursorX, setCursorX] = useState<number | null>(null);
   const [resizePreview, setResizePreview] = useState<ResizePreview>(null);
@@ -271,9 +273,9 @@ export function GanttRow({
           type="button"
           className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] bg-[var(--color-surface-panel)] group-hover:bg-[var(--color-surface-sunken)] border border-[var(--color-hairline)] rounded-[var(--radius-sm)] px-1.5 py-0.5 shadow-sm"
           onClick={(e) => { e.stopPropagation(); onAddAbsence(mechanic.id); }}
-          aria-label={`Add absence for ${mechanic.fullName}`}
+          aria-label={t("dispatch.addAbsenceForMechanic", { name: mechanic.fullName })}
         >
-          + Absence
+          {t("dispatch.addAbsence")}
         </button>
       </div>
       <div

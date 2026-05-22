@@ -83,6 +83,7 @@
     "rescheduleSuccess": "Schedule updated",
     "conflictWarning": "Overlaps with {{title}} at {{time}}",
     "addAbsence": "+ Absence",
+    "addAbsenceForMechanic": "Add absence for {{name}}",
     "orderCreatedToast": "Order created",
     "errorStartBeforeEnd": "Start must be before end",
     "errorEndAfterStart": "End must be after start",
