@@ -15,6 +15,14 @@ const BASE_ROW_MIN_HEIGHT_PX = 72;
 const POOL_SNAP_MS = 30 * 60_000;
 const RESIZE_SNAP_MS = 30 * 60_000;
 
+// Snap a raw absolute time to the nearest wall-clock boundary (e.g. :00/:30)
+// OR to the estimated boundary, whichever is closer to the raw position.
+// Exported via duplication in DispatchPage (preview vs. commit must agree).
+function snapResizeAbsolute(rawMs: number, stepMs: number, estMs: number): number {
+  const wallMs = Math.round(rawMs / stepMs) * stepMs;
+  return Math.abs(estMs - rawMs) < Math.abs(wallMs - rawMs) ? estMs : wallMs;
+}
+
 type ResizePreview = {
   edge: "start" | "end";
   leftPct: number;
@@ -152,9 +160,12 @@ export function GanttRow({
 
       // Resize preview: only the row that owns the order being resized
       // computes & shows it. Anchor preview to the actual scheduled times
-      // (not the chip's current visual span) using the snapped delta.
+      // (not the chip's current visual span). Snap is *absolute* — to the
+      // wall-clock :00/:30 boundary nearest the raw cursor position — with
+      // the estimated boundary as an alternative candidate. Picks whichever
+      // is closer to where the cursor actually is.
       const data = e.active.data.current as
-        | { kind?: string; edge?: "start" | "end"; scheduledStartAt?: string; scheduledEndAt?: string; currentMechanicId?: string }
+        | { kind?: string; edge?: "start" | "end"; scheduledStartAt?: string; scheduledEndAt?: string; currentMechanicId?: string; estimatedMinutes?: number }
         | undefined;
       if (
         rect &&
@@ -165,16 +176,20 @@ export function GanttRow({
       ) {
         const totalMs = winEnd.getTime() - winStart.getTime();
         const rawDelta = (e.delta.x / rect.width) * totalMs;
-        const deltaMs = Math.round(rawDelta / RESIZE_SNAP_MS) * RESIZE_SNAP_MS;
         const oldStart = new Date(data.scheduledStartAt);
         const oldEnd = new Date(data.scheduledEndAt);
+        const estMs = (data.estimatedMinutes ?? 0) * 60_000;
         let newStart = oldStart;
         let newEnd = oldEnd;
         if (data.edge === "start") {
-          const ns = new Date(oldStart.getTime() + deltaMs);
+          const raw = oldStart.getTime() + rawDelta;
+          const snapped = snapResizeAbsolute(raw, RESIZE_SNAP_MS, oldEnd.getTime() - estMs);
+          const ns = new Date(snapped);
           if (ns < oldEnd) newStart = ns;
         } else {
-          const ne = new Date(oldEnd.getTime() + deltaMs);
+          const raw = oldEnd.getTime() + rawDelta;
+          const snapped = snapResizeAbsolute(raw, RESIZE_SNAP_MS, oldStart.getTime() + estMs);
+          const ne = new Date(snapped);
           if (ne > oldStart) newEnd = ne;
         }
         const pos = eventPosition(newStart, newEnd);

@@ -53,6 +53,14 @@ function snapMs(ms: number, step: number): number {
   return Math.round(ms / step) * step;
 }
 
+// Resize snap: absolute wall-clock boundary OR the estimated boundary,
+// whichever is closer to the raw cursor position. Keeps the commit path
+// in sync with GanttRow's resize preview.
+function snapResizeAbsolute(rawMs: number, stepMs: number, estMs: number): number {
+  const wallMs = Math.round(rawMs / stepMs) * stepMs;
+  return Math.abs(estMs - rawMs) < Math.abs(wallMs - rawMs) ? estMs : wallMs;
+}
+
 function pxDeltaToMs(deltaPx: number, rowWidthPx: number, winStart: Date, winEnd: Date): number {
   if (rowWidthPx <= 0) return 0;
   const totalMs = winEnd.getTime() - winStart.getTime();
@@ -249,7 +257,8 @@ export function DispatchPage() {
     setActiveDrag(null);
     const a = e.active.data.current as
       | { kind?: string; orderId?: string; orderState?: string; currentMechanicId?: string;
-          scheduledStartAt?: string; scheduledEndAt?: string; edge?: "start" | "end" }
+          scheduledStartAt?: string; scheduledEndAt?: string; edge?: "start" | "end";
+          estimatedMinutes?: number }
       | undefined;
     const o = e.over?.data.current as { kind?: string; mechanicId?: string } | undefined;
     if (!a || !a.orderId) return;
@@ -261,18 +270,21 @@ export function DispatchPage() {
       if (!targetMechanicId) return;
       const rect = rowRefs.current.get(targetMechanicId)?.getBoundingClientRect();
       if (!rect) return;
-      const deltaMs = snapMs(pxDeltaToMs(e.delta.x, rect.width, winStart, winEnd), RESIZE_SNAP_MS);
+      const rawDelta = pxDeltaToMs(e.delta.x, rect.width, winStart, winEnd);
       const oldStart = new Date(a.scheduledStartAt);
       const oldEnd = new Date(a.scheduledEndAt);
+      const estMs = (a.estimatedMinutes ?? 0) * 60_000;
       if (a.edge === "start") {
-        const newStart = new Date(oldStart.getTime() + deltaMs);
+        const raw = oldStart.getTime() + rawDelta;
+        const newStart = new Date(snapResizeAbsolute(raw, RESIZE_SNAP_MS, oldEnd.getTime() - estMs));
         if (newStart >= oldEnd) { toast.error(t("dispatch.errorStartBeforeEnd")); return; }
         if (intersectsAbsence(absences, targetMechanicId, newStart, oldEnd)) {
           toast.error(t("dispatch.errorBlockedByAbsence")); return;
         }
         rescheduleMut.mutate({ id: a.orderId as UUID, start: newStart.toISOString() });
       } else {
-        const newEnd = new Date(oldEnd.getTime() + deltaMs);
+        const raw = oldEnd.getTime() + rawDelta;
+        const newEnd = new Date(snapResizeAbsolute(raw, RESIZE_SNAP_MS, oldStart.getTime() + estMs));
         if (newEnd <= oldStart) { toast.error(t("dispatch.errorEndAfterStart")); return; }
         if (intersectsAbsence(absences, targetMechanicId, oldStart, newEnd)) {
           toast.error(t("dispatch.errorBlockedByAbsence")); return;
@@ -312,11 +324,15 @@ export function DispatchPage() {
       if (!a.scheduledStartAt || !a.scheduledEndAt) return;
       const oldStart = new Date(a.scheduledStartAt);
       const oldEnd = new Date(a.scheduledEndAt);
-      const deltaMs = snapMs(pxDeltaToMs(e.delta.x, rect.width, winStart, winEnd), EVENT_SNAP_MS);
-      const newStart = new Date(oldStart.getTime() + deltaMs);
-      const newEnd = new Date(oldEnd.getTime() + deltaMs);
+      const rawDelta = pxDeltaToMs(e.delta.x, rect.width, winStart, winEnd);
+      // Absolute snap of the start edge to the wall-clock boundary;
+      // duration is preserved across the move.
+      const snappedStart = snapMs(oldStart.getTime() + rawDelta, EVENT_SNAP_MS);
+      const effectiveDelta = snappedStart - oldStart.getTime();
+      const newStart = new Date(snappedStart);
+      const newEnd = new Date(oldEnd.getTime() + effectiveDelta);
       const sameRow = a.currentMechanicId === mechanicId;
-      if (sameRow && deltaMs === 0) return;
+      if (sameRow && effectiveDelta === 0) return;
       if (intersectsAbsence(absences, mechanicId, newStart, newEnd)) {
         toast.error(t("dispatch.errorBlockedByAbsence"));
         return;
@@ -604,10 +620,12 @@ function EventDragGhost({
       if (!rect) return;
       const totalMs = winEnd.getTime() - winStart.getTime();
       const rawDelta = (e.delta.x / rect.width) * totalMs;
-      const deltaMs = Math.round(rawDelta / snapStep) * snapStep;
-      const ns = new Date(new Date(d.scheduledStartAt).getTime() + deltaMs);
-      const ne = new Date(new Date(d.scheduledEndAt).getTime() + deltaMs);
-      setPreview({ start: ns, end: ne });
+      // Absolute snap on the start edge — duration is preserved on move.
+      const oldStart = new Date(d.scheduledStartAt).getTime();
+      const oldEnd = new Date(d.scheduledEndAt).getTime();
+      const snappedStart = Math.round((oldStart + rawDelta) / snapStep) * snapStep;
+      const effectiveDelta = snappedStart - oldStart;
+      setPreview({ start: new Date(snappedStart), end: new Date(oldEnd + effectiveDelta) });
     },
     onDragEnd:    () => setPreview(null),
     onDragCancel: () => setPreview(null),

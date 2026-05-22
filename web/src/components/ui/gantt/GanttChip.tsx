@@ -99,6 +99,7 @@ export function GanttChip({
               scheduledStartAt={order.scheduledStartAt}
               scheduledEndAt={order.scheduledEndAt}
               currentMechanicId={order.mechanicId ?? ""}
+              estimatedMinutes={order.estimatedMinutes}
             />
           )}
           <span className="text-[11px] font-semibold truncate min-w-0">{label}</span>
@@ -112,6 +113,7 @@ export function GanttChip({
               scheduledStartAt={order.scheduledStartAt}
               scheduledEndAt={order.scheduledEndAt}
               currentMechanicId={order.mechanicId ?? ""}
+              estimatedMinutes={order.estimatedMinutes}
             />
           )}
         </div>
@@ -146,13 +148,14 @@ export function GanttChip({
 }
 
 function ResizeHandle({
-  orderId, edge, scheduledStartAt, scheduledEndAt, currentMechanicId,
+  orderId, edge, scheduledStartAt, scheduledEndAt, currentMechanicId, estimatedMinutes,
 }: {
   orderId: string;
   edge: "start" | "end";
   scheduledStartAt: string;
   scheduledEndAt: string;
   currentMechanicId: string;
+  estimatedMinutes: number;
 }) {
   const data: GanttResizeDragData = {
     kind: "resize",
@@ -161,6 +164,7 @@ function ResizeHandle({
     scheduledStartAt,
     scheduledEndAt,
     currentMechanicId,
+    estimatedMinutes,
   };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `resize:${orderId}:${edge}`,

@@ -28,6 +28,7 @@ export type GanttResizeDragData = {
   scheduledStartAt: string;
   scheduledEndAt: string;
   currentMechanicId: string;
+  estimatedMinutes: number;
 };
 
 export type GanttDragData =
