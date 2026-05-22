@@ -28,6 +28,8 @@ All entity primary keys are `UUID` with `GenerationType.UUID` (Hibernate 6 gener
 ```
 REQUESTED ──► QUOTED ──► APPROVED ──► SCHEDULED ──► IN_PROGRESS ──► COMPLETED
    │            │            │             │              │             ▲
+   │            │            │             │ unassign     │             │
+   │            │            ◄─────────────┘              │             │
    └────────────┴────────────┴─────────────┴──────────────┘             │
                           CANCELLED (terminal)                          │
                                                                         │
@@ -35,6 +37,14 @@ REQUESTED ──► QUOTED ──► APPROVED ──► SCHEDULED ──► IN_P
                   • only target CANCELLED or REQUESTED
                   • REQUESTED clears mechanic + all lifecycle timestamps
                   • every override appends an audit line to `notes`
+
+                  unassign (SCHEDULED only) — POST /{id}/unassign
+                  • returns the order to APPROVED and clears mechanic + schedule
+                  • emits SERVICE_ORDER_STATE_CHANGED with unassigned:true
+
+                  hard delete — DELETE /{id}
+                  • removes the row entirely; emits SERVICE_ORDER_DELETED
+                  • refused while IN_PROGRESS
 ```
 
 ### Per-target guards (normal transitions)

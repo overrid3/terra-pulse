@@ -69,6 +69,8 @@ All bodies and responses are JSON. UUIDs are canonical 36-char strings. Timestam
 | POST   | `/{id}/start`                     |                                       | `SCHEDULED → IN_PROGRESS`                                                                                      |
 | POST   | `/{id}/complete`                  | `{actualMinutes}`                     | `IN_PROGRESS → COMPLETED`                                                                                      |
 | POST   | `/{id}/cancel`                    |                                       | normal transition to `CANCELLED` (allowed from any non-terminal state except IN_PROGRESS via this endpoint — IN_PROGRESS must override) |
+| POST   | `/{id}/unassign`                  |                                       | `SCHEDULED → APPROVED`. Clears `mechanic`, `scheduledStartAt`, `scheduledEndAt`, `dispatchedAt`. Returns the order to the unassigned pool. Emits `SERVICE_ORDER_STATE_CHANGED` with `unassigned: true` + `fromMechanicId`. |
+| DELETE | `/{id}`                           |                                       | hard delete. Forbidden while `IN_PROGRESS` (returns 409). Emits `SERVICE_ORDER_DELETED`. |
 | POST   | `/{id}/override-state`            | `{state: "CANCELLED" \| "REQUESTED", reason: "…"}` | admin override; only those two targets are accepted; `REQUESTED` performs a hard reopen (clears mechanic + timestamps); audit appended to `notes`. |
 
 Invalid normal transitions return **409** with `{error:"illegal_state_transition", message: "Illegal state transition: FROM -> TO"}`.
@@ -112,8 +114,9 @@ Server-push only. Inbound messages from clients are ignored.
 | `type`                            | Payload (key fields)                                                                                                                                         |
 |-----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `SERVICE_ORDER_CREATED`           | Full `ServiceOrderDto`                                                                                                                                       |
-| `SERVICE_ORDER_STATE_CHANGED`     | `{ id, fromState, toState, mechanicId, scheduledAt, scheduledStartAt, scheduledEndAt, startedAt, completedAt, actualMinutes, estimatedMinutes, override?, reason? }` |
+| `SERVICE_ORDER_STATE_CHANGED`     | `{ id, fromState, toState, mechanicId, scheduledAt, scheduledStartAt, scheduledEndAt, startedAt, completedAt, actualMinutes, estimatedMinutes, override?, reason?, unassigned?, fromMechanicId? }` |
 | `SERVICE_ORDER_SCHEDULE_CHANGED`  | `{ id, mechanicId, scheduledStartAt, scheduledEndAt, previousMechanicId? }`                                                                                  |
+| `SERVICE_ORDER_DELETED`           | `{ id, mechanicId }`                                                                                                                                         |
 | `MECHANIC_LOCATION_UPDATED`       | `{ mechanicId, lat, lng, updatedAt }`                                                                                                                        |
 | `MECHANIC_STATUS_CHANGED`         | `{ mechanicId, fromStatus, toStatus, updatedAt }`                                                                                                            |
 
