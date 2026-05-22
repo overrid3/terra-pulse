@@ -101,7 +101,8 @@
     "deleteOrderTitle": "Eliminare l'ordine?",
     "deleteOrderConfirm": "Eliminare definitivamente \"{{title}}\"? Operazione irreversibile.",
     "unassignSuccess": "Assegnazione rimossa",
-    "deleteSuccess": "Ordine eliminato"
+    "deleteSuccess": "Ordine eliminato",
+    "tooltipConflict": "Conflitto con un altro ordine o assenza su questo meccanico"
   },
   "orders": {
     "pageTitle": "Ordini di servizio",

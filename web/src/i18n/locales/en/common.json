@@ -101,7 +101,8 @@
     "deleteOrderTitle": "Delete order?",
     "deleteOrderConfirm": "Permanently delete \"{{title}}\"? This cannot be undone.",
     "unassignSuccess": "Order unassigned",
-    "deleteSuccess": "Order deleted"
+    "deleteSuccess": "Order deleted",
+    "tooltipConflict": "Conflicts with another order or absence on this mechanic"
   },
   "orders": {
     "pageTitle": "Service orders",

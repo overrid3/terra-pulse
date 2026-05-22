@@ -13,7 +13,7 @@ import { GanttRow } from "./GanttRow";
 function clampPct(n: number) { return Math.max(0, Math.min(100, n)); }
 
 export function Gantt({
-  mechanics, orders, absences, selectedMechanicId,
+  mechanics, orders, absences, vehicleById, selectedMechanicId,
   view, date, winStart, winEnd,
   onSelectOrder, onEditOrder, onUnassignOrder, onDeleteOrder,
   onAddAbsence, registerRow,
@@ -132,6 +132,7 @@ export function Gantt({
             mechanic={m}
             orders={ordersForRow(m.id)}
             absences={absencesForRow(m.id)}
+            vehicleById={vehicleById}
             gridTemplate={gridTemplate}
             minTimelineWidth={minTimelineWidth}
             eventPosition={eventPosition}

@@ -7,12 +7,14 @@ import { OrdersPage } from "./pages/OrdersPage";
 import { VehiclesPage } from "./pages/VehiclesPage";
 import { SkillsPage } from "./pages/SkillsPage";
 import { ToastProvider } from "./components/Toast";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { useDispatchSocket } from "./hooks/useDispatchSocket";
 
 export default function App() {
   useDispatchSocket();
   return (
     <ToastProvider>
+      <TooltipProvider>
       <BrowserRouter>
         <div className="flex flex-row h-full overflow-hidden">
           <NavBar />
@@ -29,6 +31,7 @@ export default function App() {
           </div>
         </div>
       </BrowserRouter>
+      </TooltipProvider>
     </ToastProvider>
   );
 }

@@ -1,4 +1,4 @@
-import type { Mechanic, MechanicAbsence, ServiceOrder } from "../../../types";
+import type { Mechanic, MechanicAbsence, ServiceOrder, Vehicle } from "../../../types";
 
 export type GanttView = "day" | "week" | "month";
 
@@ -40,6 +40,7 @@ export type GanttRenderProps = {
   mechanics: Mechanic[];
   orders: ServiceOrder[];
   absences: MechanicAbsence[];
+  vehicleById: Map<string, Vehicle>;
   selectedMechanicId: string | null;
   view: GanttView;
   date: Date;

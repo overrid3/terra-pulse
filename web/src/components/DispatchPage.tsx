@@ -13,6 +13,7 @@ import { useDateLocale } from "@/i18n/format";
 import { mechanicsApi } from "../api/mechanics";
 import { serviceOrdersApi, CreateOrderBody, ServiceOrderPatchBody } from "../api/serviceOrders";
 import { absencesApi } from "../api/absences";
+import { vehiclesApi } from "../api/vehicles";
 import { queryKeys } from "../api/client";
 import { Gantt, dayBoundary, weekBoundary, monthBoundary } from "@/components/ui/gantt";
 import type { GanttView } from "@/components/ui/gantt";
@@ -23,7 +24,7 @@ import { CreateOrderForm } from "./CreateOrderForm";
 import { OrderEditForm, OrderSaveBody } from "./OrderEditForm";
 import { ResizableSplitHandle } from "./ResizableSplitHandle";
 import { useResizableSplit, useIsMobile } from "@/hooks/useResizableSplit";
-import { ServiceOrder, MechanicAbsence, ServiceOrderState, UUID } from "../types";
+import { ServiceOrder, MechanicAbsence, ServiceOrderState, UUID, Vehicle } from "../types";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
@@ -131,6 +132,13 @@ export function DispatchPage() {
 
   const mechanicsQ = useQuery({ queryKey: queryKeys.mechanics,     queryFn: mechanicsApi.list });
   const ordersQ    = useQuery({ queryKey: queryKeys.serviceOrders, queryFn: serviceOrdersApi.list });
+  const vehiclesQ  = useQuery({ queryKey: queryKeys.vehicles,      queryFn: vehiclesApi.list });
+
+  const vehicleById = useMemo(() => {
+    const map = new Map<string, Vehicle>();
+    (vehiclesQ.data ?? []).forEach((v) => map.set(v.id, v));
+    return map;
+  }, [vehiclesQ.data]);
 
   const windowRange = useMemo(() => {
     const now = new Date();
@@ -450,6 +458,7 @@ export function DispatchPage() {
               mechanics={mechanicsQ.data ?? []}
               orders={filteredOrders}
               absences={absencesQ.data ?? []}
+              vehicleById={vehicleById}
               selectedMechanicId={selectedMechanicId}
               view={view}
               date={date}

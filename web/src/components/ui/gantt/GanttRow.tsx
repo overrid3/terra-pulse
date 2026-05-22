@@ -4,7 +4,7 @@ import { useDndMonitor, useDroppable } from "@dnd-kit/core";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import type { Mechanic, MechanicAbsence, ServiceOrder } from "../../../types";
+import type { Mechanic, MechanicAbsence, ServiceOrder, Vehicle } from "../../../types";
 import { findConflicts, ScheduledItem } from "../../../lib/findConflicts";
 import { GanttChip, LANE_HEIGHT_PX } from "./GanttChip";
 import { GanttAbsenceBand } from "./GanttAbsenceBand";
@@ -36,6 +36,7 @@ type Props = {
   mechanic: Mechanic;
   orders: ServiceOrder[];
   absences: MechanicAbsence[];
+  vehicleById: Map<string, Vehicle>;
   gridTemplate: string;
   minTimelineWidth: number;
   eventPosition: (s: Date, e: Date) => { leftPct: number; rightPct: number } | null;
@@ -96,7 +97,7 @@ function assignLanes(items: ServiceOrder[]) {
 }
 
 export function GanttRow({
-  mechanic, orders, absences,
+  mechanic, orders, absences, vehicleById,
   gridTemplate, minTimelineWidth,
   eventPosition, chipLabel, chipTitle,
   winStart, winEnd,
@@ -382,6 +383,7 @@ export function GanttRow({
               key={o.id}
               order={o}
               mechanicName={mechanic.fullName}
+              vehicle={vehicleById.get(o.vehicleId) ?? null}
               leftPct={pos.leftPct}
               rightPct={pos.rightPct}
               top={top}
