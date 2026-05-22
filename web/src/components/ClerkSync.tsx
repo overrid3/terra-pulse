@@ -5,7 +5,7 @@ import { setTokenGetter } from "@/lib/auth";
 export function ClerkSync() {
   const { getToken } = useAuth();
   useEffect(() => {
-    setTokenGetter(() => getToken());
+    setTokenGetter(getToken);
   }, [getToken]);
   return null;
 }

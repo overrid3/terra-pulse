@@ -12,8 +12,33 @@ import { TooltipProvider } from "./components/ui/tooltip";
 import { useDispatchSocket } from "./hooks/useDispatchSocket";
 import { ClerkSync } from "./components/ClerkSync";
 
-export default function App() {
+function AuthenticatedShell() {
   useDispatchSocket();
+  return (
+    <ToastProvider>
+      <TooltipProvider>
+        <BrowserRouter>
+          <div className="flex flex-row h-full overflow-hidden">
+            <NavBar />
+            <div className="flex-1 min-w-0 h-full overflow-y-auto bg-[var(--color-surface-app)] flex flex-col">
+              <Routes>
+                <Route path="/" element={<Navigate to="/dispatch" replace />} />
+                <Route path="/dispatch" element={<DispatchPage />} />
+                <Route path="/orders" element={<OrdersPage />} />
+                <Route path="/mechanics" element={<MechanicsPage />} />
+                <Route path="/vehicles" element={<VehiclesPage />} />
+                <Route path="/skills" element={<SkillsPage />} />
+                <Route path="/clients" element={<ClientsPage />} />
+              </Routes>
+            </div>
+          </div>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ToastProvider>
+  );
+}
+
+export default function App() {
   return (
     <>
       <SignedOut>
@@ -21,26 +46,7 @@ export default function App() {
       </SignedOut>
       <SignedIn>
         <ClerkSync />
-        <ToastProvider>
-          <TooltipProvider>
-            <BrowserRouter>
-              <div className="flex flex-row h-full overflow-hidden">
-                <NavBar />
-                <div className="flex-1 min-w-0 h-full overflow-y-auto bg-[var(--color-surface-app)] flex flex-col">
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dispatch" replace />} />
-                    <Route path="/dispatch" element={<DispatchPage />} />
-                    <Route path="/orders" element={<OrdersPage />} />
-                    <Route path="/mechanics" element={<MechanicsPage />} />
-                    <Route path="/vehicles" element={<VehiclesPage />} />
-                    <Route path="/skills" element={<SkillsPage />} />
-                    <Route path="/clients" element={<ClientsPage />} />
-                  </Routes>
-                </div>
-              </div>
-            </BrowserRouter>
-          </TooltipProvider>
-        </ToastProvider>
+        <AuthenticatedShell />
       </SignedIn>
     </>
   );
