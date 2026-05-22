@@ -1,4 +1,5 @@
 import { UUID } from "../types";
+import { getToken } from "@/lib/auth";
 
 const BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8080/api";
 
@@ -19,8 +20,10 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await getToken();
+  const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+    headers: { "content-type": "application/json", ...authHeader, ...(init?.headers ?? {}) },
     ...init
   });
   if (!res.ok) {
