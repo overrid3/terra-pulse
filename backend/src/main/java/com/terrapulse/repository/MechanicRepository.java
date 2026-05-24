@@ -1,12 +1,11 @@
 package com.terrapulse.repository;
 
 import com.terrapulse.domain.mechanic.Mechanic;
-
 import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import jakarta.persistence.PersistenceContext;
+import jakarta.inject.Inject;
+import org.hibernate.reactive.mutiny.Mutiny;
 
 import java.util.List;
 import java.util.UUID;
@@ -14,15 +13,11 @@ import java.util.UUID;
 @ApplicationScoped
 public class MechanicRepository implements PanacheRepositoryBase<Mechanic, UUID> {
 
-    @PersistenceContext
-    EntityManager em;
+    @Inject
+    Mutiny.SessionFactory factory;
 
-    /**
-     * KNN search via GIST index. {@code <->} on geometry returns 2D distance in degree units;
-     * we use it purely for ordering — the result list is converted back to entities.
-     */
     @SuppressWarnings("unchecked")
-    public List<Mechanic> findNearest(double lat, double lng, int limit, String skillOrNull) {
+    public Uni<List<Mechanic>> findNearest(double lat, double lng, int limit, String skillOrNull) {
         String base = """
                 SELECT m.* FROM mechanic m
                 WHERE m.location IS NOT NULL
@@ -31,7 +26,6 @@ public class MechanicRepository implements PanacheRepositoryBase<Mechanic, UUID>
                 ORDER BY m.location <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)
                 LIMIT :lim
                 """;
-        // After V8 skills moved to a join table; filter via EXISTS on skill name.
         String skillClause = """
                  AND EXISTS (
                     SELECT 1 FROM mechanic_skill ms
@@ -40,12 +34,15 @@ public class MechanicRepository implements PanacheRepositoryBase<Mechanic, UUID>
                  )
                 """;
         String sql = (skillOrNull == null) ? base + tail : base + skillClause + tail;
+        String finalSkill = skillOrNull;
 
-        Query q = em.createNativeQuery(sql, Mechanic.class)
-                .setParameter("lat", lat)
-                .setParameter("lng", lng)
-                .setParameter("lim", limit);
-        if (skillOrNull != null) q.setParameter("skill", skillOrNull);
-        return q.getResultList();
+        return factory.withSession(session -> {
+            var query = session.createNativeQuery(sql, Mechanic.class)
+                    .setParameter("lat", lat)
+                    .setParameter("lng", lng)
+                    .setParameter("lim", limit);
+            if (finalSkill != null) query.setParameter("skill", finalSkill);
+            return query.getResultList();
+        });
     }
 }

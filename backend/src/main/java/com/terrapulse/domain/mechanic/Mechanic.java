@@ -1,7 +1,9 @@
 package com.terrapulse.domain.mechanic;
 
 import com.terrapulse.domain.skill.Skill;
+import com.terrapulse.service.PointAttributeConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -48,6 +50,7 @@ public class Mechanic {
     public MechanicStatus status = MechanicStatus.IDLE;
 
     @Column(name = "location", columnDefinition = "geometry(Point,4326)")
+    @Convert(converter = PointAttributeConverter.class)
     public Point location;
 
     @Column(name = "location_updated_at")

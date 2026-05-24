@@ -40,7 +40,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 @QuarkusTest
 @TestSecurity(authorizationEnabled = false)
-class ServiceOrderOverrideTest {
+class ServiceOrderOverrideTest extends ReactiveTestBase {
 
     @Inject ServiceOrderRepository repo;
     @Inject VehicleRepository vehicleRepo;
@@ -59,7 +59,7 @@ class ServiceOrderOverrideTest {
 
     @AfterEach
     void cleanup() {
-        Panache.withTransaction(() -> {
+        runBlocking(() -> Panache.withTransaction(() -> {
             Uni<Void> chain = Uni.createFrom().voidItem();
             for (UUID id : createdOrders)     chain = chain.flatMap(v -> repo.deleteById(id).replaceWithVoid());
             for (UUID id : createdMechanics)  chain = chain.flatMap(v -> mechanicRepo.deleteById(id).replaceWithVoid());
@@ -68,7 +68,7 @@ class ServiceOrderOverrideTest {
             for (UUID id : createdClients)    chain = chain.flatMap(v -> clientRepo.deleteById(id).replaceWithVoid());
             for (String c : createdVmrsCodes) chain = chain.flatMap(v -> vmrsRepo.deleteById(c).replaceWithVoid());
             return chain;
-        }).await().indefinitely();
+        }));
         createdOrders.clear();
         createdMechanics.clear();
         createdVehicles.clear();
@@ -81,8 +81,7 @@ class ServiceOrderOverrideTest {
         Client c = new Client();
         c.name = "Test Client " + UUID.randomUUID();
         c.email = "test+" + UUID.randomUUID() + "@example.com";
-        Client result = Panache.withTransaction(() -> clientRepo.persist(c).replaceWith(c))
-            .await().indefinitely();
+        Client result = runBlocking(() -> Panache.withTransaction(() -> clientRepo.persist(c).replaceWith(c)));
         createdClients.add(result.id);
         return result;
     }
@@ -92,12 +91,12 @@ class ServiceOrderOverrideTest {
         s.name = "Test Site " + UUID.randomUUID();
         s.lat = 51.5074;
         s.lng = -0.1278;
-        Site result = Panache.withTransaction(() ->
+        Site result = runBlocking(() -> Panache.withTransaction(() ->
             clientRepo.findById(clientId).flatMap(client -> {
                 s.client = client;
                 return siteRepo.persist(s).replaceWith(s);
             })
-        ).await().indefinitely();
+        ));
         createdSites.add(result.id);
         return result;
     }
@@ -109,12 +108,12 @@ class ServiceOrderOverrideTest {
         v.serialNumber = "SN-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         v.vehicleClass = VehicleClass.EXCAVATOR;
         v.status = VehicleStatus.AVAILABLE;
-        Vehicle result = Panache.withTransaction(() ->
+        Vehicle result = runBlocking(() -> Panache.withTransaction(() ->
             siteRepo.findById(siteId).flatMap(site -> {
                 v.site = site;
                 return vehicleRepo.persist(v).replaceWith(v);
             })
-        ).await().indefinitely();
+        ));
         createdVehicles.add(result.id);
         return result;
     }
@@ -125,8 +124,7 @@ class ServiceOrderOverrideTest {
         vc.description = "Test service";
         vc.srtMinutes = 60;
         vc.difficultyFactor = BigDecimal.ONE;
-        VmrsCode result = Panache.withTransaction(() -> vmrsRepo.persist(vc).replaceWith(vc))
-            .await().indefinitely();
+        VmrsCode result = runBlocking(() -> Panache.withTransaction(() -> vmrsRepo.persist(vc).replaceWith(vc)));
         createdVmrsCodes.add(result.code);
         return result;
     }
@@ -135,8 +133,7 @@ class ServiceOrderOverrideTest {
         Mechanic m = new Mechanic();
         m.fullName = "Test Mech " + UUID.randomUUID();
         m.status = MechanicStatus.IDLE;
-        Mechanic result = Panache.withTransaction(() -> mechanicRepo.persist(m).replaceWith(m))
-            .await().indefinitely();
+        Mechanic result = runBlocking(() -> Panache.withTransaction(() -> mechanicRepo.persist(m).replaceWith(m)));
         createdMechanics.add(result.id);
         return result;
     }
@@ -154,7 +151,7 @@ class ServiceOrderOverrideTest {
         so.completedAt = completedAt;
         so.actualMinutes = actualMinutes;
 
-        UUID result = Panache.withTransaction(() ->
+        UUID result = runBlocking(() -> Panache.withTransaction(() ->
             vehicleRepo.findById(vehicleId).flatMap(vehicle -> {
                 so.vehicle = vehicle;
                 return vmrsRepo.findById(vmrsCode);
@@ -174,7 +171,7 @@ class ServiceOrderOverrideTest {
                 so.mechanic = (Mechanic) mechanic;
                 return repo.persist(so).replaceWith(so);
             }).map(s -> s.id)
-        ).await().indefinitely();
+        ));
 
         createdOrders.add(result);
         return result;

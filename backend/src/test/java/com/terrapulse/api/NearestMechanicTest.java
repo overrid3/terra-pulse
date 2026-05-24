@@ -31,7 +31,7 @@ import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 @TestSecurity(authorizationEnabled = false)
-class NearestMechanicTest {
+class NearestMechanicTest extends ReactiveTestBase {
 
     @Inject MechanicRepository mechanicRepo;
     @Inject MechanicAbsenceRepository absenceRepo;
@@ -47,7 +47,7 @@ class NearestMechanicTest {
     private final List<UUID> createdSkills = new ArrayList<>();
 
     void clearAll() {
-        Panache.withTransaction(() ->
+        runBlocking(() -> Panache.withTransaction(() ->
             serviceOrderRepo.deleteAll()
                 .flatMap(v -> absenceRepo.deleteAll())
                 .flatMap(v -> mechanicRepo.deleteAll())
@@ -56,7 +56,7 @@ class NearestMechanicTest {
                 .flatMap(v -> clientRepo.deleteAll())
                 .flatMap(v -> skillRepo.deleteAll())
                 .replaceWithVoid()
-        ).await().indefinitely();
+        ));
     }
 
     @AfterEach
@@ -74,7 +74,7 @@ class NearestMechanicTest {
         m.location = geo.point(lng, lat);
         m.locationUpdatedAt = Instant.now();
 
-        Mechanic result = Panache.withTransaction(() -> {
+        Mechanic result = runBlocking(() -> Panache.withTransaction(() -> {
             List<Uni<Skill>> skillUnis = Arrays.stream(skills)
                 .map(skillRepo::findOrCreate)
                 .collect(Collectors.toList());
@@ -85,7 +85,7 @@ class NearestMechanicTest {
                 m.skills.addAll(skillList);
                 return mechanicRepo.persist(m).replaceWith(m);
             });
-        }).await().indefinitely();
+        }));
 
         createdMechanics.add(result.id);
         result.skills.forEach(s -> { if (!createdSkills.contains(s.id)) createdSkills.add(s.id); });
@@ -98,12 +98,12 @@ class NearestMechanicTest {
         a.endAt = end;
         a.type = AbsenceType.VACATION;
 
-        MechanicAbsence result = Panache.withTransaction(() ->
+        MechanicAbsence result = runBlocking(() -> Panache.withTransaction(() ->
             mechanicRepo.findById(mechanicId).flatMap(m -> {
                 a.mechanic = m;
                 return absenceRepo.persist(a).replaceWith(a);
             })
-        ).await().indefinitely();
+        ));
 
         createdAbsences.add(result.id);
     }

@@ -28,21 +28,16 @@ public class NearestMechanicService {
         int safeLimit = Math.clamp(limit, 1, 50);
         Instant now = Instant.now();
 
-        return absenceRepo.findOverlapping(now, now)
-                .map(absences -> {
-                    Set<UUID> onAbsence = absences.stream()
-                            .map(a -> a.mechanic.id)
-                            .collect(Collectors.toSet());
-
-                    // findNearest uses a blocking EntityManager / PostGIS native query.
-                    // Acceptable for this POC; annotate the REST endpoint with @Blocking
-                    // to keep this off the event-loop if needed.
-                    List<Mechanic> candidates = mechanicRepository.findNearest(lat, lng, safeLimit * 3, skillOrNull);
-
-                    return candidates.stream()
-                            .filter(m -> !onAbsence.contains(m.id))
-                            .limit(safeLimit)
-                            .toList();
-                });
+        return mechanicRepository.findNearest(lat, lng, safeLimit * 3, skillOrNull)
+                .flatMap(candidates -> absenceRepo.findOverlapping(now, now)
+                        .map(absences -> {
+                            Set<UUID> onAbsence = absences.stream()
+                                    .map(a -> a.mechanic.id)
+                                    .collect(Collectors.toSet());
+                            return candidates.stream()
+                                    .filter(m -> !onAbsence.contains(m.id))
+                                    .limit(safeLimit)
+                                    .toList();
+                        }));
     }
 }

@@ -5,7 +5,9 @@ import com.terrapulse.domain.mechanic.Mechanic;
 import com.terrapulse.domain.site.Site;
 import com.terrapulse.domain.vehicle.Vehicle;
 import com.terrapulse.domain.vmrs.VmrsCode;
+import com.terrapulse.service.PointAttributeConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -65,6 +67,7 @@ public class ServiceOrder {
     public Integer actualMinutes;
 
     @Column(name = "site_location", nullable = false, columnDefinition = "geometry(Point,4326)")
+    @Convert(converter = PointAttributeConverter.class)
     public Point siteLocation;
 
     @Column(name = "requested_at", nullable = false)
