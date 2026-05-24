@@ -101,12 +101,10 @@ Runs automatically at Quarkus startup (`quarkus.flyway.migrate-at-start=true`). 
 ### GitHub Actions — `pr-checks.yml`
 Trigger: pull request to `main`
 
-> **Java 25 note:** Temurin does not ship a stable Java 25 GA build yet. CI uses `actions/setup-java` with the EA distribution or installs via SDKMAN (`sdk install java 25-open`). Track Temurin 25 GA release and pin to stable once available.
-
 ```
 jobs:
   backend:
-    - actions/setup-java (Java 25, EA or SDKMAN)
+    - actions/setup-java (Java 25, Temurin)
     - mvn verify
 
   frontend:
@@ -154,8 +152,10 @@ jobs:
 ### Dockerfiles needed (new)
 - `backend/Dockerfile` — multistage: Maven build → JVM runtime image
 - `web/Dockerfile` — multistage: npm build → nginx with custom config
-- `docker-compose.yml` at repo root (used both locally and on Oracle VM, env-file driven)
-- Local dev: `docker-compose.override.yml` keeps localhost DB URL and no Clerk enforcement; prod uses `.env` with real credentials and Clerk config. Override file is gitignored.
+- `docker-compose.prod.yml` at repo root — production only (db + backend + nginx/web)
+- Existing `docker-compose.yml` stays unchanged (postgis + pgadmin for local dev). `just up/down` unaffected.
+- Oracle VM and CI deploy step both reference `docker-compose.prod.yml` explicitly (`docker compose -f docker-compose.prod.yml ...`).
+- `.env.prod` on the Oracle VM holds DB credentials + Clerk config; gitignored.
 
 ---
 

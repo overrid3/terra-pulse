@@ -15,8 +15,10 @@ import com.terrapulse.repository.ClientRepository;
 import com.terrapulse.repository.MechanicRepository;
 import com.terrapulse.repository.ReservationRepository;
 import com.terrapulse.repository.VehicleRepository;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
@@ -32,9 +34,8 @@ import jakarta.ws.rs.core.Response;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
-import io.quarkus.security.Authenticated;
 
 @Path("/api/reservations")
 @Produces(MediaType.APPLICATION_JSON)
@@ -58,89 +59,112 @@ public class ReservationResource {
     }
 
     @GET
-    public List<ReservationDto> list(@QueryParam("vehicleId") UUID vehicleId,
-                                     @QueryParam("from") Instant from,
-                                     @QueryParam("to") Instant to) {
-        return repo.filter(vehicleId, from, to).stream().map(ReservationDto::of).toList();
+    public Uni<List<ReservationDto>> list(@QueryParam("vehicleId") UUID vehicleId,
+                                          @QueryParam("from") Instant from,
+                                          @QueryParam("to") Instant to) {
+        return repo.filter(vehicleId, from, to)
+                .map(list -> list.stream().map(ReservationDto::of).toList());
     }
 
     @GET
     @Path("/{id}")
-    public ReservationDto get(@PathParam("id") UUID id) {
-        return ReservationDto.of(load(id));
+    public Uni<ReservationDto> get(@PathParam("id") UUID id) {
+        return load(id).map(ReservationDto::of);
     }
 
     @POST
-    @Transactional
-    public Response create(ReservationCreateDto in) {
+    @WithTransaction
+    public Uni<Response> create(ReservationCreateDto in) {
         if (in.endAt().isBefore(in.startAt()) || in.endAt().equals(in.startAt())) {
             throw new IllegalArgumentException("endAt must be after startAt");
         }
-        Vehicle vehicle = vehicleRepo.findById(in.vehicleId());
-        if (vehicle == null) throw new IllegalArgumentException("vehicleId not found");
         if (in.clientId() == null) throw new IllegalArgumentException("clientId required");
-        Client client = clientRepo.findById(in.clientId());
-        if (client == null) throw new IllegalArgumentException("clientId not found");
 
-        List<Reservation> overlaps = repo.findOverlapping(in.vehicleId(), in.startAt(), in.endAt());
-        if (!overlaps.isEmpty()) {
-            throw new WebApplicationException(
-                    Response.status(Response.Status.CONFLICT)
-                            .entity(java.util.Map.of("error", "reservation_overlap",
-                                    "message", "vehicle has an overlapping reservation"))
-                            .build());
-        }
+        return Uni.combine().all().unis(
+                vehicleRepo.findById(in.vehicleId()),
+                clientRepo.findById(in.clientId())
+        ).asTuple().flatMap(t -> {
+            Vehicle vehicle = t.getItem1();
+            if (vehicle == null) throw new IllegalArgumentException("vehicleId not found");
+            Client client = t.getItem2();
+            if (client == null) throw new IllegalArgumentException("clientId not found");
 
-        Reservation r;
-        if (in.hireType() == HireType.DRY_HIRE) {
-            if (in.dailyRate() == null) throw new IllegalArgumentException("dailyRate required for DRY_HIRE");
-            DryHireReservation d = new DryHireReservation();
-            d.dailyRate = in.dailyRate();
-            r = d;
-        } else {
-            if (in.hourlyRate() == null) throw new IllegalArgumentException("hourlyRate required for WET_HIRE");
-            WetHireReservation w = new WetHireReservation();
-            w.hourlyRate = in.hourlyRate();
-            if (in.operatorMechanicId() != null) {
-                Mechanic op = mechanicRepo.findById(in.operatorMechanicId());
-                if (op == null) throw new IllegalArgumentException("operatorMechanicId not found");
-                w.operatorMechanic = op;
-            }
-            r = w;
-        }
-        r.vehicle = vehicle;
-        r.client = client;
-        r.startAt = in.startAt();
-        r.endAt = in.endAt();
-        r.status = ReservationStatus.BOOKED;
-        repo.persist(r);
-        return Response.status(Response.Status.CREATED).entity(ReservationDto.of(r)).build();
+            return repo.findOverlapping(in.vehicleId(), in.startAt(), in.endAt())
+                    .flatMap(overlaps -> {
+                        if (!overlaps.isEmpty()) {
+                            throw new WebApplicationException(
+                                    Response.status(Response.Status.CONFLICT)
+                                            .entity(Map.of("error", "reservation_overlap",
+                                                    "message", "vehicle has an overlapping reservation"))
+                                            .build());
+                        }
+
+                        Reservation r;
+                        if (in.hireType() == HireType.DRY_HIRE) {
+                            if (in.dailyRate() == null)
+                                throw new IllegalArgumentException("dailyRate required for DRY_HIRE");
+                            DryHireReservation d = new DryHireReservation();
+                            d.dailyRate = in.dailyRate();
+                            r = d;
+                        } else {
+                            if (in.hourlyRate() == null)
+                                throw new IllegalArgumentException("hourlyRate required for WET_HIRE");
+                            WetHireReservation w = new WetHireReservation();
+                            w.hourlyRate = in.hourlyRate();
+                            r = w;
+                        }
+                        r.vehicle = vehicle;
+                        r.client = client;
+                        r.startAt = in.startAt();
+                        r.endAt = in.endAt();
+                        r.status = ReservationStatus.BOOKED;
+
+                        if (in.hireType() == HireType.WET_HIRE && in.operatorMechanicId() != null) {
+                            final WetHireReservation wet = (WetHireReservation) r;
+                            return mechanicRepo.findById(in.operatorMechanicId()).flatMap(op -> {
+                                if (op == null)
+                                    throw new IllegalArgumentException("operatorMechanicId not found");
+                                wet.operatorMechanic = op;
+                                return repo.persist(wet).replaceWith(
+                                        Response.status(Response.Status.CREATED)
+                                                .entity(ReservationDto.of(wet)).build());
+                            });
+                        }
+
+                        final Reservation reservation = r;
+                        return repo.persist(reservation).replaceWith(
+                                Response.status(Response.Status.CREATED)
+                                        .entity(ReservationDto.of(reservation)).build());
+                    });
+        });
     }
 
     @PATCH
     @Path("/{id}")
-    @Transactional
-    public ReservationDto patch(@PathParam("id") UUID id, ReservationPatchDto in) {
-        Reservation r = load(id);
-        if (in.status() != null) r.status = in.status();
-        return ReservationDto.of(r);
+    @WithTransaction
+    public Uni<ReservationDto> patch(@PathParam("id") UUID id, ReservationPatchDto in) {
+        return load(id).map(r -> {
+            if (in.status() != null) r.status = in.status();
+            return ReservationDto.of(r);
+        });
     }
 
     @DELETE
     @Path("/{id}")
-    @Transactional
-    public Response delete(@PathParam("id") UUID id) {
-        Reservation r = load(id);
-        if (r.status != ReservationStatus.BOOKED) {
-            throw new IllegalArgumentException("only BOOKED reservations can be deleted");
-        }
-        repo.delete(r);
-        return Response.noContent().build();
+    @WithTransaction
+    public Uni<Response> delete(@PathParam("id") UUID id) {
+        return load(id).flatMap(r -> {
+            if (r.status != ReservationStatus.BOOKED) {
+                throw new IllegalArgumentException("only BOOKED reservations can be deleted");
+            }
+            return repo.delete(r).replaceWith(Response.noContent().build());
+        });
     }
 
-    private Reservation load(UUID id) {
-        Reservation r = repo.findById(id);
-        if (r == null) throw new NotFoundException();
-        return r;
+    private Uni<Reservation> load(UUID id) {
+        return repo.findById(id).map(r -> {
+            if (r == null) throw new NotFoundException();
+            return r;
+        });
     }
 }

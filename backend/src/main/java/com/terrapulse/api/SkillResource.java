@@ -2,8 +2,10 @@ package com.terrapulse.api;
 
 import com.terrapulse.domain.skill.Skill;
 import com.terrapulse.repository.SkillRepository;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
@@ -19,8 +21,6 @@ import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-
-import io.quarkus.security.Authenticated;
 
 @Path("/api/skills")
 @Produces(MediaType.APPLICATION_JSON)
@@ -41,45 +41,53 @@ public class SkillResource {
     public record SkillUpsert(String name) {}
 
     @GET
-    public List<SkillDto> list() {
-        return repo.findAllSorted().stream().map(SkillDto::of).toList();
+    public Uni<List<SkillDto>> list() {
+        return repo.findAllSorted().map(list -> list.stream().map(SkillDto::of).toList());
     }
 
     @POST
-    @Transactional
-    public Response create(SkillUpsert in) {
+    @WithTransaction
+    public Uni<Response> create(SkillUpsert in) {
         String name = sanitize(in == null ? null : in.name());
-        if (repo.findByName(name).isPresent()) {
-            throw new WebApplicationException("skill '" + name + "' already exists", Response.Status.CONFLICT);
-        }
-        Skill s = new Skill();
-        s.name = name;
-        repo.persist(s);
-        return Response.status(Response.Status.CREATED).entity(SkillDto.of(s)).build();
+        return repo.findByName(name).flatMap(existing -> {
+            if (existing != null) {
+                throw new WebApplicationException("skill '" + name + "' already exists", Response.Status.CONFLICT);
+            }
+            Skill s = new Skill();
+            s.name = name;
+            return repo.persist(s).replaceWith(
+                    Response.status(Response.Status.CREATED).entity(SkillDto.of(s)).build());
+        });
     }
 
     @PUT
     @Path("/{id}")
-    @Transactional
-    public SkillDto rename(@PathParam("id") UUID id, SkillUpsert in) {
+    @WithTransaction
+    public Uni<SkillDto> rename(@PathParam("id") UUID id, SkillUpsert in) {
         String name = sanitize(in == null ? null : in.name());
-        Skill s = repo.findById(id);
-        if (s == null) throw new NotFoundException();
-        repo.findByName(name).ifPresent(other -> {
-            if (!other.id.equals(id))
-                throw new WebApplicationException("skill '" + name + "' already exists",
-                        Response.Status.CONFLICT);
+        return Uni.combine().all().unis(
+                repo.findById(id),
+                repo.findByName(name)
+        ).asTuple().map(t -> {
+            Skill s = t.getItem1();
+            if (s == null) throw new NotFoundException();
+            Skill other = t.getItem2();
+            if (other != null && !other.id.equals(id)) {
+                throw new WebApplicationException("skill '" + name + "' already exists", Response.Status.CONFLICT);
+            }
+            s.name = name;
+            return SkillDto.of(s);
         });
-        s.name = name;
-        return SkillDto.of(s);
     }
 
     @DELETE
     @Path("/{id}")
-    @Transactional
-    public Response delete(@PathParam("id") UUID id) {
-        if (!repo.deleteById(id)) throw new NotFoundException();
-        return Response.noContent().build();
+    @WithTransaction
+    public Uni<Response> delete(@PathParam("id") UUID id) {
+        return repo.deleteById(id).map(deleted -> {
+            if (!deleted) throw new NotFoundException();
+            return Response.noContent().build();
+        });
     }
 
     private static String sanitize(String in) {

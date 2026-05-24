@@ -6,13 +6,17 @@ import io.quarkus.logging.Log;
 import io.quarkus.websockets.next.OpenConnections;
 import io.quarkus.websockets.next.WebSocketConnection;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 
 @ApplicationScoped
 public class DispatchEventBus {
 
-    @Inject OpenConnections connections;
-    @Inject ObjectMapper mapper;
+    OpenConnections connections;
+    ObjectMapper mapper;
+
+    public DispatchEventBus(OpenConnections connections, ObjectMapper mapper) {
+        this.connections = connections;
+        this.mapper = mapper;
+    }
 
     public void publish(DispatchEvent event) {
         String json;

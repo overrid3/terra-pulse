@@ -1,7 +1,8 @@
 package com.terrapulse.repository;
 
 import com.terrapulse.domain.mechanic.Mechanic;
-import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+
+import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;

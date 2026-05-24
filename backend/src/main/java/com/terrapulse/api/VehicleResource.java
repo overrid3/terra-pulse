@@ -4,12 +4,13 @@ import com.terrapulse.api.dto.VehicleDtos.VehicleCreateDto;
 import com.terrapulse.api.dto.VehicleDtos.VehicleDto;
 import com.terrapulse.api.dto.VehicleDtos.VehiclePatchDto;
 import com.terrapulse.api.dto.VehicleDtos.VehicleUpdateDto;
-import com.terrapulse.domain.site.Site;
 import com.terrapulse.domain.vehicle.Vehicle;
 import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
@@ -26,8 +27,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import io.quarkus.security.Authenticated;
-
 @Path("/api/vehicles")
 @Produces(MediaType.APPLICATION_JSON)
 @Authenticated
@@ -43,19 +42,19 @@ public class VehicleResource {
     }
 
     @GET
-    public List<VehicleDto> list() {
-        return repo.listAll().stream().map(VehicleDto::of).toList();
+    public Uni<List<VehicleDto>> list() {
+        return repo.listAll().map(list -> list.stream().map(VehicleDto::of).toList());
     }
 
     @GET
     @Path("/{id}")
-    public VehicleDto get(@PathParam("id") UUID id) {
-        return VehicleDto.of(load(id));
+    public Uni<VehicleDto> get(@PathParam("id") UUID id) {
+        return load(id).map(VehicleDto::of);
     }
 
     @POST
-    @Transactional
-    public Response create(VehicleCreateDto in) {
+    @WithTransaction
+    public Uni<Response> create(VehicleCreateDto in) {
         Vehicle v = new Vehicle();
         v.make = in.make();
         v.model = in.model();
@@ -63,50 +62,57 @@ public class VehicleResource {
         v.vehicleClass = in.vehicleClass();
         v.engineHours = in.engineHours() != null ? in.engineHours() : BigDecimal.ZERO;
         if (in.status() != null) v.status = in.status();
-        repo.persist(v);
-        return Response.status(Response.Status.CREATED).entity(VehicleDto.of(v)).build();
+        return repo.persist(v).replaceWith(
+                Response.status(Response.Status.CREATED).entity(VehicleDto.of(v)).build());
     }
 
     @PATCH
     @Path("/{id}")
-    @Transactional
-    public VehicleDto patch(@PathParam("id") UUID id, VehiclePatchDto in) {
-        Vehicle v = load(id);
-        if (in.engineHours() != null) v.engineHours = in.engineHours();
-        if (in.status() != null) v.status = in.status();
-        if (in.siteId() != null) {
-            Site site = siteRepo.findById(in.siteId());
-            if (site == null) throw new NotFoundException();
-            v.site = site;
-        }
-        return VehicleDto.of(v);
+    @WithTransaction
+    public Uni<VehicleDto> patch(@PathParam("id") UUID id, VehiclePatchDto in) {
+        return load(id).flatMap(v -> {
+            if (in.engineHours() != null) v.engineHours = in.engineHours();
+            if (in.status() != null) v.status = in.status();
+            if (in.siteId() != null) {
+                return siteRepo.findById(in.siteId()).map(site -> {
+                    if (site == null) throw new NotFoundException();
+                    v.site = site;
+                    return VehicleDto.of(v);
+                });
+            }
+            return Uni.createFrom().item(VehicleDto.of(v));
+        });
     }
 
     @PUT
     @Path("/{id}")
-    @Transactional
-    public VehicleDto update(@PathParam("id") UUID id, VehicleUpdateDto in) {
-        Vehicle v = load(id);
-        v.make = in.make();
-        v.model = in.model();
-        v.serialNumber = in.serialNumber();
-        v.vehicleClass = in.vehicleClass();
-        if (in.engineHours() != null) v.engineHours = in.engineHours();
-        if (in.status() != null) v.status = in.status();
-        return VehicleDto.of(v);
+    @WithTransaction
+    public Uni<VehicleDto> update(@PathParam("id") UUID id, VehicleUpdateDto in) {
+        return load(id).map(v -> {
+            v.make = in.make();
+            v.model = in.model();
+            v.serialNumber = in.serialNumber();
+            v.vehicleClass = in.vehicleClass();
+            if (in.engineHours() != null) v.engineHours = in.engineHours();
+            if (in.status() != null) v.status = in.status();
+            return VehicleDto.of(v);
+        });
     }
 
     @DELETE
     @Path("/{id}")
-    @Transactional
-    public Response delete(@PathParam("id") UUID id) {
-        if (!repo.deleteById(id)) throw new NotFoundException();
-        return Response.noContent().build();
+    @WithTransaction
+    public Uni<Response> delete(@PathParam("id") UUID id) {
+        return repo.deleteById(id).map(deleted -> {
+            if (!deleted) throw new NotFoundException();
+            return Response.noContent().build();
+        });
     }
 
-    private Vehicle load(UUID id) {
-        Vehicle v = repo.findById(id);
-        if (v == null) throw new NotFoundException();
-        return v;
+    private Uni<Vehicle> load(UUID id) {
+        return repo.findById(id).map(v -> {
+            if (v == null) throw new NotFoundException();
+            return v;
+        });
     }
 }

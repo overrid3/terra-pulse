@@ -17,11 +17,12 @@ import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
 import com.terrapulse.repository.VmrsCodeRepository;
 import com.terrapulse.service.GeometrySupport;
+import io.quarkus.hibernate.reactive.panache.Panache;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,13 +35,6 @@ import java.util.UUID;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
-/**
- * Integration tests for PATCH /api/service-orders/{id}/schedule.
- *
- * Seeding strategy mirrors ServiceOrderOverrideTest: REQUIRES_NEW transactions
- * commit immediately so data is visible to the HTTP layer. AfterEach deletes
- * created rows to isolate tests.
- */
 @QuarkusTest
 @TestSecurity(authorizationEnabled = false)
 class ServiceOrderRescheduleTest {
@@ -60,19 +54,18 @@ class ServiceOrderRescheduleTest {
     private final List<UUID> createdClients   = new ArrayList<>();
     private final List<String> createdVmrsCodes = new ArrayList<>();
 
-    // ---------------------------------------------------------------------------
-    // Cleanup
-    // ---------------------------------------------------------------------------
-
     @AfterEach
-    @Transactional
     void cleanup() {
-        createdOrders.forEach(id -> repo.deleteById(id));
-        createdMechanics.forEach(id -> mechanicRepo.deleteById(id));
-        createdVehicles.forEach(id -> vehicleRepo.deleteById(id));
-        createdSites.forEach(id -> siteRepo.deleteById(id));
-        createdClients.forEach(id -> clientRepo.deleteById(id));
-        createdVmrsCodes.forEach(code -> vmrsRepo.deleteById(code));
+        Panache.withTransaction(() -> {
+            Uni<Void> chain = Uni.createFrom().voidItem();
+            for (UUID id : createdOrders)     chain = chain.flatMap(v -> repo.deleteById(id).replaceWithVoid());
+            for (UUID id : createdMechanics)  chain = chain.flatMap(v -> mechanicRepo.deleteById(id).replaceWithVoid());
+            for (UUID id : createdVehicles)   chain = chain.flatMap(v -> vehicleRepo.deleteById(id).replaceWithVoid());
+            for (UUID id : createdSites)      chain = chain.flatMap(v -> siteRepo.deleteById(id).replaceWithVoid());
+            for (UUID id : createdClients)    chain = chain.flatMap(v -> clientRepo.deleteById(id).replaceWithVoid());
+            for (String c : createdVmrsCodes) chain = chain.flatMap(v -> vmrsRepo.deleteById(c).replaceWithVoid());
+            return chain;
+        }).await().indefinitely();
         createdOrders.clear();
         createdMechanics.clear();
         createdVehicles.clear();
@@ -81,126 +74,130 @@ class ServiceOrderRescheduleTest {
         createdVmrsCodes.clear();
     }
 
-    // ---------------------------------------------------------------------------
-    // Seed helpers — each commits immediately (REQUIRES_NEW)
-    // ---------------------------------------------------------------------------
-
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     Client seedClient() {
         Client c = new Client();
         c.name = "Test Client " + UUID.randomUUID();
         c.email = "test+" + UUID.randomUUID() + "@example.com";
-        clientRepo.persist(c);
-        createdClients.add(c.id);
-        return c;
+        Client result = Panache.withTransaction(() -> clientRepo.persist(c).replaceWith(c))
+            .await().indefinitely();
+        createdClients.add(result.id);
+        return result;
     }
 
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     Site seedSite(UUID clientId) {
-        Client client = clientRepo.findById(clientId);
         Site s = new Site();
-        s.client = client;
         s.name = "Test Site " + UUID.randomUUID();
         s.lat = 51.5074;
         s.lng = -0.1278;
-        siteRepo.persist(s);
-        createdSites.add(s.id);
-        return s;
+        Site result = Panache.withTransaction(() ->
+            clientRepo.findById(clientId).flatMap(client -> {
+                s.client = client;
+                return siteRepo.persist(s).replaceWith(s);
+            })
+        ).await().indefinitely();
+        createdSites.add(result.id);
+        return result;
     }
 
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     Vehicle seedVehicle(UUID siteId) {
-        Site site = siteRepo.findById(siteId);
         Vehicle v = new Vehicle();
         v.make = "CAT";
         v.model = "320";
         v.serialNumber = "SN-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         v.vehicleClass = VehicleClass.EXCAVATOR;
         v.status = VehicleStatus.AVAILABLE;
-        v.site = site;
-        vehicleRepo.persist(v);
-        createdVehicles.add(v.id);
-        return v;
+        Vehicle result = Panache.withTransaction(() ->
+            siteRepo.findById(siteId).flatMap(site -> {
+                v.site = site;
+                return vehicleRepo.persist(v).replaceWith(v);
+            })
+        ).await().indefinitely();
+        createdVehicles.add(result.id);
+        return result;
     }
 
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     VmrsCode seedVmrsCode() {
         VmrsCode vc = new VmrsCode();
         vc.code = UUID.randomUUID().toString().replace("-", "").substring(0, 9);
         vc.description = "Test service";
         vc.srtMinutes = 60;
         vc.difficultyFactor = BigDecimal.ONE;
-        vmrsRepo.persist(vc);
-        createdVmrsCodes.add(vc.code);
-        return vc;
+        VmrsCode result = Panache.withTransaction(() -> vmrsRepo.persist(vc).replaceWith(vc))
+            .await().indefinitely();
+        createdVmrsCodes.add(result.code);
+        return result;
     }
 
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     Mechanic seedMechanic() {
         Mechanic m = new Mechanic();
         m.fullName = "Test Mech " + UUID.randomUUID();
         m.status = MechanicStatus.IDLE;
-        mechanicRepo.persist(m);
-        createdMechanics.add(m.id);
-        return m;
+        Mechanic result = Panache.withTransaction(() -> mechanicRepo.persist(m).replaceWith(m))
+            .await().indefinitely();
+        createdMechanics.add(result.id);
+        return result;
     }
 
-    /**
-     * Persists a ServiceOrder directly in SCHEDULED state with the given
-     * scheduledStartAt / scheduledEndAt ISO strings. A mechanic is required by
-     * the domain model for SCHEDULED orders.
-     */
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     UUID seedScheduledOrder(UUID vehicleId, String vmrsCode, UUID clientId,
                             UUID siteId, UUID mechanicId,
                             String startISO, String endISO) {
-        Vehicle vehicle   = vehicleRepo.findById(vehicleId);
-        VmrsCode vc       = vmrsRepo.findById(vmrsCode);
-        Client client     = clientRepo.findById(clientId);
-        Site site         = siteRepo.findById(siteId);
-        Mechanic mechanic = mechanicRepo.findById(mechanicId);
-
         ServiceOrder so = new ServiceOrder();
-        so.vehicle           = vehicle;
-        so.vmrsCode          = vc;
-        so.client            = client;
-        so.site              = site;
-        so.title             = "Reschedule Test Order";
-        so.state             = ServiceOrderState.SCHEDULED;
-        so.estimatedMinutes  = 60;
-        so.siteLocation      = geo.point(site.lng, site.lat);
-        so.mechanic          = mechanic;
-        so.scheduledStartAt  = Instant.parse(startISO);
-        so.scheduledEndAt    = Instant.parse(endISO);
-        repo.persist(so);
-        createdOrders.add(so.id);
-        return so.id;
+        so.title = "Reschedule Test Order";
+        so.state = ServiceOrderState.SCHEDULED;
+        so.estimatedMinutes = 60;
+        so.scheduledStartAt = Instant.parse(startISO);
+        so.scheduledEndAt = Instant.parse(endISO);
+
+        UUID result = Panache.withTransaction(() ->
+            vehicleRepo.findById(vehicleId).flatMap(vehicle -> {
+                so.vehicle = vehicle;
+                return vmrsRepo.findById(vmrsCode);
+            }).flatMap(vc -> {
+                so.vmrsCode = vc;
+                return clientRepo.findById(clientId);
+            }).flatMap(client -> {
+                so.client = client;
+                return siteRepo.findById(siteId);
+            }).flatMap(site -> {
+                so.site = site;
+                so.siteLocation = geo.point(site.lng, site.lat);
+                return mechanicRepo.findById(mechanicId);
+            }).flatMap(mechanic -> {
+                so.mechanic = mechanic;
+                return repo.persist(so).replaceWith(so);
+            }).map(s -> s.id)
+        ).await().indefinitely();
+
+        createdOrders.add(result);
+        return result;
     }
 
-    /**
-     * Persists a ServiceOrder directly in the given non-SCHEDULED state
-     * (no schedule times needed).
-     */
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     UUID seedOrderInState(ServiceOrderState state, UUID vehicleId, String vmrsCode,
                           UUID clientId, UUID siteId) {
-        Vehicle vehicle = vehicleRepo.findById(vehicleId);
-        VmrsCode vc     = vmrsRepo.findById(vmrsCode);
-        Client client   = clientRepo.findById(clientId);
-        Site site       = siteRepo.findById(siteId);
-
         ServiceOrder so = new ServiceOrder();
-        so.vehicle          = vehicle;
-        so.vmrsCode         = vc;
-        so.client           = client;
-        so.site             = site;
-        so.title            = "State Test Order";
-        so.state            = state;
+        so.title = "State Test Order";
+        so.state = state;
         so.estimatedMinutes = 60;
-        so.siteLocation     = geo.point(site.lng, site.lat);
-        repo.persist(so);
-        createdOrders.add(so.id);
-        return so.id;
+
+        UUID result = Panache.withTransaction(() ->
+            vehicleRepo.findById(vehicleId).flatMap(vehicle -> {
+                so.vehicle = vehicle;
+                return vmrsRepo.findById(vmrsCode);
+            }).flatMap(vc -> {
+                so.vmrsCode = vc;
+                return clientRepo.findById(clientId);
+            }).flatMap(client -> {
+                so.client = client;
+                return siteRepo.findById(siteId);
+            }).flatMap(site -> {
+                so.site = site;
+                so.siteLocation = geo.point(site.lng, site.lat);
+                return repo.persist(so).replaceWith(so);
+            }).map(s -> s.id)
+        ).await().indefinitely();
+
+        createdOrders.add(result);
+        return result;
     }
 
     // ---------------------------------------------------------------------------

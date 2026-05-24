@@ -14,8 +14,11 @@ import jakarta.inject.Inject;
 @WebSocket(path = "/ws/dispatch")
 public class DispatchBoardSocket {
 
-    @Inject
     WebSocketConnection connection;
+
+    public DispatchBoardSocket(WebSocketConnection connection) {
+        this.connection = connection;
+    }
 
     @OnOpen
     public void onOpen() {

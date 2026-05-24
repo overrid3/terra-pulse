@@ -1,8 +1,9 @@
 package com.terrapulse.repository;
 
 import com.terrapulse.domain.reservation.Reservation;
-import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import io.quarkus.panache.common.Parameters;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.time.Instant;
@@ -12,12 +13,12 @@ import java.util.UUID;
 @ApplicationScoped
 public class ReservationRepository implements PanacheRepositoryBase<Reservation, UUID> {
 
-    public List<Reservation> findOverlapping(UUID vehicleId, Instant from, Instant to) {
+    public Uni<List<Reservation>> findOverlapping(UUID vehicleId, Instant from, Instant to) {
         return list("vehicle.id = :vid and startAt < :to and endAt > :from and status <> 'CANCELLED'",
                 Parameters.with("vid", vehicleId).and("from", from).and("to", to));
     }
 
-    public List<Reservation> filter(UUID vehicleIdOrNull, Instant fromOrNull, Instant toOrNull) {
+    public Uni<List<Reservation>> filter(UUID vehicleIdOrNull, Instant fromOrNull, Instant toOrNull) {
         if (vehicleIdOrNull == null && fromOrNull == null && toOrNull == null) {
             return listAll();
         }

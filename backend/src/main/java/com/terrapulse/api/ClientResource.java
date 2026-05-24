@@ -10,8 +10,12 @@ import com.terrapulse.domain.service.ServiceOrderState;
 import com.terrapulse.repository.ClientRepository;
 import com.terrapulse.repository.ServiceOrderRepository;
 import com.terrapulse.repository.SiteRepository;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.groups.UniAndGroup2;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
@@ -26,9 +30,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
-import io.quarkus.security.Authenticated;
 
 @Path("/api/clients")
 @Produces(MediaType.APPLICATION_JSON)
@@ -49,108 +52,133 @@ public class ClientResource {
     }
 
     @GET
-    public List<ClientSummaryDto> list() {
-        return repo.listAll().stream().map(c -> {
-            long sites = siteRepo.count("client.id = ?1", c.id);
-            long openOrders = serviceOrderRepo.count(
-                    "client.id = ?1 and state != ?2 and state != ?3",
-                    c.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED);
-            return new ClientSummaryDto(c.id, c.name, c.email, c.phone, c.vatNumber,
-                    c.addressLine1, c.addressLine2, c.city, c.postalCode, c.country,
-                    c.state, sites, openOrders, c.createdAt, c.updatedAt);
-        }).toList();
+    public Uni<List<ClientSummaryDto>> list() {
+        return repo.listAll().onItem()
+                .transformToMulti(l -> Multi.createFrom().iterable(l))
+                .onItem().transformToUniAndMerge(p -> getUnis(p).with((a, b) -> ClientSummaryDto.of(p, a, b)))
+                .collect().asList();
+    }
+
+    private UniAndGroup2<Long, Long> getUnis(Client c) {
+        return Uni.combine().all().unis(
+                siteCount(c),
+                serviceOrderCount(c)
+        );
+    }
+
+    private Uni<Long> serviceOrderCount(Client c) {
+        return serviceOrderRepo.count(
+                "client.id = ?1 and state != ?2 and state != ?3",
+                c.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED);
+    }
+
+    private Uni<Long> siteCount(Client c) {
+        return siteRepo.count("client.id = ?1", c.id);
     }
 
     @GET
     @Path("/{id}")
-    public ClientDto get(@PathParam("id") UUID id) {
-        return ClientDto.of(load(id));
+    public Uni<ClientDto> get(@PathParam("id") UUID id) {
+        return load(id).map(ClientDto::of);
     }
 
     @POST
-    @Transactional
-    public Response create(ClientUpsertDto in) {
+    @WithTransaction
+    public Uni<Response> create(ClientUpsertDto in) {
         validate(in);
-        if (repo.findByEmail(in.email()) != null) {
-            throw new WebApplicationException(Response.status(Response.Status.CONFLICT)
-                    .entity(java.util.Map.of("error", "duplicate_email", "message", "email already in use"))
-                    .build());
-        }
-        Client c = new Client();
-        copy(in, c);
-        repo.persist(c);
-        return Response.status(Response.Status.CREATED).entity(ClientDto.of(c)).build();
+        return repo.findByEmail(in.email()).flatMap(existing -> {
+            if (existing != null) {
+                throw new WebApplicationException(Response.status(Response.Status.CONFLICT)
+                        .entity(Map.of("error", "duplicate_email", "message", "email already in use"))
+                        .build());
+            }
+            Client c = new Client();
+            copy(in, c);
+            return repo.persist(c).replaceWith(
+                    Response.status(Response.Status.CREATED).entity(ClientDto.of(c)).build());
+        });
     }
 
     @PUT
     @Path("/{id}")
-    @Transactional
-    public ClientDto update(@PathParam("id") UUID id, ClientUpsertDto in) {
+    @WithTransaction
+    public Uni<ClientDto> update(@PathParam("id") UUID id, ClientUpsertDto in) {
         validate(in);
-        Client c = load(id);
-        Client other = repo.findByEmail(in.email());
-        if (other != null && !other.id.equals(c.id)) {
-            throw new WebApplicationException(Response.status(Response.Status.CONFLICT)
-                    .entity(java.util.Map.of("error", "duplicate_email", "message", "email already in use"))
-                    .build());
-        }
-        copy(in, c);
-        return ClientDto.of(c);
+        return Uni.combine().all().unis(load(id), repo.findByEmail(in.email()))
+                .asTuple()
+                .map(t -> {
+                    Client c = t.getItem1();
+                    Client other = t.getItem2();
+                    if (other != null && !other.id.equals(c.id)) {
+                        throw new WebApplicationException(Response.status(Response.Status.CONFLICT)
+                                .entity(Map.of("error", "duplicate_email", "message", "email already in use"))
+                                .build());
+                    }
+                    copy(in, c);
+                    return ClientDto.of(c);
+                });
     }
 
     @PUT
     @Path("/{id}/state")
-    @Transactional
-    public ClientDto setState(@PathParam("id") UUID id, ClientStateChangeDto in) {
-        Client c = load(id);
+    @WithTransaction
+    public Uni<ClientDto> setState(@PathParam("id") UUID id, ClientStateChangeDto in) {
         if (in == null || in.state() == null)
             throw new IllegalArgumentException("state required");
-        if (in.state() == ClientState.INACTIVE && c.state == ClientState.ACTIVE) {
-            long openOrders = serviceOrderRepo.count(
-                    "client.id = ?1 and state != ?2 and state != ?3",
-                    c.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED);
-            if (openOrders > 0) {
-                throw new WebApplicationException(Response.status(Response.Status.CONFLICT)
-                        .entity(java.util.Map.of(
-                                "error", "client_has_open_orders",
-                                "message", "Cannot deactivate client with " + openOrders + " open order(s)",
-                                "openOrders", openOrders))
-                        .build());
+
+        return load(id).flatMap(c -> {
+            if (in.state() == ClientState.INACTIVE && c.state == ClientState.ACTIVE) {
+                return serviceOrderCount(c).map(openOrders -> {
+                    if (openOrders > 0) {
+                        throw new WebApplicationException(Response.status(Response.Status.CONFLICT)
+                                .entity(Map.of(
+                                        "error", "client_has_open_orders",
+                                        "message", "Cannot deactivate client with " + openOrders + " open order(s)",
+                                        "openOrders", openOrders))
+                                .build());
+                    }
+                    c.state = in.state();
+                    return ClientDto.of(c);
+                });
             }
-        }
-        c.state = in.state();
-        return ClientDto.of(c);
+            c.state = in.state();
+            return Uni.createFrom().item(ClientDto.of(c));
+        });
     }
 
     @PATCH
     @Path("/{id}")
-    @Transactional
-    public ClientDto patch(@PathParam("id") UUID id, ClientUpsertDto in) {
-        Client c = load(id);
-        if (in.name() != null)         c.name = in.name();
-        if (in.email() != null)        c.email = in.email();
-        if (in.phone() != null)        c.phone = in.phone();
-        if (in.vatNumber() != null)    c.vatNumber = in.vatNumber();
-        if (in.addressLine1() != null) c.addressLine1 = in.addressLine1();
-        if (in.addressLine2() != null) c.addressLine2 = in.addressLine2();
-        if (in.city() != null)         c.city = in.city();
-        if (in.postalCode() != null)   c.postalCode = in.postalCode();
-        if (in.country() != null)      c.country = in.country();
-        return ClientDto.of(c);
+    @WithTransaction
+    public Uni<ClientDto> patch(@PathParam("id") UUID id, ClientUpsertDto in) {
+        return load(id).map(c -> {
+            if (in.name() != null)         c.name = in.name();
+            if (in.email() != null)        c.email = in.email();
+            if (in.phone() != null)        c.phone = in.phone();
+            if (in.vatNumber() != null)    c.vatNumber = in.vatNumber();
+            if (in.addressLine1() != null) c.addressLine1 = in.addressLine1();
+            if (in.addressLine2() != null) c.addressLine2 = in.addressLine2();
+            if (in.city() != null)         c.city = in.city();
+            if (in.postalCode() != null)   c.postalCode = in.postalCode();
+            if (in.country() != null)      c.country = in.country();
+            return ClientDto.of(c);
+        });
     }
 
     @DELETE
     @Path("/{id}")
-    @Transactional
-    public Response delete(@PathParam("id") UUID id) {
-        if (!repo.deleteById(id)) throw new NotFoundException();
-        return Response.noContent().build();
+    @WithTransaction
+    public Uni<Response> delete(@PathParam("id") UUID id) {
+        return repo.deleteById(id).map(deleted -> {
+            if (!deleted) throw new NotFoundException();
+            return Response.noContent().build();
+        });
     }
 
-    private Client load(UUID id) {
-        Client c = repo.findById(id);
-        if (c == null) throw new NotFoundException();
-        return c;
+    private Uni<Client> load(UUID id) {
+        return repo.findById(id).map(c -> {
+            if (c == null) throw new NotFoundException();
+            return c;
+        });
     }
 
     private void validate(ClientUpsertDto in) {

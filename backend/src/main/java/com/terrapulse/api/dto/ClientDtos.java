@@ -60,7 +60,14 @@ public final class ClientDtos {
             long openOrderCount,
             java.time.Instant createdAt,
             java.time.Instant updatedAt
-    ) {}
+    ) {
+        public static ClientSummaryDto of(Client c, long siteCount, long openOrderCount) {
+            return new ClientSummaryDto(c.id, c.name, c.email, c.phone, c.vatNumber,
+                    c.addressLine1, c.addressLine2, c.city, c.postalCode, c.country,
+                    c.state, siteCount, openOrderCount, c.createdAt, c.updatedAt);
+        }
+    }
 
     public record ClientStateChangeDto(ClientState state) {}
+
 }

@@ -8,16 +8,17 @@ import com.terrapulse.repository.ClientRepository;
 import com.terrapulse.repository.ServiceOrderRepository;
 import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import io.quarkus.security.Authenticated;
 
 @Path("/api/clients/{clientId}/sites")
 @Produces(MediaType.APPLICATION_JSON)
@@ -41,85 +42,100 @@ public class SiteResource {
     }
 
     @GET
-    public List<SiteDto> list(@PathParam("clientId") UUID clientId) {
-        if (clientRepo.findById(clientId) == null) throw new NotFoundException();
-        return repo.findByClientId(clientId).stream()
-                .map(this::toDto)
-                .toList();
+    public Uni<List<SiteDto>> list(@PathParam("clientId") UUID clientId) {
+        return clientRepo.findById(clientId).flatMap(client -> {
+            if (client == null) throw new NotFoundException();
+            return repo.findByClientId(clientId)
+                    .flatMap(sites -> {
+                        // Build Uni<SiteDto> for each site, then collect
+                        List<Uni<SiteDto>> dtoUnis = sites.stream().map(this::toDto).toList();
+                        if (dtoUnis.isEmpty()) return Uni.createFrom().item(List.of());
+                        return Uni.combine().all().unis(dtoUnis)
+                                .combinedWith(objs -> objs.stream().map(o -> (SiteDto) o).toList());
+                    });
+        });
     }
 
     @POST
-    @Transactional
-    public Response create(@PathParam("clientId") UUID clientId, SiteUpsertDto in) {
-        var client = clientRepo.findById(clientId);
-        if (client == null) throw new NotFoundException();
+    @WithTransaction
+    public Uni<Response> create(@PathParam("clientId") UUID clientId, SiteUpsertDto in) {
         if (in == null || in.name() == null || in.name().isBlank())
             throw new IllegalArgumentException("name required");
-
-        Site site = new Site();
-        site.client = client;
-        site.name = in.name().trim();
-        site.lat = in.lat();
-        site.lng = in.lng();
-        site.locationLabel = in.locationLabel();
-        repo.persist(site);
-        return Response.status(Response.Status.CREATED).entity(toDto(site)).build();
+        return clientRepo.findById(clientId).flatMap(client -> {
+            if (client == null) throw new NotFoundException();
+            Site site = new Site();
+            site.client = client;
+            site.name = in.name().trim();
+            site.lat = in.lat();
+            site.lng = in.lng();
+            site.locationLabel = in.locationLabel();
+            return repo.persist(site).flatMap(v -> toDto(site).map(dto ->
+                    Response.status(Response.Status.CREATED).entity(dto).build()));
+        });
     }
 
     @PATCH
     @Path("/{siteId}")
-    @Transactional
-    public SiteDto patch(@PathParam("clientId") UUID clientId,
-                         @PathParam("siteId") UUID siteId,
-                         SiteUpsertDto in) {
-        Site site = load(clientId, siteId);
-        if (in.name() != null && !in.name().isBlank()) site.name = in.name().trim();
-        if (in.lat() != null)           site.lat = in.lat();
-        if (in.lng() != null)           site.lng = in.lng();
-        if (in.locationLabel() != null) site.locationLabel = in.locationLabel();
-        return toDto(site);
+    @WithTransaction
+    public Uni<SiteDto> patch(@PathParam("clientId") UUID clientId,
+                              @PathParam("siteId") UUID siteId,
+                              SiteUpsertDto in) {
+        return load(clientId, siteId).flatMap(site -> {
+            if (in.name() != null && !in.name().isBlank()) site.name = in.name().trim();
+            if (in.lat() != null)           site.lat = in.lat();
+            if (in.lng() != null)           site.lng = in.lng();
+            if (in.locationLabel() != null) site.locationLabel = in.locationLabel();
+            return toDto(site);
+        });
     }
 
     @DELETE
     @Path("/{siteId}")
-    @Transactional
-    public Response delete(@PathParam("clientId") UUID clientId,
-                           @PathParam("siteId") UUID siteId) {
-        Site site = load(clientId, siteId);
-        long active = serviceOrderRepo.count(
-                "site.id = ?1 and state != ?2 and state != ?3",
-                site.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED);
-        if (active > 0)
-            throw new WebApplicationException(
-                    Response.status(Response.Status.CONFLICT)
-                            .entity(Map.of("error", "site_has_active_orders",
-                                           "message", "Cannot delete site with active orders"))
-                            .build());
-        repo.delete(site);
-        return Response.noContent().build();
+    @WithTransaction
+    public Uni<Response> delete(@PathParam("clientId") UUID clientId,
+                                @PathParam("siteId") UUID siteId) {
+        return load(clientId, siteId).flatMap(site ->
+                serviceOrderRepo.count(
+                        "site.id = ?1 and state != ?2 and state != ?3",
+                        site.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED)
+                        .flatMap(active -> {
+                            if (active > 0)
+                                throw new WebApplicationException(
+                                        Response.status(Response.Status.CONFLICT)
+                                                .entity(Map.of("error", "site_has_active_orders",
+                                                        "message", "Cannot delete site with active orders"))
+                                                .build());
+                            return repo.delete(site).replaceWith(Response.noContent().build());
+                        })
+        );
     }
 
-    private Site load(UUID clientId, UUID siteId) {
-        if (clientRepo.findById(clientId) == null) throw new NotFoundException();
-        Site site = repo.findById(siteId);
-        if (site == null || !site.client.id.equals(clientId)) throw new NotFoundException();
-        return site;
+    private Uni<Site> load(UUID clientId, UUID siteId) {
+        return clientRepo.findById(clientId).flatMap(client -> {
+            if (client == null) throw new NotFoundException();
+            return repo.findById(siteId).map(site -> {
+                if (site == null || !site.client.id.equals(clientId)) throw new NotFoundException();
+                return site;
+            });
+        });
     }
 
-    private SiteDto toDto(Site s) {
-        long openOrders = serviceOrderRepo.count(
+    private Uni<SiteDto> toDto(Site s) {
+        Uni<Long> openOrdersUni = serviceOrderRepo.count(
                 "site.id = ?1 and state != ?2 and state != ?3",
                 s.id, ServiceOrderState.COMPLETED, ServiceOrderState.CANCELLED);
-        long equipment = vehicleRepo.count("site.id = ?1", s.id);
-        long personnel = (Long) repo.getEntityManager()
-                .createQuery("select count(distinct so.mechanic.id) from ServiceOrder so " +
-                             "where so.site.id = :siteId and so.mechanic is not null " +
-                             "and (so.state = :scheduled or so.state = :inProgress)")
-                .setParameter("siteId", s.id)
-                .setParameter("scheduled", ServiceOrderState.SCHEDULED)
-                .setParameter("inProgress", ServiceOrderState.IN_PROGRESS)
-                .getSingleResult();
-        return new SiteDto(s.id, s.client.id, s.name, s.lat, s.lng, s.locationLabel,
-                openOrders, equipment, personnel, s.createdAt, s.updatedAt);
+        Uni<Long> equipmentUni = vehicleRepo.count("site.id = ?1", s.id);
+        // Count distinct active mechanics via list + stream (reactive-safe for POC)
+        Uni<Long> personnelUni = serviceOrderRepo.list(
+                "site.id = ?1 and mechanic is not null and (state = ?2 or state = ?3)",
+                s.id, ServiceOrderState.SCHEDULED, ServiceOrderState.IN_PROGRESS)
+                .map(orders -> (long) orders.stream()
+                        .map(so -> so.mechanic.id)
+                        .distinct()
+                        .count());
+
+        return Uni.combine().all().unis(openOrdersUni, equipmentUni, personnelUni).asTuple()
+                .map(t -> new SiteDto(s.id, s.client.id, s.name, s.lat, s.lng, s.locationLabel,
+                        t.getItem1(), t.getItem2(), t.getItem3(), s.createdAt, s.updatedAt));
     }
 }

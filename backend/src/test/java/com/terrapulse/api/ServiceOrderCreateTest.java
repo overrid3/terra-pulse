@@ -3,7 +3,6 @@ package com.terrapulse.api;
 import com.terrapulse.domain.client.Client;
 import com.terrapulse.domain.mechanic.Mechanic;
 import com.terrapulse.domain.mechanic.MechanicStatus;
-import com.terrapulse.domain.service.ServiceOrder;
 import com.terrapulse.domain.site.Site;
 import com.terrapulse.domain.vehicle.Vehicle;
 import com.terrapulse.domain.vehicle.VehicleClass;
@@ -15,11 +14,12 @@ import com.terrapulse.repository.ServiceOrderRepository;
 import com.terrapulse.repository.SiteRepository;
 import com.terrapulse.repository.VehicleRepository;
 import com.terrapulse.repository.VmrsCodeRepository;
+import io.quarkus.hibernate.reactive.panache.Panache;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,14 +33,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-/**
- * Integration tests for POST /api/service-orders.
- *
- * Seeding strategy: each test method seeds via REQUIRES_NEW transactions that
- * commit immediately, making the data visible to the HTTP layer. AfterEach
- * deletes the created rows (also committed) to isolate tests without relying on
- * rollback, which cannot span across the HTTP request boundary.
- */
 @QuarkusTest
 @TestSecurity(authorizationEnabled = false)
 class ServiceOrderCreateTest {
@@ -52,7 +44,6 @@ class ServiceOrderCreateTest {
     @Inject SiteRepository siteRepo;
     @Inject VmrsCodeRepository vmrsRepo;
 
-    // Track created IDs for cleanup
     private final List<UUID> createdOrders = new ArrayList<>();
     private final List<UUID> createdMechanics = new ArrayList<>();
     private final List<UUID> createdVehicles = new ArrayList<>();
@@ -60,19 +51,18 @@ class ServiceOrderCreateTest {
     private final List<UUID> createdClients = new ArrayList<>();
     private final List<String> createdVmrsCodes = new ArrayList<>();
 
-    // ---------------------------------------------------------------------------
-    // Cleanup
-    // ---------------------------------------------------------------------------
-
     @AfterEach
-    @Transactional
     void cleanup() {
-        createdOrders.forEach(id -> repo.deleteById(id));
-        createdMechanics.forEach(id -> mechanicRepo.deleteById(id));
-        createdVehicles.forEach(id -> vehicleRepo.deleteById(id));
-        createdSites.forEach(id -> siteRepo.deleteById(id));
-        createdClients.forEach(id -> clientRepo.deleteById(id));
-        createdVmrsCodes.forEach(code -> vmrsRepo.deleteById(code));
+        Panache.withTransaction(() -> {
+            Uni<Void> chain = Uni.createFrom().voidItem();
+            for (UUID id : createdOrders)     chain = chain.flatMap(v -> repo.deleteById(id).replaceWithVoid());
+            for (UUID id : createdMechanics)  chain = chain.flatMap(v -> mechanicRepo.deleteById(id).replaceWithVoid());
+            for (UUID id : createdVehicles)   chain = chain.flatMap(v -> vehicleRepo.deleteById(id).replaceWithVoid());
+            for (UUID id : createdSites)      chain = chain.flatMap(v -> siteRepo.deleteById(id).replaceWithVoid());
+            for (UUID id : createdClients)    chain = chain.flatMap(v -> clientRepo.deleteById(id).replaceWithVoid());
+            for (String c : createdVmrsCodes) chain = chain.flatMap(v -> vmrsRepo.deleteById(c).replaceWithVoid());
+            return chain;
+        }).await().indefinitely();
         createdOrders.clear();
         createdMechanics.clear();
         createdVehicles.clear();
@@ -81,68 +71,68 @@ class ServiceOrderCreateTest {
         createdVmrsCodes.clear();
     }
 
-    // ---------------------------------------------------------------------------
-    // Seed helpers — each commits immediately (REQUIRES_NEW)
-    // ---------------------------------------------------------------------------
-
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     Client seedClient() {
         Client c = new Client();
         c.name = "Test Client " + UUID.randomUUID();
         c.email = "test+" + UUID.randomUUID() + "@example.com";
-        clientRepo.persist(c);
-        createdClients.add(c.id);
-        return c;
+        Client result = Panache.withTransaction(() -> clientRepo.persist(c).replaceWith(c))
+            .await().indefinitely();
+        createdClients.add(result.id);
+        return result;
     }
 
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     Site seedSite(UUID clientId) {
-        Client client = clientRepo.findById(clientId);
         Site s = new Site();
-        s.client = client;
         s.name = "Test Site " + UUID.randomUUID();
         s.lat = 51.5074;
         s.lng = -0.1278;
-        siteRepo.persist(s);
-        createdSites.add(s.id);
-        return s;
+        Site result = Panache.withTransaction(() ->
+            clientRepo.findById(clientId).flatMap(client -> {
+                s.client = client;
+                return siteRepo.persist(s).replaceWith(s);
+            })
+        ).await().indefinitely();
+        createdSites.add(result.id);
+        return result;
     }
 
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     Vehicle seedVehicle(UUID siteId) {
-        Site site = siteRepo.findById(siteId);
         Vehicle v = new Vehicle();
         v.make = "CAT";
         v.model = "336";
         v.serialNumber = "SN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         v.vehicleClass = VehicleClass.EXCAVATOR;
         v.status = VehicleStatus.AVAILABLE;
-        v.site = site;
-        vehicleRepo.persist(v);
-        createdVehicles.add(v.id);
-        return v;
+        Vehicle result = Panache.withTransaction(() ->
+            siteRepo.findById(siteId).flatMap(site -> {
+                v.site = site;
+                return vehicleRepo.persist(v).replaceWith(v);
+            })
+        ).await().indefinitely();
+        createdVehicles.add(result.id);
+        return result;
     }
 
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     VmrsCode seedVmrs() {
         VmrsCode vc = new VmrsCode();
         vc.code = UUID.randomUUID().toString().replace("-", "").substring(0, 9);
         vc.description = "Test service";
         vc.srtMinutes = 60;
         vc.difficultyFactor = BigDecimal.ONE;
-        vmrsRepo.persist(vc);
-        createdVmrsCodes.add(vc.code);
-        return vc;
+        VmrsCode result = Panache.withTransaction(() -> vmrsRepo.persist(vc).replaceWith(vc))
+            .await().indefinitely();
+        createdVmrsCodes.add(result.code);
+        return result;
     }
 
-    @Transactional(jakarta.transaction.Transactional.TxType.REQUIRES_NEW)
     Mechanic seedMechanic() {
         Mechanic m = new Mechanic();
         m.fullName = "Test Mech " + UUID.randomUUID();
         m.status = MechanicStatus.IDLE;
-        mechanicRepo.persist(m);
-        createdMechanics.add(m.id);
-        return m;
+        Mechanic result = Panache.withTransaction(() -> mechanicRepo.persist(m).replaceWith(m))
+            .await().indefinitely();
+        createdMechanics.add(result.id);
+        return result;
     }
 
     // ---------------------------------------------------------------------------

@@ -2,8 +2,9 @@ package com.terrapulse.repository;
 
 import com.terrapulse.domain.service.ServiceOrder;
 import com.terrapulse.domain.service.ServiceOrderState;
-import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
+import io.quarkus.hibernate.reactive.panache.PanacheRepositoryBase;
 import io.quarkus.panache.common.Parameters;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
@@ -12,9 +13,9 @@ import java.util.UUID;
 @ApplicationScoped
 public class ServiceOrderRepository implements PanacheRepositoryBase<ServiceOrder, UUID> {
 
-    public List<ServiceOrder> filter(ServiceOrderState stateOrNull,
-                                     UUID mechanicIdOrNull,
-                                     UUID vehicleIdOrNull) {
+    public Uni<List<ServiceOrder>> filter(ServiceOrderState stateOrNull,
+                                          UUID mechanicIdOrNull,
+                                          UUID vehicleIdOrNull) {
         if (stateOrNull == null && mechanicIdOrNull == null && vehicleIdOrNull == null) {
             return listAll();
         }

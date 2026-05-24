@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 
 @Path("/api/vmrs-codes")
 @Produces(MediaType.APPLICATION_JSON)
@@ -32,7 +33,7 @@ public class VmrsResource {
     }
 
     @GET
-    public List<VmrsCodeDto> list() {
-        return repo.listAll().stream().map(VmrsCodeDto::of).toList();
+    public Uni<List<VmrsCodeDto>> list() {
+        return repo.listAll().map(list -> list.stream().map(VmrsCodeDto::of).toList());
     }
 }

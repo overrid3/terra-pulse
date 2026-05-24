@@ -14,8 +14,10 @@ import com.terrapulse.service.GeometrySupport;
 import com.terrapulse.service.NearestMechanicService;
 import com.terrapulse.ws.DispatchEvent;
 import com.terrapulse.ws.DispatchEventBus;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
@@ -29,14 +31,13 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import io.quarkus.security.Authenticated;
 
 @Path("/api/mechanics")
 @Produces(MediaType.APPLICATION_JSON)
@@ -66,93 +67,105 @@ public class MechanicResource {
     }
 
     @GET
-    public List<MechanicDto> list() {
-        Set<UUID> onAbsence = mechanicsOnAbsenceNow();
-        return repo.listAll().stream()
-                .map(m -> MechanicDto.of(m, onAbsence.contains(m.id)))
-                .toList();
+    public Uni<List<MechanicDto>> list() {
+        Instant now = Instant.now();
+        return Uni.combine().all().unis(
+                repo.listAll(),
+                absenceRepo.findOverlapping(now, now)
+        ).asTuple().map(tuple -> {
+            Set<UUID> onAbsence = tuple.getItem2().stream()
+                    .map(a -> a.mechanic.id)
+                    .collect(Collectors.toSet());
+            return tuple.getItem1().stream()
+                    .map(m -> MechanicDto.of(m, onAbsence.contains(m.id)))
+                    .toList();
+        });
     }
 
     @GET
     @Path("/nearest")
-    public List<MechanicDto> nearest(@QueryParam("lat") double lat,
-                                     @QueryParam("lng") double lng,
-                                     @QueryParam("limit") Integer limit,
-                                     @QueryParam("skill") String skill) {
+    public Uni<List<MechanicDto>> nearest(@QueryParam("lat") double lat,
+                                          @QueryParam("lng") double lng,
+                                          @QueryParam("limit") Integer limit,
+                                          @QueryParam("skill") String skill) {
         int lim = limit != null ? limit : 5;
-        // NearestMechanicService now filters out mechanics on absence.
-        return nearest.findNearest(lat, lng, lim, skill).stream()
-                .map(m -> MechanicDto.of(m, false))
-                .toList();
+        return nearest.findNearest(lat, lng, lim, skill)
+                .map(mechanics -> mechanics.stream().map(m -> MechanicDto.of(m, false)).toList());
     }
 
     @GET
     @Path("/{id}")
-    public MechanicDto get(@PathParam("id") UUID id) {
-        Mechanic m = load(id);
-        return MechanicDto.of(m, isOnAbsenceNow(m.id));
-    }
-
-    private Set<UUID> mechanicsOnAbsenceNow() {
+    public Uni<MechanicDto> get(@PathParam("id") UUID id) {
         Instant now = Instant.now();
-        return absenceRepo.findOverlapping(now, now).stream()
-                .map(a -> a.mechanic.id)
-                .collect(Collectors.toSet());
-    }
-
-    private boolean isOnAbsenceNow(UUID mechanicId) {
-        return mechanicsOnAbsenceNow().contains(mechanicId);
+        return Uni.combine().all().unis(
+                load(id),
+                absenceRepo.findOverlapping(now, now)
+        ).asTuple().map(tuple -> {
+            Mechanic m = tuple.getItem1();
+            boolean onAbsence = tuple.getItem2().stream()
+                    .anyMatch(a -> m.id.equals(a.mechanic.id));
+            return MechanicDto.of(m, onAbsence);
+        });
     }
 
     @POST
-    @Transactional
-    public Response create(MechanicCreateDto in) {
+    @WithTransaction
+    public Uni<Response> create(MechanicCreateDto in) {
         Mechanic m = new Mechanic();
         m.fullName = in.fullName();
         m.phone = in.phone();
-        m.skills = resolveSkills(in.skills());
         if (in.status() != null) m.status = in.status();
         if (in.location() != null) {
             m.location = geo.point(in.location().lng(), in.location().lat());
             m.locationUpdatedAt = Instant.now();
         }
-        repo.persist(m);
-        return Response.status(Response.Status.CREATED).entity(MechanicDto.of(m)).build();
+        return resolveSkills(in.skills()).flatMap(skillSet -> {
+            m.skills = skillSet;
+            return repo.persist(m).replaceWith(
+                    Response.status(Response.Status.CREATED).entity(MechanicDto.of(m)).build());
+        });
     }
 
     @PATCH
     @Path("/{id}")
-    @Transactional
-    public MechanicDto patch(@PathParam("id") UUID id, MechanicPatchDto in) {
-        Mechanic m = load(id);
-        if (in.fullName() != null) m.fullName = in.fullName();
-        if (in.phone() != null)    m.phone = in.phone().isBlank() ? null : in.phone();
-        if (in.skills() != null) {
-            m.skills.clear();
-            m.skills.addAll(resolveSkills(in.skills()));
-        }
-        if (in.status() != null) {
-            MechanicStatus from = m.status;
-            m.status = in.status();
-            if (from != m.status) {
-                bus.publish(DispatchEvent.of(DispatchEvent.MECHANIC_STATUS_CHANGED, Map.of(
-                        "mechanicId", m.id,
-                        "fromStatus", from,
-                        "toStatus", m.status,
-                        "updatedAt", Instant.now()
-                )));
+    @WithTransaction
+    public Uni<MechanicDto> patch(@PathParam("id") UUID id, MechanicPatchDto in) {
+        return load(id).flatMap(m -> {
+            if (in.fullName() != null) m.fullName = in.fullName();
+            if (in.phone() != null)    m.phone = in.phone().isBlank() ? null : in.phone();
+            if (in.status() != null) {
+                MechanicStatus from = m.status;
+                m.status = in.status();
+                if (from != m.status) {
+                    bus.publish(DispatchEvent.of(DispatchEvent.MECHANIC_STATUS_CHANGED, Map.of(
+                            "mechanicId", m.id,
+                            "fromStatus", from,
+                            "toStatus", m.status,
+                            "updatedAt", Instant.now()
+                    )));
+                }
             }
-        }
-        if (in.location() != null) updateLocation(m, in.location());
-        return MechanicDto.of(m);
+            if (in.location() != null) updateLocation(m, in.location());
+
+            if (in.skills() != null) {
+                return resolveSkills(in.skills()).map(skillSet -> {
+                    m.skills.clear();
+                    m.skills.addAll(skillSet);
+                    return MechanicDto.of(m);
+                });
+            }
+            return Uni.createFrom().item(MechanicDto.of(m));
+        });
     }
 
     @DELETE
     @Path("/{id}")
-    @Transactional
-    public Response delete(@PathParam("id") UUID id) {
-        if (!repo.deleteById(id)) throw new NotFoundException();
-        return Response.noContent().build();
+    @WithTransaction
+    public Uni<Response> delete(@PathParam("id") UUID id) {
+        return repo.deleteById(id).map(deleted -> {
+            if (!deleted) throw new NotFoundException();
+            return Response.noContent().build();
+        });
     }
 
     public void updateLocation(Mechanic m, LatLng loc) {
@@ -167,21 +180,37 @@ public class MechanicResource {
         )));
     }
 
-    private Set<Skill> resolveSkills(List<String> names) {
-        Set<Skill> out = new HashSet<>();
-        if (names == null) return out;
-        for (String n : names) {
-            if (n == null) continue;
-            String trimmed = n.trim();
-            if (trimmed.isEmpty()) continue;
-            out.add(skills.findOrCreate(trimmed));
+    private Uni<Set<Skill>> resolveSkills(List<String> names) {
+        if (names == null || names.isEmpty())
+            return Uni.createFrom().item(new HashSet<>());
+
+        List<String> filtered = names.stream()
+                .filter(n -> n != null && !n.trim().isEmpty())
+                .map(String::trim)
+                .distinct()
+                .toList();
+
+        if (filtered.isEmpty())
+            return Uni.createFrom().item(new HashSet<>());
+
+        // Chain sequentially so each findOrCreate runs inside the same session
+        Uni<List<Skill>> accumulated = Uni.createFrom().item(new ArrayList<>());
+        for (String name : filtered) {
+            final String skillName = name;
+            accumulated = accumulated.flatMap(list ->
+                    skills.findOrCreate(skillName).map(skill -> {
+                        list.add(skill);
+                        return list;
+                    })
+            );
         }
-        return out;
+        return accumulated.map(HashSet::new);
     }
 
-    private Mechanic load(UUID id) {
-        Mechanic m = repo.findById(id);
-        if (m == null) throw new NotFoundException();
-        return m;
+    private Uni<Mechanic> load(UUID id) {
+        return repo.findById(id).map(m -> {
+            if (m == null) throw new NotFoundException();
+            return m;
+        });
     }
 }

@@ -8,19 +8,22 @@ import com.terrapulse.domain.mechanic.MechanicStatus;
 import com.terrapulse.domain.skill.Skill;
 import com.terrapulse.repository.*;
 import com.terrapulse.service.GeometrySupport;
+import io.quarkus.hibernate.reactive.panache.Panache;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,19 +46,20 @@ class NearestMechanicTest {
     private final List<UUID> createdAbsences = new ArrayList<>();
     private final List<UUID> createdSkills = new ArrayList<>();
 
-    @Transactional
     void clearAll() {
-        serviceOrderRepo.deleteAll();
-        absenceRepo.deleteAll();
-        mechanicRepo.deleteAll();
-        vehicleRepo.deleteAll();
-        siteRepo.deleteAll();
-        clientRepo.deleteAll();
-        skillRepo.deleteAll();
+        Panache.withTransaction(() ->
+            serviceOrderRepo.deleteAll()
+                .flatMap(v -> absenceRepo.deleteAll())
+                .flatMap(v -> mechanicRepo.deleteAll())
+                .flatMap(v -> vehicleRepo.deleteAll())
+                .flatMap(v -> siteRepo.deleteAll())
+                .flatMap(v -> clientRepo.deleteAll())
+                .flatMap(v -> skillRepo.deleteAll())
+                .replaceWithVoid()
+        ).await().indefinitely();
     }
 
     @AfterEach
-    @Transactional
     void cleanup() {
         clearAll();
         createdAbsences.clear();
@@ -63,35 +67,45 @@ class NearestMechanicTest {
         createdSkills.clear();
     }
 
-    @Transactional(Transactional.TxType.REQUIRES_NEW)
     Mechanic seedMechanic(String name, double lat, double lng, String... skills) {
         Mechanic m = new Mechanic();
         m.fullName = name;
         m.status = MechanicStatus.IDLE;
         m.location = geo.point(lng, lat);
         m.locationUpdatedAt = Instant.now();
-        for (String s : skills) {
-            Skill skill = skillRepo.findOrCreate(s);
-            m.skills.add(skill);
-            if (!createdSkills.contains(skill.id)) {
-                createdSkills.add(skill.id);
-            }
-        }
-        mechanicRepo.persist(m);
-        createdMechanics.add(m.id);
-        return m;
+
+        Mechanic result = Panache.withTransaction(() -> {
+            List<Uni<Skill>> skillUnis = Arrays.stream(skills)
+                .map(skillRepo::findOrCreate)
+                .collect(Collectors.toList());
+            Uni<List<Skill>> resolvedSkills = skillUnis.isEmpty()
+                ? Uni.createFrom().item(List.of())
+                : Uni.join().all(skillUnis).andFailFast();
+            return resolvedSkills.flatMap(skillList -> {
+                m.skills.addAll(skillList);
+                return mechanicRepo.persist(m).replaceWith(m);
+            });
+        }).await().indefinitely();
+
+        createdMechanics.add(result.id);
+        result.skills.forEach(s -> { if (!createdSkills.contains(s.id)) createdSkills.add(s.id); });
+        return result;
     }
 
-    @Transactional(Transactional.TxType.REQUIRES_NEW)
     void seedAbsence(UUID mechanicId, Instant start, Instant end) {
-        Mechanic m = mechanicRepo.findById(mechanicId);
         MechanicAbsence a = new MechanicAbsence();
-        a.mechanic = m;
         a.startAt = start;
         a.endAt = end;
         a.type = AbsenceType.VACATION;
-        absenceRepo.persist(a);
-        createdAbsences.add(a.id);
+
+        MechanicAbsence result = Panache.withTransaction(() ->
+            mechanicRepo.findById(mechanicId).flatMap(m -> {
+                a.mechanic = m;
+                return absenceRepo.persist(a).replaceWith(a);
+            })
+        ).await().indefinitely();
+
+        createdAbsences.add(result.id);
     }
 
     @Test

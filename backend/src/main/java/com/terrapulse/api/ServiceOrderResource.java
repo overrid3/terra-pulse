@@ -28,9 +28,10 @@ import com.terrapulse.service.GeometrySupport;
 import com.terrapulse.service.TitleGenerator;
 import com.terrapulse.ws.DispatchEvent;
 import com.terrapulse.ws.DispatchEventBus;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.NotFoundException;
@@ -42,13 +43,14 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.jspecify.annotations.NonNull;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import io.quarkus.security.Authenticated;
+import java.util.function.Supplier;
 
 @Path("/api/service-orders")
 @Produces(MediaType.APPLICATION_JSON)
@@ -89,73 +91,28 @@ public class ServiceOrderResource {
         this.bus = bus;
     }
 
+    // ── READ ─────────────────────────────────────────────────────────────────
+
     @GET
-    public List<ServiceOrderDto> list(@QueryParam("state") ServiceOrderState state,
-                                      @QueryParam("mechanicId") UUID mechanicId,
-                                      @QueryParam("vehicleId") UUID vehicleId) {
-        return repo.filter(state, mechanicId, vehicleId).stream().map(ServiceOrderDto::of).toList();
+    public Uni<List<ServiceOrderDto>> list(@QueryParam("state") ServiceOrderState state,
+                                           @QueryParam("mechanicId") UUID mechanicId,
+                                           @QueryParam("vehicleId") UUID vehicleId) {
+        return repo.filter(state, mechanicId, vehicleId)
+                .map(list -> list.stream().map(ServiceOrderDto::of).toList());
     }
 
     @GET
     @Path("/{id}")
-    public ServiceOrderDto get(@PathParam("id") UUID id) {
-        return ServiceOrderDto.of(load(id));
+    public Uni<ServiceOrderDto> get(@PathParam("id") UUID id) {
+        return load(id).map(ServiceOrderDto::of);
     }
 
+    // ── CREATE ────────────────────────────────────────────────────────────────
+
     @POST
-    @Transactional
-    public Response create(ServiceOrderCreateDto in) {
-        Vehicle v = vehicleRepo.findById(in.vehicleId());
-        if (v == null) throw new IllegalArgumentException("vehicleId not found");
-        VmrsCode c = vmrsRepo.findById(in.vmrsCode());
-        if (c == null) throw new IllegalArgumentException("vmrsCode not found");
+    @WithTransaction
+    public Uni<Response> create(ServiceOrderCreateDto in) {
         if (in.siteId() == null) throw new IllegalArgumentException("siteId required");
-        Site site = siteRepo.findById(in.siteId());
-        if (site == null) throw new IllegalArgumentException("siteId not found");
-
-        ServiceOrder so = new ServiceOrder();
-        so.vehicle = v;
-        so.vmrsCode = c;
-        so.site = site;
-
-        Client resolvedClient;
-        if (in.clientId() != null) {
-            resolvedClient = clientRepo.findById(in.clientId());
-            if (resolvedClient == null) throw new IllegalArgumentException("clientId not found");
-        } else {
-            resolvedClient = site.client;
-        }
-        so.client = resolvedClient;
-
-        if (site.lat != null && site.lng != null) {
-            so.siteLocation = geo.point(site.lng, site.lat);
-        } else if (in.siteLocation() != null) {
-            so.siteLocation = geo.point(in.siteLocation().lng(), in.siteLocation().lat());
-        } else {
-            so.siteLocation = null;
-        }
-        so.notes = in.notes();
-
-        if (in.title() == null || in.title().isBlank()) {
-            so.title = titleGenerator.generate(v, c);
-        } else {
-            String t = in.title().trim();
-            if (t.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
-            so.title = t;
-        }
-
-        if (in.estimation() != null && !in.estimation().isBlank()) {
-            try {
-                so.estimatedMinutes = EstimationParser.parse(in.estimation());
-            } catch (IllegalArgumentException ex) {
-                throw new IllegalArgumentException("estimation: " + ex.getMessage());
-            }
-            if (so.estimatedMinutes <= 0) {
-                throw new IllegalArgumentException("estimation must be > 0 minutes");
-            }
-        } else {
-            so.estimatedMinutes = estimation.estimateMinutes(c);
-        }
 
         boolean wantsSchedule = in.mechanicId() != null
                 && in.scheduledStartAt() != null
@@ -163,29 +120,433 @@ public class ServiceOrderResource {
         boolean partialSchedule = !wantsSchedule
                 && (in.mechanicId() != null || in.scheduledStartAt() != null || in.scheduledEndAt() != null);
         if (partialSchedule) {
-            throw new IllegalArgumentException("mechanicId, scheduledStartAt and scheduledEndAt must all be set together");
+            throw new IllegalArgumentException(
+                    "mechanicId, scheduledStartAt and scheduledEndAt must all be set together");
         }
 
-        if (wantsSchedule) {
-            Mechanic m = mechanicRepo.findById(in.mechanicId());
-            if (m == null) throw new IllegalArgumentException("mechanicId not found");
-            so.mechanic = m;
-            so.scheduledStartAt = in.scheduledStartAt();
-            so.scheduledEndAt = in.scheduledEndAt();
-            // Set state to APPROVED first so the state-machine guard for SCHEDULED transition fires (enforces start<end etc.)
-            so.state = ServiceOrderState.APPROVED;
-            ServiceOrderStateMachine.transitionTo(so, ServiceOrderState.SCHEDULED);
-        } else {
-            so.state = ServiceOrderState.REQUESTED;
-        }
+        return Uni.combine().all().unis(
+                vehicleRepo.findById(in.vehicleId()),
+                vmrsRepo.findById(in.vmrsCode()),
+                siteRepo.findById(in.siteId())
+        ).asTuple().flatMap(t -> {
+            Vehicle v = t.getItem1();
+            if (v == null) throw new IllegalArgumentException("vehicleId not found");
+            VmrsCode c = t.getItem2();
+            if (c == null) throw new IllegalArgumentException("vmrsCode not found");
+            Site site = t.getItem3();
+            if (site == null) throw new IllegalArgumentException("siteId not found");
 
-        repo.persist(so);
-        ServiceOrderDto dto = ServiceOrderDto.of(so);
-        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_CREATED, dto));
-        return Response.status(Response.Status.CREATED).entity(dto).build();
+            Uni<Client> clientUni = in.clientId() != null
+                    ? clientRepo.findById(in.clientId()).map(cl -> {
+                        if (cl == null) throw new IllegalArgumentException("clientId not found");
+                        return cl;
+                    })
+                    : Uni.createFrom().item(site.client);
+
+            return clientUni.flatMap(client -> {
+                ServiceOrder so = new ServiceOrder();
+                so.vehicle = v;
+                so.vmrsCode = c;
+                so.site = site;
+                so.client = client;
+
+                if (site.lat != null && site.lng != null) {
+                    so.siteLocation = geo.point(site.lng, site.lat);
+                } else if (in.siteLocation() != null) {
+                    so.siteLocation = geo.point(in.siteLocation().lng(), in.siteLocation().lat());
+                }
+                so.notes = in.notes();
+
+                if (in.title() == null || in.title().isBlank()) {
+                    so.title = titleGenerator.generate(v, c);
+                } else {
+                    String t2 = in.title().trim();
+                    if (t2.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
+                    so.title = t2;
+                }
+
+                if (in.estimation() != null && !in.estimation().isBlank()) {
+                    try {
+                        so.estimatedMinutes = EstimationParser.parse(in.estimation());
+                    } catch (IllegalArgumentException ex) {
+                        throw new IllegalArgumentException("estimation: " + ex.getMessage());
+                    }
+                    if (so.estimatedMinutes <= 0)
+                        throw new IllegalArgumentException("estimation must be > 0 minutes");
+                } else {
+                    so.estimatedMinutes = estimation.estimateMinutes(c);
+                }
+
+                if (wantsSchedule) {
+                    return mechanicRepo.findById(in.mechanicId()).flatMap(m -> {
+                        if (m == null) throw new IllegalArgumentException("mechanicId not found");
+                        so.mechanic = m;
+                        so.scheduledStartAt = in.scheduledStartAt();
+                        so.scheduledEndAt = in.scheduledEndAt();
+                        so.state = ServiceOrderState.APPROVED;
+                        ServiceOrderStateMachine.transitionTo(so, ServiceOrderState.SCHEDULED);
+                        return repo.persist(so).map(ignored -> {
+                            ServiceOrderDto dto = ServiceOrderDto.of(so);
+                            bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_CREATED, dto));
+                            return Response.status(Response.Status.CREATED).entity(dto).build();
+                        });
+                    });
+                }
+                so.state = ServiceOrderState.REQUESTED;
+                return repo.persist(so).map(ignored -> {
+                    ServiceOrderDto dto = ServiceOrderDto.of(so);
+                    bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_CREATED, dto));
+                    return Response.status(Response.Status.CREATED).entity(dto).build();
+                });
+            });
+        });
     }
 
-    private ServiceOrderDto applyTransition(ServiceOrder so, ServiceOrderState target) {
+    // ── TRANSITIONS ───────────────────────────────────────────────────────────
+
+    @POST
+    @Path("/{id}/quote")
+    @WithTransaction
+    public Uni<ServiceOrderDto> quote(@PathParam("id") UUID id) {
+        return load(id).flatMap(so -> {
+            so.estimatedMinutes = estimation.estimateMinutes(so.vmrsCode);
+            return applyTransition(so, ServiceOrderState.QUOTED);
+        });
+    }
+
+    @POST
+    @Path("/{id}/approve")
+    @WithTransaction
+    public Uni<ServiceOrderDto> approve(@PathParam("id") UUID id) {
+        return load(id).flatMap(so -> applyTransition(so, ServiceOrderState.APPROVED));
+    }
+
+    @POST
+    @Path("/{id}/schedule")
+    @WithTransaction
+    public Uni<ServiceOrderDto> schedule(@PathParam("id") UUID id, ScheduleRequest in) {
+        if (in == null || in.mechanicId() == null
+                || in.scheduledStartAt() == null || in.scheduledEndAt() == null) {
+            throw new IllegalArgumentException("mechanicId, scheduledStartAt, scheduledEndAt all required");
+        }
+        return Uni.combine().all().unis(load(id), mechanicRepo.findById(in.mechanicId()))
+                .asTuple()
+                .flatMap(t -> {
+                    ServiceOrder so = t.getItem1();
+                    Mechanic m = t.getItem2();
+                    if (m == null) throw new IllegalArgumentException("mechanicId not found");
+                    so.mechanic = m;
+                    so.scheduledStartAt = in.scheduledStartAt();
+                    so.scheduledEndAt = in.scheduledEndAt();
+                    return applyTransition(so, ServiceOrderState.SCHEDULED);
+                });
+    }
+
+    @PATCH
+    @Path("/{id}/schedule")
+    @WithTransaction
+    public Uni<ServiceOrderDto> patchSchedule(@PathParam("id") UUID id, PatchScheduleRequest in) {
+        if (in == null
+                || (in.mechanicId() == null && in.scheduledStartAt() == null && in.scheduledEndAt() == null)) {
+            throw new IllegalArgumentException(
+                    "at least one of mechanicId, scheduledStartAt, scheduledEndAt required");
+        }
+        return load(id).flatMap(so -> {
+            if (so.state != ServiceOrderState.SCHEDULED) {
+                throw new com.terrapulse.domain.service.IllegalStateTransitionException(
+                        "PATCH /schedule only allowed in SCHEDULED state (got " + so.state + ")");
+            }
+            UUID previousMechanicId = so.mechanic != null ? so.mechanic.id : null;
+
+            if (in.mechanicId() != null) {
+                return mechanicRepo.findById(in.mechanicId()).map(m -> {
+                    if (m == null) throw new IllegalArgumentException("mechanicId not found");
+                    so.mechanic = m;
+                    applyScheduleTimes(so, in);
+                    publishRescheduleEvent(so, previousMechanicId);
+                    return ServiceOrderDto.of(so);
+                });
+            }
+            applyScheduleTimes(so, in);
+            publishRescheduleEvent(so, previousMechanicId);
+            return Uni.createFrom().item(ServiceOrderDto.of(so));
+        });
+    }
+
+    @POST
+    @Path("/{id}/start")
+    @WithTransaction
+    public Uni<ServiceOrderDto> start(@PathParam("id") UUID id) {
+        return load(id).flatMap(so -> applyTransition(so, ServiceOrderState.IN_PROGRESS));
+    }
+
+    @POST
+    @Path("/{id}/complete")
+    @WithTransaction
+    public Uni<ServiceOrderDto> complete(@PathParam("id") UUID id, CompleteRequest in) {
+        if (in == null || in.actualMinutes() == null) {
+            throw new IllegalArgumentException("actualMinutes required");
+        }
+        return load(id).flatMap(so -> {
+            so.actualMinutes = in.actualMinutes();
+            return applyTransition(so, ServiceOrderState.COMPLETED);
+        });
+    }
+
+    @POST
+    @Path("/{id}/cancel")
+    @WithTransaction
+    public Uni<ServiceOrderDto> cancel(@PathParam("id") UUID id) {
+        return load(id).flatMap(so -> applyTransition(so, ServiceOrderState.CANCELLED));
+    }
+
+    @POST
+    @Path("/{id}/unassign")
+    @WithTransaction
+    public Uni<ServiceOrderDto> unassign(@PathParam("id") UUID id) {
+        return load(id).map(so -> {
+            if (so.state != ServiceOrderState.SCHEDULED) {
+                throw new com.terrapulse.domain.service.IllegalStateTransitionException(
+                        "unassign only allowed in SCHEDULED state (got " + so.state + ")");
+            }
+            UUID previousMechanicId = so.mechanic != null ? so.mechanic.id : null;
+            so.mechanic = null;
+            so.scheduledStartAt = null;
+            so.scheduledEndAt = null;
+            so.dispatchedAt = null;
+            so.state = ServiceOrderState.APPROVED;
+
+            ServiceOrderDto dto = ServiceOrderDto.of(so);
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("id", so.id);
+            payload.put("fromState", ServiceOrderState.SCHEDULED);
+            payload.put("toState", ServiceOrderState.APPROVED);
+            payload.put("fromMechanicId", previousMechanicId);
+            payload.put("mechanicId", null);
+            payload.put("unassigned", true);
+            bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
+            return dto;
+        });
+    }
+
+    // ── OVERRIDE STATE ────────────────────────────────────────────────────────
+
+    @POST
+    @Path("/{id}/override-state")
+    @WithTransaction
+    public Uni<ServiceOrderDto> overrideState(@PathParam("id") UUID id, OverrideStateRequest in) {
+        if (in == null || in.state() == null) throw new IllegalArgumentException("state required");
+
+        return load(id).flatMap(so -> {
+            ServiceOrderState target = in.state();
+            ServiceOrderState from = so.state;
+            Instant now = Instant.now();
+            String reason = (in.reason() == null || in.reason().isBlank()) ? "no reason given" : in.reason();
+            String entry = "[override " + now + "] " + from + " -> " + target + ": " + reason;
+            so.notes = (so.notes == null || so.notes.isBlank()) ? entry : so.notes + "\n" + entry;
+
+            return switch (target) {
+                case REQUESTED, QUOTED, APPROVED -> {
+                    so.mechanic = null;
+                    so.scheduledStartAt = null;
+                    so.scheduledEndAt = null;
+                    so.dispatchedAt = null;
+                    so.startedAt = null;
+                    so.completedAt = null;
+                    so.actualMinutes = null;
+                    so.state = target;
+                    publishOverrideEvent(so, from, target, reason);
+                    yield Uni.createFrom().item(ServiceOrderDto.of(so));
+                }
+                case SCHEDULED -> {
+                    if (so.mechanic == null && in.mechanicId() == null)
+                        throw new IllegalArgumentException("mechanicId required to override to SCHEDULED");
+                    Instant newStart = in.scheduledStartAt() != null ? in.scheduledStartAt() : so.scheduledStartAt;
+                    Instant newEnd   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledEndAt;
+                    if (newStart == null || newEnd == null || !newEnd.isAfter(newStart))
+                        throw new IllegalArgumentException(
+                                "scheduledStartAt + scheduledEndAt required (end after start) to override to SCHEDULED");
+                    so.scheduledStartAt = newStart;
+                    so.scheduledEndAt = newEnd;
+                    so.startedAt = null;
+                    so.completedAt = null;
+                    so.actualMinutes = null;
+                    so.state = target;
+                    if (so.mechanic != null) {
+                        publishOverrideEvent(so, from, target, reason);
+                        yield Uni.createFrom().item(ServiceOrderDto.of(so));
+                    }
+                    yield mechanicRepo.findById(in.mechanicId()).map(m -> {
+                        if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                        so.mechanic = m;
+                        publishOverrideEvent(so, from, target, reason);
+                        return ServiceOrderDto.of(so);
+                    });
+                }
+                case IN_PROGRESS -> {
+                    if (so.scheduledStartAt == null) so.scheduledStartAt = in.scheduledStartAt() != null ? in.scheduledStartAt() : now;
+                    if (so.scheduledEndAt == null)   so.scheduledEndAt   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledStartAt.plusSeconds(60L * Math.max(1, so.estimatedMinutes));
+                    if (so.startedAt == null) so.startedAt = now;
+                    so.completedAt = null;
+                    so.actualMinutes = null;
+                    so.state = target;
+                    if (so.mechanic != null) {
+                        publishOverrideEvent(so, from, target, reason);
+                        yield Uni.createFrom().item(ServiceOrderDto.of(so));
+                    }
+                    if (in.mechanicId() == null) throw new IllegalArgumentException("mechanicId required to override to IN_PROGRESS");
+                    yield mechanicRepo.findById(in.mechanicId()).map(m -> {
+                        if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                        so.mechanic = m;
+                        publishOverrideEvent(so, from, target, reason);
+                        return ServiceOrderDto.of(so);
+                    });
+                }
+                case COMPLETED -> {
+                    if (so.scheduledStartAt == null) so.scheduledStartAt = in.scheduledStartAt() != null ? in.scheduledStartAt() : now;
+                    if (so.scheduledEndAt == null)   so.scheduledEndAt   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledStartAt.plusSeconds(60L * Math.max(1, so.estimatedMinutes));
+                    if (so.startedAt == null) so.startedAt = now;
+                    if (so.actualMinutes == null) {
+                        if (in.actualMinutes() == null || in.actualMinutes() < 1)
+                            throw new IllegalArgumentException("actualMinutes required to override to COMPLETED");
+                        so.actualMinutes = in.actualMinutes();
+                    }
+                    if (so.completedAt == null) so.completedAt = now;
+                    so.state = target;
+                    if (so.mechanic != null) {
+                        publishOverrideEvent(so, from, target, reason);
+                        yield Uni.createFrom().item(ServiceOrderDto.of(so));
+                    }
+                    if (in.mechanicId() == null) throw new IllegalArgumentException("mechanicId required to override to COMPLETED");
+                    yield mechanicRepo.findById(in.mechanicId()).map(m -> {
+                        if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
+                        so.mechanic = m;
+                        publishOverrideEvent(so, from, target, reason);
+                        return ServiceOrderDto.of(so);
+                    });
+                }
+                case CANCELLED -> {
+                    so.state = target;
+                    publishOverrideEvent(so, from, target, reason);
+                    yield Uni.createFrom().item(ServiceOrderDto.of(so));
+                }
+            };
+        });
+    }
+
+    // ── PATCH ─────────────────────────────────────────────────────────────────
+
+    @PATCH
+    @Path("/{id}")
+    @WithTransaction
+    public Uni<ServiceOrderDto> patch(@PathParam("id") UUID id, ServiceOrderPatchDto in) {
+        if (in == null) throw new IllegalArgumentException("body required");
+        return load(id).flatMap(so -> {
+            if (in.title() != null) {
+                String t = in.title().trim();
+                if (t.isEmpty()) throw new IllegalArgumentException("title cannot be empty");
+                if (t.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
+                so.title = t;
+            }
+            if (in.notes() != null) so.notes = in.notes();
+            if (in.estimatedMinutes() != null) {
+                if (in.estimatedMinutes() <= 0)
+                    throw new IllegalArgumentException("estimatedMinutes must be > 0");
+                so.estimatedMinutes = in.estimatedMinutes();
+            }
+            if (in.scheduledStartAt() != null) so.scheduledStartAt = in.scheduledStartAt();
+            if (in.scheduledEndAt() != null)   so.scheduledEndAt   = in.scheduledEndAt();
+            if (so.scheduledStartAt != null && so.scheduledEndAt != null
+                    && !so.scheduledEndAt.isAfter(so.scheduledStartAt)) {
+                throw new IllegalArgumentException("scheduledEndAt must be after scheduledStartAt");
+            }
+
+            // Gather optional FK lookups
+            Uni<Vehicle>  vehicleUni = in.vehicleId() != null  ? vehicleRepo.findById(in.vehicleId())  : Uni.createFrom().nullItem();
+            Uni<Client>   clientUni  = in.clientId()  != null  ? clientRepo.findById(in.clientId())    : Uni.createFrom().nullItem();
+            Uni<Site>     siteUni    = in.siteId()    != null  ? siteRepo.findById(in.siteId())        : Uni.createFrom().nullItem();
+            Uni<VmrsCode> vmrsUni    = in.vmrsCode()  != null  ? vmrsRepo.findById(in.vmrsCode())      : Uni.createFrom().nullItem();
+
+            return Uni.combine().all().unis(vehicleUni, clientUni, siteUni, vmrsUni).asTuple()
+                    .map(t -> {
+                        if (in.vehicleId() != null) {
+                            Vehicle v = t.getItem1();
+                            if (v == null) throw new IllegalArgumentException("vehicleId not found");
+                            so.vehicle = v;
+                        }
+                        if (in.clientId() != null) {
+                            Client cl = t.getItem2();
+                            if (cl == null) throw new IllegalArgumentException("clientId not found");
+                            so.client = cl;
+                        }
+                        if (in.siteId() != null) {
+                            Site s = t.getItem3();
+                            if (s == null) throw new IllegalArgumentException("siteId not found");
+                            so.site = s;
+                            so.siteLocation = (s.lat != null && s.lng != null) ? geo.point(s.lng, s.lat) : null;
+                        }
+                        if (in.vmrsCode() != null) {
+                            VmrsCode vc = t.getItem4();
+                            if (vc == null) throw new IllegalArgumentException("vmrsCode not found");
+                            so.vmrsCode = vc;
+                        }
+                        ServiceOrderDto dto = ServiceOrderDto.of(so);
+                        Map<String, Object> payload = new HashMap<>();
+                        payload.put("id", so.id);
+                        payload.put("order", dto);
+                        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_UPDATED, payload));
+                        return dto;
+                    });
+        });
+    }
+
+    @PATCH
+    @Path("/{id}/title")
+    @WithTransaction
+    public Uni<ServiceOrderDto> renameTitle(@PathParam("id") UUID id, TitleUpdateDto in) {
+        if (in == null || in.title() == null || in.title().isBlank()) {
+            throw new IllegalArgumentException("title required");
+        }
+        String t = in.title().trim();
+        if (t.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
+        return load(id).map(so -> {
+            so.title = t;
+            ServiceOrderDto dto = ServiceOrderDto.of(so);
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("id", so.id);
+            payload.put("fromState", so.state);
+            payload.put("toState", so.state);
+            payload.put("title", so.title);
+            payload.put("titleChanged", true);
+            bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
+            return dto;
+        });
+    }
+
+    @DELETE
+    @Path("/{id}")
+    @WithTransaction
+    public Uni<Response> delete(@PathParam("id") UUID id) {
+        return load(id).flatMap(so -> {
+            if (so.state == ServiceOrderState.IN_PROGRESS) {
+                throw new com.terrapulse.domain.service.IllegalStateTransitionException(
+                        "cannot hard-delete IN_PROGRESS order; cancel or complete first");
+            }
+            UUID deletedId = so.id;
+            UUID mechanicId = so.mechanic != null ? so.mechanic.id : null;
+            return repo.delete(so).map(ignored -> {
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("id", deletedId);
+                payload.put("mechanicId", mechanicId);
+                bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_DELETED, payload));
+                return Response.noContent().build();
+            });
+        });
+    }
+
+    // ── HELPERS ───────────────────────────────────────────────────────────────
+
+    private Uni<ServiceOrderDto> applyTransition(ServiceOrder so, ServiceOrderState target) {
         ServiceOrderState from = so.state;
         ServiceOrderStateMachine.transitionTo(so, target);
         ServiceOrderDto dto = ServiceOrderDto.of(so);
@@ -200,72 +561,20 @@ public class ServiceOrderResource {
         payload.put("actualMinutes", so.actualMinutes);
         payload.put("estimatedMinutes", so.estimatedMinutes);
         bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
-        return dto;
+        return Uni.createFrom().item(dto);
     }
 
-    @POST
-    @Path("/{id}/quote")
-    @Transactional
-    public ServiceOrderDto quote(@PathParam("id") UUID id) {
-        ServiceOrder so = load(id);
-        so.estimatedMinutes = estimation.estimateMinutes(so.vmrsCode);
-        return applyTransition(so, ServiceOrderState.QUOTED);
-    }
-
-    @POST
-    @Path("/{id}/approve")
-    @Transactional
-    public ServiceOrderDto approve(@PathParam("id") UUID id) {
-        return applyTransition(load(id), ServiceOrderState.APPROVED);
-    }
-
-    @POST
-    @Path("/{id}/schedule")
-    @Transactional
-    public ServiceOrderDto schedule(@PathParam("id") UUID id, ScheduleRequest in) {
-        if (in == null || in.mechanicId() == null
-                || in.scheduledStartAt() == null || in.scheduledEndAt() == null) {
-            throw new IllegalArgumentException("mechanicId, scheduledStartAt, scheduledEndAt all required");
-        }
-        Mechanic m = mechanicRepo.findById(in.mechanicId());
-        if (m == null) throw new IllegalArgumentException("mechanicId not found");
-
-        ServiceOrder so = load(id);
-        so.mechanic = m;
-        so.scheduledStartAt = in.scheduledStartAt();
-        so.scheduledEndAt = in.scheduledEndAt();
-        return applyTransition(so, ServiceOrderState.SCHEDULED);
-    }
-
-    @PATCH
-    @Path("/{id}/schedule")
-    @Transactional
-    public ServiceOrderDto patchSchedule(@PathParam("id") UUID id, PatchScheduleRequest in) {
-        if (in == null
-                || (in.mechanicId() == null && in.scheduledStartAt() == null && in.scheduledEndAt() == null)) {
-            throw new IllegalArgumentException("at least one of mechanicId, scheduledStartAt, scheduledEndAt required");
-        }
-        ServiceOrder so = load(id);
-        if (so.state != ServiceOrderState.SCHEDULED) {
-            throw new com.terrapulse.domain.service.IllegalStateTransitionException(
-                    "PATCH /schedule only allowed in SCHEDULED state (got " + so.state + ")");
-        }
-        UUID previousMechanicId = so.mechanic != null ? so.mechanic.id : null;
-
-        if (in.mechanicId() != null) {
-            Mechanic m = mechanicRepo.findById(in.mechanicId());
-            if (m == null) throw new IllegalArgumentException("mechanicId not found");
-            so.mechanic = m;
-        }
-        java.time.Instant newStart = in.scheduledStartAt() != null ? in.scheduledStartAt() : so.scheduledStartAt;
-        java.time.Instant newEnd   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledEndAt;
+    private void applyScheduleTimes(ServiceOrder so, PatchScheduleRequest in) {
+        Instant newStart = in.scheduledStartAt() != null ? in.scheduledStartAt() : so.scheduledStartAt;
+        Instant newEnd   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledEndAt;
         if (newEnd == null || newStart == null || !newEnd.isAfter(newStart)) {
             throw new IllegalArgumentException("scheduledEndAt must be after scheduledStartAt");
         }
         so.scheduledStartAt = newStart;
         so.scheduledEndAt = newEnd;
+    }
 
-        ServiceOrderDto dto = ServiceOrderDto.of(so);
+    private void publishRescheduleEvent(ServiceOrder so, UUID previousMechanicId) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("id", so.id);
         payload.put("mechanicId", so.mechanic.id);
@@ -273,259 +582,27 @@ public class ServiceOrderResource {
         payload.put("scheduledStartAt", so.scheduledStartAt);
         payload.put("scheduledEndAt", so.scheduledEndAt);
         bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_SCHEDULE_CHANGED, payload));
-        return dto;
     }
 
-    @POST
-    @Path("/{id}/start")
-    @Transactional
-    public ServiceOrderDto start(@PathParam("id") UUID id) {
-        return applyTransition(load(id), ServiceOrderState.IN_PROGRESS);
-    }
-
-    @POST
-    @Path("/{id}/complete")
-    @Transactional
-    public ServiceOrderDto complete(@PathParam("id") UUID id, CompleteRequest in) {
-        if (in == null || in.actualMinutes() == null) {
-            throw new IllegalArgumentException("actualMinutes required");
-        }
-        ServiceOrder so = load(id);
-        so.actualMinutes = in.actualMinutes();
-        return applyTransition(so, ServiceOrderState.COMPLETED);
-    }
-
-    @POST
-    @Path("/{id}/cancel")
-    @Transactional
-    public ServiceOrderDto cancel(@PathParam("id") UUID id) {
-        return applyTransition(load(id), ServiceOrderState.CANCELLED);
-    }
-
-    @POST
-    @Path("/{id}/unassign")
-    @Transactional
-    public ServiceOrderDto unassign(@PathParam("id") UUID id) {
-        ServiceOrder so = load(id);
-        if (so.state != ServiceOrderState.SCHEDULED) {
-            throw new com.terrapulse.domain.service.IllegalStateTransitionException(
-                    "unassign only allowed in SCHEDULED state (got " + so.state + ")");
-        }
-        UUID previousMechanicId = so.mechanic != null ? so.mechanic.id : null;
-        so.mechanic = null;
-        so.scheduledStartAt = null;
-        so.scheduledEndAt = null;
-        so.dispatchedAt = null;
-        so.state = ServiceOrderState.APPROVED;
-
-        ServiceOrderDto dto = ServiceOrderDto.of(so);
+    private void publishOverrideEvent(ServiceOrder so, ServiceOrderState from,
+                                      ServiceOrderState target, String reason) {
         Map<String, Object> payload = new HashMap<>();
-        payload.put("id", so.id);
-        payload.put("fromState", ServiceOrderState.SCHEDULED);
-        payload.put("toState", ServiceOrderState.APPROVED);
-        payload.put("fromMechanicId", previousMechanicId);
-        payload.put("mechanicId", null);
-        payload.put("unassigned", true);
-        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
-        return dto;
-    }
-
-    @DELETE
-    @Path("/{id}")
-    @Transactional
-    public Response delete(@PathParam("id") UUID id) {
-        ServiceOrder so = load(id);
-        if (so.state == ServiceOrderState.IN_PROGRESS) {
-            throw new com.terrapulse.domain.service.IllegalStateTransitionException(
-                    "cannot hard-delete IN_PROGRESS order; cancel or complete first");
-        }
-        UUID deletedId = so.id;
-        UUID mechanicId = so.mechanic != null ? so.mechanic.id : null;
-        repo.delete(so);
-
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("id", deletedId);
-        payload.put("mechanicId", mechanicId);
-        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_DELETED, payload));
-        return Response.noContent().build();
-    }
-
-    @POST
-    @Path("/{id}/override-state")
-    @Transactional
-    public ServiceOrderDto overrideState(@PathParam("id") UUID id, OverrideStateRequest in) {
-        if (in == null || in.state() == null) {
-            throw new IllegalArgumentException("state required");
-        }
-        ServiceOrderState target = in.state();
-        ServiceOrder so = load(id);
-        ServiceOrderState from = so.state;
-        java.time.Instant now = java.time.Instant.now();
-
-        String reason = (in.reason() == null || in.reason().isBlank()) ? "no reason given" : in.reason();
-        String entry = "[override " + now + "] " + from + " -> " + target + ": " + reason;
-        so.notes = (so.notes == null || so.notes.isBlank()) ? entry : so.notes + "\n" + entry;
-        switch (target) {
-            case REQUESTED, QUOTED, APPROVED -> {
-                so.mechanic = null;
-                so.scheduledStartAt = null;
-                so.scheduledEndAt = null;
-                so.dispatchedAt = null;
-                so.startedAt = null;
-                so.completedAt = null;
-                so.actualMinutes = null;
-            }
-            case SCHEDULED -> {
-                if (so.mechanic == null) {
-                    if (in.mechanicId() == null) {
-                        throw new IllegalArgumentException("mechanicId required to override to SCHEDULED");
-                    }
-                    Mechanic m = mechanicRepo.findById(in.mechanicId());
-                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
-                    so.mechanic = m;
-                }
-                java.time.Instant newStart = in.scheduledStartAt() != null ? in.scheduledStartAt() : so.scheduledStartAt;
-                java.time.Instant newEnd   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledEndAt;
-                if (newStart == null || newEnd == null || !newEnd.isAfter(newStart)) {
-                    throw new IllegalArgumentException("scheduledStartAt + scheduledEndAt required (end after start) to override to SCHEDULED");
-                }
-                so.scheduledStartAt = newStart;
-                so.scheduledEndAt = newEnd;
-                so.startedAt = null;
-                so.completedAt = null;
-                so.actualMinutes = null;
-            }
-            case IN_PROGRESS -> {
-                if (so.mechanic == null) {
-                    if (in.mechanicId() == null) throw new IllegalArgumentException("mechanicId required to override to IN_PROGRESS");
-                    Mechanic m = mechanicRepo.findById(in.mechanicId());
-                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
-                    so.mechanic = m;
-                }
-                if (so.scheduledStartAt == null) so.scheduledStartAt = in.scheduledStartAt() != null ? in.scheduledStartAt() : now;
-                if (so.scheduledEndAt == null)   so.scheduledEndAt   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledStartAt.plusSeconds(60L * Math.max(1, so.estimatedMinutes));
-                if (so.startedAt == null) so.startedAt = now;
-                so.completedAt = null;
-                so.actualMinutes = null;
-            }
-            case COMPLETED -> {
-                if (so.mechanic == null) {
-                    if (in.mechanicId() == null) throw new IllegalArgumentException("mechanicId required to override to COMPLETED");
-                    Mechanic m = mechanicRepo.findById(in.mechanicId());
-                    if (m == null) throw new IllegalArgumentException("mechanic not found: " + in.mechanicId());
-                    so.mechanic = m;
-                }
-                if (so.scheduledStartAt == null) so.scheduledStartAt = in.scheduledStartAt() != null ? in.scheduledStartAt() : now;
-                if (so.scheduledEndAt == null)   so.scheduledEndAt   = in.scheduledEndAt()   != null ? in.scheduledEndAt()   : so.scheduledStartAt.plusSeconds(60L * Math.max(1, so.estimatedMinutes));
-                if (so.startedAt == null) so.startedAt = now;
-                if (so.actualMinutes == null) {
-                    if (in.actualMinutes() == null || in.actualMinutes() < 1) {
-                        throw new IllegalArgumentException("actualMinutes required to override to COMPLETED");
-                    }
-                    so.actualMinutes = in.actualMinutes();
-                }
-                if (so.completedAt == null) so.completedAt = now;
-            }
-            case CANCELLED -> {
-                // keep lifecycle fields for audit trail
-            }
-        }
-        so.state = target;
-
-        java.util.Map<String, Object> payload = new java.util.HashMap<>();
         payload.put("id", so.id);
         payload.put("fromState", from);
         payload.put("toState", target);
         payload.put("override", true);
         payload.put("reason", reason);
-        bus.publish(com.terrapulse.ws.DispatchEvent.of(
-                com.terrapulse.ws.DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
-
-        return ServiceOrderDto.of(so);
-    }
-
-    @PATCH
-    @Path("/{id}")
-    @Transactional
-    public ServiceOrderDto patch(@PathParam("id") UUID id, ServiceOrderPatchDto in) {
-        if (in == null) throw new IllegalArgumentException("body required");
-        ServiceOrder so = load(id);
-        if (in.title() != null) {
-            String t = in.title().trim();
-            if (t.isEmpty()) throw new IllegalArgumentException("title cannot be empty");
-            if (t.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
-            so.title = t;
-        }
-        if (in.vehicleId() != null) {
-            Vehicle v = vehicleRepo.findById(in.vehicleId());
-            if (v == null) throw new IllegalArgumentException("vehicleId not found");
-            so.vehicle = v;
-        }
-        if (in.clientId() != null) {
-            Client c = clientRepo.findById(in.clientId());
-            if (c == null) throw new IllegalArgumentException("clientId not found");
-            so.client = c;
-        }
-        if (in.siteId() != null) {
-            Site s = siteRepo.findById(in.siteId());
-            if (s == null) throw new IllegalArgumentException("siteId not found");
-            so.site = s;
-            so.siteLocation = (s.lat != null && s.lng != null) ? geo.point(s.lng, s.lat) : null;
-        }
-        if (in.vmrsCode() != null) {
-            VmrsCode vc = vmrsRepo.findById(in.vmrsCode());
-            if (vc == null) throw new IllegalArgumentException("vmrsCode not found");
-            so.vmrsCode = vc;
-        }
-        if (in.notes() != null) so.notes = in.notes();
-        if (in.estimatedMinutes() != null) {
-            if (in.estimatedMinutes() <= 0) throw new IllegalArgumentException("estimatedMinutes must be > 0");
-            so.estimatedMinutes = in.estimatedMinutes();
-        }
-        if (in.scheduledStartAt() != null) so.scheduledStartAt = in.scheduledStartAt();
-        if (in.scheduledEndAt() != null)   so.scheduledEndAt   = in.scheduledEndAt();
-        if (so.scheduledStartAt != null && so.scheduledEndAt != null
-                && !so.scheduledEndAt.isAfter(so.scheduledStartAt)) {
-            throw new IllegalArgumentException("scheduledEndAt must be after scheduledStartAt");
-        }
-        ServiceOrderDto dto = ServiceOrderDto.of(so);
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("id", so.id);
-        payload.put("order", dto);
-        bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_UPDATED, payload));
-        return dto;
-    }
-
-    @PATCH
-    @Path("/{id}/title")
-    @Transactional
-    public ServiceOrderDto renameTitle(@PathParam("id") UUID id, TitleUpdateDto in) {
-        if (in == null || in.title() == null || in.title().isBlank()) {
-            throw new IllegalArgumentException("title required");
-        }
-        String t = in.title().trim();
-        if (t.length() > 120) {
-            throw new IllegalArgumentException("title must be <= 120 chars");
-        }
-        ServiceOrder so = load(id);
-        so.title = t;
-        ServiceOrderDto dto = ServiceOrderDto.of(so);
-        // No dedicated SERVICE_ORDER_UPDATED constant exists yet; reuse
-        // SERVICE_ORDER_STATE_CHANGED with titleChanged=true so subscribers can
-        // disambiguate. Payload shape stays additive.
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("id", so.id);
-        payload.put("fromState", so.state);
-        payload.put("toState", so.state);
-        payload.put("title", so.title);
-        payload.put("titleChanged", true);
         bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_STATE_CHANGED, payload));
-        return dto;
     }
 
-    private ServiceOrder load(UUID id) {
-        ServiceOrder so = repo.findById(id);
-        if (so == null) throw new NotFoundException();
-        return so;
+    private Uni<ServiceOrder> load(UUID id) {
+        return repo.findById(id).map(so -> {
+            if (so == null) throw new NotFoundException();
+            return so;
+        });
+    }
+
+    private static @NonNull Supplier<IllegalArgumentException> argException(String message) {
+        return () -> new IllegalArgumentException(message);
     }
 }

@@ -1,29 +1,20 @@
 package com.terrapulse.api;
 
 import com.terrapulse.domain.mechanic.AbsenceType;
-import com.terrapulse.domain.mechanic.Mechanic;
 import com.terrapulse.domain.mechanic.MechanicAbsence;
 import com.terrapulse.repository.MechanicAbsenceRepository;
 import com.terrapulse.repository.MechanicRepository;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.Authenticated;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-
-import io.quarkus.security.Authenticated;
 
 @Path("/api/mechanic-absences")
 @Produces(MediaType.APPLICATION_JSON)
@@ -63,17 +54,13 @@ public class MechanicAbsenceResource {
             String reason
     ) {}
 
-    /**
-     * Filter: pass either {@code mechanicId} (per-mechanic history) OR
-     * {@code from}/{@code to} (overlap query for the dispatch board).
-     * Passing nothing returns all absences (POC convenience).
-     */
     @GET
-    public List<AbsenceDto> list(@QueryParam("mechanicId") UUID mechanicId,
-                                 @QueryParam("from") Instant from,
-                                 @QueryParam("to") Instant to) {
+    public Uni<List<AbsenceDto>> list(@QueryParam("mechanicId") UUID mechanicId,
+                                      @QueryParam("from") Instant from,
+                                      @QueryParam("to") Instant to) {
         if (mechanicId != null) {
-            return absences.findByMechanic(mechanicId).stream().map(AbsenceDto::of).toList();
+            return absences.findByMechanic(mechanicId)
+                    .map(list -> list.stream().map(AbsenceDto::of).toList());
         }
         if (from != null || to != null) {
             if (from == null || to == null) {
@@ -82,53 +69,65 @@ public class MechanicAbsenceResource {
             if (!to.isAfter(from)) {
                 throw new IllegalArgumentException("'to' must be after 'from'");
             }
-            return absences.findOverlapping(from, to).stream().map(AbsenceDto::of).toList();
+            return absences.findOverlapping(from, to)
+                    .map(list -> list.stream().map(AbsenceDto::of).toList());
         }
-        return absences.listAll().stream().map(AbsenceDto::of).toList();
+        return absences.listAll()
+                .map(list -> list.stream().map(AbsenceDto::of).toList());
     }
 
     @POST
-    @Transactional
-    public Response create(AbsenceUpsert in) {
+    @WithTransaction
+    public Uni<Response> create(AbsenceUpsert in) {
         validate(in);
-        Mechanic m = mechanics.findById(in.mechanicId());
-        if (m == null) throw new IllegalArgumentException("mechanicId not found");
-        MechanicAbsence a = new MechanicAbsence();
-        a.mechanic = m;
-        a.startAt = in.startAt();
-        a.endAt = in.endAt();
-        a.type = in.type();
-        a.reason = blankToNull(in.reason());
-        absences.persist(a);
-        return Response.status(Response.Status.CREATED).entity(AbsenceDto.of(a)).build();
+        return mechanics.findById(in.mechanicId()).flatMap(m -> {
+            if (m == null) throw new IllegalArgumentException("mechanicId not found");
+            MechanicAbsence a = new MechanicAbsence();
+            a.mechanic = m;
+            a.startAt = in.startAt();
+            a.endAt = in.endAt();
+            a.type = in.type();
+            a.reason = blankToNull(in.reason());
+            return absences.persist(a).replaceWith(
+                    Response.status(Response.Status.CREATED).entity(AbsenceDto.of(a)).build());
+        });
     }
 
     @PUT
     @Path("/{id}")
-    @Transactional
-    public AbsenceDto update(@PathParam("id") UUID id, AbsenceUpsert in) {
-        MechanicAbsence a = absences.findById(id);
-        if (a == null) throw new NotFoundException();
-        validate(in);
-        // mechanicId on PUT is optional — if provided + different, reassign.
-        if (in.mechanicId() != null && !in.mechanicId().equals(a.mechanic.id)) {
-            Mechanic m = mechanics.findById(in.mechanicId());
-            if (m == null) throw new IllegalArgumentException("mechanicId not found");
-            a.mechanic = m;
-        }
-        a.startAt = in.startAt();
-        a.endAt = in.endAt();
-        a.type = in.type();
-        a.reason = blankToNull(in.reason());
-        return AbsenceDto.of(a);
+    @WithTransaction
+    public Uni<AbsenceDto> update(@PathParam("id") UUID id, AbsenceUpsert in) {
+        return absences.findById(id).flatMap(a -> {
+            if (a == null) throw new NotFoundException();
+            validate(in);
+            if (in.mechanicId() != null && !in.mechanicId().equals(a.mechanic.id)) {
+                return mechanics.findById(in.mechanicId()).map(m -> {
+                    if (m == null) throw new IllegalArgumentException("mechanicId not found");
+                    a.mechanic = m;
+                    applyUpsert(a, in);
+                    return AbsenceDto.of(a);
+                });
+            }
+            applyUpsert(a, in);
+            return Uni.createFrom().item(AbsenceDto.of(a));
+        });
     }
 
     @DELETE
     @Path("/{id}")
-    @Transactional
-    public Response delete(@PathParam("id") UUID id) {
-        if (!absences.deleteById(id)) throw new NotFoundException();
-        return Response.noContent().build();
+    @WithTransaction
+    public Uni<Response> delete(@PathParam("id") UUID id) {
+        return absences.deleteById(id).map(deleted -> {
+            if (!deleted) throw new NotFoundException();
+            return Response.noContent().build();
+        });
+    }
+
+    private static void applyUpsert(MechanicAbsence a, AbsenceUpsert in) {
+        a.startAt = in.startAt();
+        a.endAt = in.endAt();
+        a.type = in.type();
+        a.reason = blankToNull(in.reason());
     }
 
     private static void validate(AbsenceUpsert in) {
