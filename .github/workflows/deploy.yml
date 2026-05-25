@@ -44,17 +44,15 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Trigger Koyeb redeploy
+      - name: Trigger Render redeploy
         run: |
           response=$(curl -s --max-time 30 \
-            -X POST "https://app.koyeb.com/v1/services/${{ secrets.KOYEB_SERVICE_ID }}/redeploy" \
-            -H "Authorization: Bearer ${{ secrets.KOYEB_API_KEY }}" \
-            -H "Content-Type: application/json" \
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
             -w "\n%{http_code}")
           body=$(echo "$response" | head -n -1)
           status=$(echo "$response" | tail -n1)
           if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
-            echo "Koyeb redeploy failed. Status: $status. Response: $body"
+            echo "Render redeploy failed. Status: $status. Response: $body"
             exit 1
           fi
-          echo "Koyeb redeploy triggered (status $status)"
+          echo "Render redeploy triggered (status $status)"
