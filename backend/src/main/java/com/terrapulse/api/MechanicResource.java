@@ -14,6 +14,7 @@ import com.terrapulse.service.GeometrySupport;
 import com.terrapulse.service.NearestMechanicService;
 import com.terrapulse.ws.DispatchEvent;
 import com.terrapulse.ws.DispatchEventBus;
+import io.quarkus.hibernate.reactive.panache.common.WithSession;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
 import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
@@ -67,19 +68,21 @@ public class MechanicResource {
     }
 
     @GET
+    @WithSession
     public Uni<List<MechanicDto>> list() {
         Instant now = Instant.now();
-        return Uni.combine().all().unis(
-                repo.listAll(),
-                absenceRepo.findOverlapping(now, now)
-        ).asTuple().map(tuple -> {
-            Set<UUID> onAbsence = tuple.getItem2().stream()
-                    .map(a -> a.mechanic.id)
-                    .collect(Collectors.toSet());
-            return tuple.getItem1().stream()
-                    .map(m -> MechanicDto.of(m, onAbsence.contains(m.id)))
-                    .toList();
-        });
+        return repo.list("FROM Mechanic m LEFT JOIN FETCH m.skills ORDER BY m.fullName")
+                .flatMap(mechanics ->
+                        absenceRepo.findOverlapping(now, now)
+                                .map(absences -> {
+                                    Set<UUID> onAbsence = absences.stream()
+                                            .map(a -> a.mechanic.id)
+                                            .collect(Collectors.toSet());
+                                    return mechanics.stream()
+                                            .map(m -> MechanicDto.of(m, onAbsence.contains(m.id)))
+                                            .toList();
+                                })
+                );
     }
 
     @GET
@@ -95,17 +98,17 @@ public class MechanicResource {
 
     @GET
     @Path("/{id}")
+    @WithSession
     public Uni<MechanicDto> get(@PathParam("id") UUID id) {
         Instant now = Instant.now();
-        return Uni.combine().all().unis(
-                load(id),
+        return load(id).flatMap(m ->
                 absenceRepo.findOverlapping(now, now)
-        ).asTuple().map(tuple -> {
-            Mechanic m = tuple.getItem1();
-            boolean onAbsence = tuple.getItem2().stream()
-                    .anyMatch(a -> m.id.equals(a.mechanic.id));
-            return MechanicDto.of(m, onAbsence);
-        });
+                        .map(absences -> {
+                            boolean onAbsence = absences.stream()
+                                    .anyMatch(a -> m.id.equals(a.mechanic.id));
+                            return MechanicDto.of(m, onAbsence);
+                        })
+        );
     }
 
     @POST
@@ -121,7 +124,7 @@ public class MechanicResource {
         }
         return resolveSkills(in.skills()).flatMap(skillSet -> {
             m.skills = skillSet;
-            return repo.persist(m).replaceWith(
+            return repo.persist(m).map(ignored ->
                     Response.status(Response.Status.CREATED).entity(MechanicDto.of(m)).build());
         });
     }
@@ -208,9 +211,11 @@ public class MechanicResource {
     }
 
     private Uni<Mechanic> load(UUID id) {
-        return repo.findById(id).map(m -> {
-            if (m == null) throw new NotFoundException();
-            return m;
-        });
+        return repo.find("FROM Mechanic m LEFT JOIN FETCH m.skills WHERE m.id = ?1", id)
+                .firstResult()
+                .map(m -> {
+                    if (m == null) throw new NotFoundException();
+                    return m;
+                });
     }
 }

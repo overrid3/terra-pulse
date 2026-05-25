@@ -125,14 +125,14 @@ public class ReservationResource {
                                 if (op == null)
                                     throw new IllegalArgumentException("operatorMechanicId not found");
                                 wet.operatorMechanic = op;
-                                return repo.persist(wet).replaceWith(
+                                return repo.persist(wet).map(ignored ->
                                         Response.status(Response.Status.CREATED)
                                                 .entity(ReservationDto.of(wet)).build());
                             });
                         }
 
                         final Reservation reservation = r;
-                        return repo.persist(reservation).replaceWith(
+                        return repo.persist(reservation).map(ignored ->
                                 Response.status(Response.Status.CREATED)
                                         .entity(ReservationDto.of(reservation)).build());
                     });

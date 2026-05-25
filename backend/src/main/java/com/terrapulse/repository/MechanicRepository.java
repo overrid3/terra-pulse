@@ -42,7 +42,15 @@ public class MechanicRepository implements PanacheRepositoryBase<Mechanic, UUID>
                     .setParameter("lng", lng)
                     .setParameter("lim", limit);
             if (finalSkill != null) query.setParameter("skill", finalSkill);
-            return query.getResultList();
+            return query.getResultList().flatMap(list -> {
+                // Initialize lazy skills collection for each mechanic within this session
+                Uni<Void> init = Uni.createFrom().voidItem();
+                for (Mechanic m : list) {
+                    final Mechanic ref = m;
+                    init = init.flatMap(v -> session.fetch(ref.skills).replaceWithVoid());
+                }
+                return init.replaceWith(list);
+            });
         });
     }
 }

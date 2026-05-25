@@ -62,7 +62,7 @@ public class VehicleResource {
         v.vehicleClass = in.vehicleClass();
         v.engineHours = in.engineHours() != null ? in.engineHours() : BigDecimal.ZERO;
         if (in.status() != null) v.status = in.status();
-        return repo.persist(v).replaceWith(
+        return repo.persist(v).map(ignored ->
                 Response.status(Response.Status.CREATED).entity(VehicleDto.of(v)).build());
     }
 

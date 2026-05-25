@@ -94,7 +94,7 @@ public class ClientResource {
             }
             Client c = new Client();
             copy(in, c);
-            return repo.persist(c).replaceWith(
+            return repo.persist(c).map(ignored ->
                     Response.status(Response.Status.CREATED).entity(ClientDto.of(c)).build());
         });
     }

@@ -55,7 +55,7 @@ public class SkillResource {
             }
             Skill s = new Skill();
             s.name = name;
-            return repo.persist(s).replaceWith(
+            return repo.persist(s).map(ignored ->
                     Response.status(Response.Status.CREATED).entity(SkillDto.of(s)).build());
         });
     }

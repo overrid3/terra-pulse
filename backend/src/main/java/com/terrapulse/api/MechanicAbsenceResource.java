@@ -88,7 +88,7 @@ public class MechanicAbsenceResource {
             a.endAt = in.endAt();
             a.type = in.type();
             a.reason = blankToNull(in.reason());
-            return absences.persist(a).replaceWith(
+            return absences.persist(a).map(ignored ->
                     Response.status(Response.Status.CREATED).entity(AbsenceDto.of(a)).build());
         });
     }

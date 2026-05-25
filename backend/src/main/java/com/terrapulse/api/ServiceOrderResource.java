@@ -124,79 +124,72 @@ public class ServiceOrderResource {
                     "mechanicId, scheduledStartAt and scheduledEndAt must all be set together");
         }
 
-        return vehicleRepo.findById(in.vehicleId()).flatMap(v -> {
-            if (v == null) throw new IllegalArgumentException("vehicleId not found");
-            return vmrsRepo.findById(in.vmrsCode()).flatMap(c -> {
-            if (c == null) throw new IllegalArgumentException("vmrsCode not found");
-            return siteRepo.findById(in.siteId()).flatMap(site -> {
-            if (site == null) throw new IllegalArgumentException("siteId not found");
-
-            Uni<Client> clientUni = in.clientId() != null
-                    ? clientRepo.findById(in.clientId()).map(cl -> {
+        return loadRequiredFks(in.vehicleId(), in.vmrsCode(), in.siteId())
+                .flatMap(fk -> {
+                    Uni<Client> clientUni = in.clientId() != null
+                            ? clientRepo.findById(in.clientId()).map(cl -> {
                         if (cl == null) throw new IllegalArgumentException("clientId not found");
                         return cl;
                     })
-                    : Uni.createFrom().item(site.client);
+                            : Uni.createFrom().item(fk.site.client);
 
-            return clientUni.flatMap(client -> {
-                ServiceOrder so = new ServiceOrder();
-                so.vehicle = v;
-                so.vmrsCode = c;
-                so.site = site;
-                so.client = client;
+                    return clientUni.flatMap(client -> {
+                        ServiceOrder so = new ServiceOrder();
+                        so.vehicle = fk.vehicle;
+                        so.vmrsCode = fk.vmrs;
+                        so.site = fk.site;
+                        so.client = client;
 
-                if (site.lat != null && site.lng != null) {
-                    so.siteLocation = geo.point(site.lng, site.lat);
-                } else if (in.siteLocation() != null) {
-                    so.siteLocation = geo.point(in.siteLocation().lng(), in.siteLocation().lat());
-                }
-                so.notes = in.notes();
+                        if (fk.site.lat != null && fk.site.lng != null) {
+                            so.siteLocation = geo.point(fk.site.lng, fk.site.lat);
+                        } else if (in.siteLocation() != null) {
+                            so.siteLocation = geo.point(in.siteLocation().lng(), in.siteLocation().lat());
+                        }
+                        so.notes = in.notes();
 
-                if (in.title() == null || in.title().isBlank()) {
-                    so.title = titleGenerator.generate(v, c);
-                } else {
-                    String t2 = in.title().trim();
-                    if (t2.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
-                    so.title = t2;
-                }
+                        if (in.title() == null || in.title().isBlank()) {
+                            so.title = titleGenerator.generate(fk.vehicle, fk.vmrs);
+                        } else {
+                            String t2 = in.title().trim();
+                            if (t2.length() > 120) throw new IllegalArgumentException("title must be <= 120 chars");
+                            so.title = t2;
+                        }
 
-                if (in.estimation() != null && !in.estimation().isBlank()) {
-                    try {
-                        so.estimatedMinutes = EstimationParser.parse(in.estimation());
-                    } catch (IllegalArgumentException ex) {
-                        throw new IllegalArgumentException("estimation: " + ex.getMessage());
-                    }
-                    if (so.estimatedMinutes <= 0)
-                        throw new IllegalArgumentException("estimation must be > 0 minutes");
-                } else {
-                    so.estimatedMinutes = estimation.estimateMinutes(c);
-                }
+                        if (in.estimation() != null && !in.estimation().isBlank()) {
+                            try {
+                                so.estimatedMinutes = EstimationParser.parse(in.estimation());
+                            } catch (IllegalArgumentException ex) {
+                                throw new IllegalArgumentException("estimation: " + ex.getMessage());
+                            }
+                            if (so.estimatedMinutes <= 0)
+                                throw new IllegalArgumentException("estimation must be > 0 minutes");
+                        } else {
+                            so.estimatedMinutes = estimation.estimateMinutes(fk.vmrs);
+                        }
 
-                if (wantsSchedule) {
-                    return mechanicRepo.findById(in.mechanicId()).flatMap(m -> {
-                        if (m == null) throw new IllegalArgumentException("mechanicId not found");
-                        so.mechanic = m;
-                        so.scheduledStartAt = in.scheduledStartAt();
-                        so.scheduledEndAt = in.scheduledEndAt();
-                        so.state = ServiceOrderState.APPROVED;
-                        ServiceOrderStateMachine.transitionTo(so, ServiceOrderState.SCHEDULED);
+                        if (wantsSchedule) {
+                            return mechanicRepo.findById(in.mechanicId()).flatMap(m -> {
+                                if (m == null) throw new IllegalArgumentException("mechanicId not found");
+                                so.mechanic = m;
+                                so.scheduledStartAt = in.scheduledStartAt();
+                                so.scheduledEndAt = in.scheduledEndAt();
+                                so.state = ServiceOrderState.APPROVED;
+                                ServiceOrderStateMachine.transitionTo(so, ServiceOrderState.SCHEDULED);
+                                return repo.persist(so).map(ignored -> {
+                                    ServiceOrderDto dto = ServiceOrderDto.of(so);
+                                    bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_CREATED, dto));
+                                    return Response.status(Response.Status.CREATED).entity(dto).build();
+                                });
+                            });
+                        }
+                        so.state = ServiceOrderState.REQUESTED;
                         return repo.persist(so).map(ignored -> {
                             ServiceOrderDto dto = ServiceOrderDto.of(so);
                             bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_CREATED, dto));
                             return Response.status(Response.Status.CREATED).entity(dto).build();
                         });
                     });
-                }
-                so.state = ServiceOrderState.REQUESTED;
-                return repo.persist(so).map(ignored -> {
-                    ServiceOrderDto dto = ServiceOrderDto.of(so);
-                    bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_CREATED, dto));
-                    return Response.status(Response.Status.CREATED).entity(dto).build();
                 });
-            });
-        }); // siteRepo.findById
-        }); // vmrsRepo.findById
-        }); // vehicleRepo.findById
     }
 
     // ── TRANSITIONS ───────────────────────────────────────────────────────────
@@ -456,46 +449,13 @@ public class ServiceOrderResource {
                 throw new IllegalArgumentException("scheduledEndAt must be after scheduledStartAt");
             }
 
-            // Sequential FK lookups to avoid concurrent session access
-            Uni<Vehicle> vehicleUni = in.vehicleId() != null
-                    ? vehicleRepo.findById(in.vehicleId()) : Uni.createFrom().nullItem();
-            return vehicleUni.flatMap(v -> {
-                if (in.vehicleId() != null) {
-                    if (v == null) throw new IllegalArgumentException("vehicleId not found");
-                    so.vehicle = v;
-                }
-                Uni<Client> clientUni = in.clientId() != null
-                        ? clientRepo.findById(in.clientId()) : Uni.createFrom().nullItem();
-                return clientUni.flatMap(cl -> {
-                    if (in.clientId() != null) {
-                        if (cl == null) throw new IllegalArgumentException("clientId not found");
-                        so.client = cl;
-                    }
-                    Uni<Site> siteUni = in.siteId() != null
-                            ? siteRepo.findById(in.siteId()) : Uni.createFrom().nullItem();
-                    return siteUni.flatMap(s -> {
-                        if (in.siteId() != null) {
-                            if (s == null) throw new IllegalArgumentException("siteId not found");
-                            so.site = s;
-                            so.siteLocation = (s.lat != null && s.lng != null)
-                                    ? geo.point(s.lng, s.lat) : null;
-                        }
-                        Uni<VmrsCode> vmrsUni = in.vmrsCode() != null
-                                ? vmrsRepo.findById(in.vmrsCode()) : Uni.createFrom().nullItem();
-                        return vmrsUni.map(vc -> {
-                            if (in.vmrsCode() != null) {
-                                if (vc == null) throw new IllegalArgumentException("vmrsCode not found");
-                                so.vmrsCode = vc;
-                            }
-                            ServiceOrderDto dto = ServiceOrderDto.of(so);
-                            Map<String, Object> payload = new HashMap<>();
-                            payload.put("id", so.id);
-                            payload.put("order", dto);
-                            bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_UPDATED, payload));
-                            return dto;
-                        });
-                    });
-                });
+            return applyPatchFks(so, in).map(s -> {
+                ServiceOrderDto dto = ServiceOrderDto.of(s);
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("id", s.id);
+                payload.put("order", dto);
+                bus.publish(DispatchEvent.of(DispatchEvent.SERVICE_ORDER_UPDATED, payload));
+                return dto;
             });
         });
     }
@@ -600,6 +560,74 @@ public class ServiceOrderResource {
             if (so == null) throw new NotFoundException();
             return so;
         });
+    }
+
+    // ── FK HELPERS ────────────────────────────────────────────────────────────
+
+    private record RequiredFks(Vehicle vehicle, VmrsCode vmrs, Site site) {
+    }
+
+    private Uni<RequiredFks> loadRequiredFks(UUID vehicleId, String vmrsCode, UUID siteId) {
+        return vehicleRepo.findById(vehicleId).flatMap(v -> {
+            if (v == null) throw new IllegalArgumentException("vehicleId not found");
+            return vmrsRepo.findById(vmrsCode).flatMap(c -> {
+                if (c == null) throw new IllegalArgumentException("vmrsCode not found");
+                return siteRepo.findById(siteId).map(s -> {
+                    if (s == null) throw new IllegalArgumentException("siteId not found");
+                    return new RequiredFks(v, c, s);
+                });
+            });
+        });
+    }
+
+    private Uni<RequiredFks> loadRequiredFks2(UUID vehicleId, String vmrsCode, UUID siteId) {
+
+        var vehicleUni = vehicleRepo.findById(vehicleId);
+        var vmrsCodeUni = vmrsRepo.findById(vmrsCode);
+        var siteUni = siteRepo.findById(siteId);
+
+        Uni.combine().all().unis(vehicleUni, vmrsCodeUni, siteUni).wi
+        return vehicleUni.flatMap(v -> {
+            if (v == null) throw new IllegalArgumentException("vehicleId not found");
+            return vmrsCodeUni.flatMap(c -> {
+                if (c == null) throw new IllegalArgumentException("vmrsCode not found");
+                return siteUni.map(s -> {
+                    if (s == null) throw new IllegalArgumentException("siteId not found");
+                    return new RequiredFks(v, c, s);
+                });
+            });
+        });
+    }
+
+    private Uni<ServiceOrder> applyPatchFks(ServiceOrder so, ServiceOrderPatchDto in) {
+        Uni<ServiceOrder> chain = Uni.createFrom().item(so);
+        if (in.vehicleId() != null)
+            chain = chain.flatMap(s -> vehicleRepo.findById(in.vehicleId()).map(v -> {
+                if (v == null) throw new IllegalArgumentException("vehicleId not found");
+                s.vehicle = v;
+                return s;
+            }));
+        if (in.clientId() != null)
+            chain = chain.flatMap(s -> clientRepo.findById(in.clientId()).map(cl -> {
+                if (cl == null) throw new IllegalArgumentException("clientId not found");
+                s.client = cl;
+                return s;
+            }));
+        if (in.siteId() != null)
+            chain = chain.flatMap(s -> siteRepo.findById(in.siteId()).map(site -> {
+                if (site == null) throw new IllegalArgumentException("siteId not found");
+                s.site = site;
+                s.siteLocation = (site.lat != null && site.lng != null)
+                        ? geo.point(site.lng, site.lat) : null;
+                return s;
+            }));
+        if (in.vmrsCode() != null)
+            chain = chain.flatMap(s -> vmrsRepo.findById(in.vmrsCode()).map(vc -> {
+                if (vc == null) throw new IllegalArgumentException("vmrsCode not found");
+                s.vmrsCode = vc;
+                return s;
+            }));
+        return chain;
     }
 
     private static @NonNull Supplier<IllegalArgumentException> argException(String message) {

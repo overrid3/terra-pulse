@@ -39,7 +39,7 @@ public class Mechanic {
     @Column(name = "phone", length = 32)
     public String phone;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "mechanic_skill",
             joinColumns = @JoinColumn(name = "mechanic_id"),
             inverseJoinColumns = @JoinColumn(name = "skill_id"))
