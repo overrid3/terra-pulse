@@ -7,7 +7,7 @@ COPY backend/.mvn backend/.mvn
 COPY backend/mvnw backend/mvnw
 COPY backend/src backend/src
 WORKDIR /workspace/backend
-RUN chmod +x mvnw && ./mvnw package -Dnative -DskipTests -q
+RUN chmod +x mvnw && ./mvnw package -Dquarkus.native.enabled=true -DskipTests -q
 RUN ls /workspace/backend/target/*-runner
 
 # Stage 2 — Minimal runtime image (~9 MB base)
