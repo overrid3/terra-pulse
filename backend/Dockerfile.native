@@ -12,9 +12,7 @@ RUN chmod +x mvnw && ./mvnw package -Dnative -DskipTests -q
 # Stage 2 — Minimal runtime image (~9 MB base)
 FROM quay.io/quarkus/quarkus-micro-image:2.0
 WORKDIR /work/
-COPY --from=build /workspace/backend/target/*-runner /work/application
-RUN chmod 775 /work/application \
-    && chown 1001 /work/application
+COPY --chmod=775 --from=build /workspace/backend/target/*-runner /work/application
 USER 1001
 EXPOSE 8080
 CMD ["./application", "-Dquarkus.http.host=0.0.0.0"]
