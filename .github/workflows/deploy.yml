@@ -13,8 +13,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    outputs:
-      sha: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +46,15 @@ jobs:
     steps:
       - name: Trigger Koyeb redeploy
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
+          response=$(curl -s --max-time 30 \
             -X POST "https://app.koyeb.com/v1/services/${{ secrets.KOYEB_SERVICE_ID }}/redeploy" \
             -H "Authorization: Bearer ${{ secrets.KOYEB_API_KEY }}" \
-            -H "Content-Type: application/json" | grep -q "^2" || exit 1
+            -H "Content-Type: application/json" \
+            -w "\n%{http_code}")
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n1)
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Koyeb redeploy failed. Status: $status. Response: $body"
+            exit 1
+          fi
+          echo "Koyeb redeploy triggered (status $status)"
