@@ -16,4 +16,4 @@ WORKDIR /work/
 COPY --chmod=775 --from=build /workspace/backend/target/*-runner /work/application
 USER 1001
 EXPOSE 8080
-CMD ["./application", "-Dquarkus.http.host=0.0.0.0"]
+CMD ["./application", "-Dquarkus.http.host=0.0.0.0", "-Djava.net.preferIPv4Stack=true"]
