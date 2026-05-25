@@ -586,7 +586,6 @@ public class ServiceOrderResource {
         var vmrsCodeUni = vmrsRepo.findById(vmrsCode);
         var siteUni = siteRepo.findById(siteId);
 
-        Uni.combine().all().unis(vehicleUni, vmrsCodeUni, siteUni).wi
         return vehicleUni.flatMap(v -> {
             if (v == null) throw new IllegalArgumentException("vehicleId not found");
             return vmrsCodeUni.flatMap(c -> {
