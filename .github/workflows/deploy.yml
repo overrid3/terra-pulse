@@ -6,7 +6,6 @@ on:
 
 env:
   BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/terra-pulse-backend
-  WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/terra-pulse-web
 
 jobs:
   build-and-push:
@@ -29,48 +28,27 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push backend image
+      - name: Build and push backend native image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: backend/Dockerfile
+          file: backend/Dockerfile.native
           push: true
           tags: |
             ${{ env.BACKEND_IMAGE }}:latest
             ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Build and push web image
-        uses: docker/build-push-action@v6
-        with:
-          context: web
-          file: web/Dockerfile
-          push: true
-          tags: |
-            ${{ env.WEB_IMAGE }}:latest
-            ${{ env.WEB_IMAGE }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VITE_API_BASE=/api
-            VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+        timeout-minutes: 30
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Deploy to Oracle VM
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.ORACLE_HOST }}
-          username: ubuntu
-          key: ${{ secrets.ORACLE_SSH_KEY }}
-          script: |
-            set -e
-            cd /app
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            docker image prune -f
-            echo "Deploy complete: ${{ github.sha }}"
+      - name: Trigger Koyeb redeploy
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "https://app.koyeb.com/v1/services/${{ secrets.KOYEB_SERVICE_ID }}/redeploy" \
+            -H "Authorization: Bearer ${{ secrets.KOYEB_API_KEY }}" \
+            -H "Content-Type: application/json" | grep -q "^2" || exit 1
