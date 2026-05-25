@@ -3,9 +3,11 @@ FROM quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-25 AS build
 USER root
 WORKDIR /workspace
 COPY backend/pom.xml backend/pom.xml
+COPY backend/.mvn backend/.mvn
+COPY backend/mvnw backend/mvnw
 COPY backend/src backend/src
 WORKDIR /workspace/backend
-RUN mvn package -Dnative -DskipTests -q
+RUN chmod +x mvnw && ./mvnw package -Dnative -DskipTests -q
 
 # Stage 2 — Minimal runtime image (~9 MB base)
 FROM quay.io/quarkus/quarkus-micro-image:2.0
